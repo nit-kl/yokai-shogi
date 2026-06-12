@@ -7,6 +7,7 @@ prototype/test/fx-*.png
 prototype/test/_tmp-*.js
 test/e2e/shot-*.png
 test/e2e/fx-*.png
+test/e2e/live-*.png
 
 # ビルド成果物(Phase 0以降: Vite / wrangler)
 dist/

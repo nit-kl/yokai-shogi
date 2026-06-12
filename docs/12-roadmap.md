@@ -24,9 +24,9 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 - [x] 既存テストを vitest へ移植(vm読み込み → import。アサーション内容は維持)
 - [x] CI(GitHub Actions): `tsc --noEmit` + vitest + playwright(`.github/workflows/ci.yml`)
 - [x] wrangler プロジェクト雛形(staging/production 環境定義。`npm run api:dev` で共有エンジンのWorkers動作確認済み)
-- [ ] Pagesデプロイ(`npm run pages:deploy` 準備済み。**要 `wrangler login` + Pagesプロジェクト作成**)
+- [x] Pagesデプロイ(https://yokai-shogi.pages.dev/ で稼働確認済み。再デプロイは `npm run pages:deploy`)
 - [x] 画像最適化(WebP・サイズ別: 512px + 小160px。約10MB → 1.8MB)
-- 完了条件: 全既存テストgreen ✅+ブラウザでの動作が現状と同一(ui-shotスクリーンショット比較 ✅)+ Pages上で現行ゲームが動く(デプロイ待ち)
+- 完了条件: 全既存テストgreen ✅+ブラウザでの動作が現状と同一(ui-shotスクリーンショット比較 ✅)+ Pages上で現行ゲームが動く ✅ → **Phase 0 / M0 完了(2026-06-13)**
 
 ## Phase 1: サーバー権威メタ
 
