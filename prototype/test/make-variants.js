@@ -1,6 +1,6 @@
 /* ガチャ限定妖怪(色違いバリアント)画像の生成
    processed/ の透過済み画像に色フィルタをかけて新妖怪の画像を作る
-   node test/make-variants.js */
+   node prototype/test/make-variants.js */
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');

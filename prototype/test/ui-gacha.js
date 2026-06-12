@@ -1,4 +1,4 @@
-/* ガチャ・編成UIの検証: node test/ui-gacha.js */
+/* ガチャ・編成UIの検証: node prototype/test/ui-gacha.js */
 const path = require('path');
 const { chromium } = require('playwright');
 
@@ -16,21 +16,21 @@ const { chromium } = require('playwright');
   await page.waitForSelector('#screen-title.active', { timeout: 30000 });
   await page.waitForSelector('#modal-login:not(.hidden)', { timeout: 5000 });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test/shot-g1-login.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g1-login.png') });
   await page.click('#btn-login-ok');
   await page.waitForTimeout(400);
-  await page.screenshot({ path: 'test/shot-g2-title.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g2-title.png') });
 
   /* ガチャ画面 → 10連(初回10枚+ログボ1枚=11枚あるはず) */
   await page.click('#btn-gacha');
   await page.waitForSelector('#screen-gacha.active');
   await page.waitForTimeout(400);
-  await page.screenshot({ path: 'test/shot-g3-gacha.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g3-gacha.png') });
 
   await page.click('#btn-pull10');
   await page.waitForSelector('#gacha-result:not(.hidden)');
   await page.waitForTimeout(1800);
-  await page.screenshot({ path: 'test/shot-g4-pull10.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g4-pull10.png') });
   const cards = await page.locator('.gacha-card').count();
   if (cards !== 10) errors.push(`10連の結果が${cards}枚`);
   await page.click('#btn-gacha-ok');
@@ -43,7 +43,7 @@ const { chromium } = require('playwright');
   await page.click('#btn-pull1');
   await page.waitForSelector('#gacha-result:not(.hidden)');
   await page.waitForTimeout(700);
-  await page.screenshot({ path: 'test/shot-g5-pull1.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g5-pull1.png') });
   await page.click('#btn-gacha-ok');
   const disabled = await page.evaluate(() => $('btn-pull1').disabled && $('btn-pull10').disabled);
   if (!disabled) errors.push('チケット0でボタンが無効化されていない');
@@ -55,7 +55,7 @@ const { chromium } = require('playwright');
   await page.click('#btn-formation');
   await page.waitForSelector('#screen-formation.active');
   await page.waitForTimeout(400);
-  await page.screenshot({ path: 'test/shot-g6-formation.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g6-formation.png') });
 
   /* 九尾を外して玉藻前を配置(大将マスは grid index 7 = 最奥中央) */
   await page.evaluate(() => {
@@ -66,11 +66,11 @@ const { chromium } = require('playwright');
     MenuUI.renderFormation();
   });
   await page.waitForTimeout(300);
-  await page.screenshot({ path: 'test/shot-g7-form-edited.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g7-form-edited.png') });
   await page.click('#btn-form-back');
   await page.waitForSelector('#screen-title.active');
   await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test/shot-g8-title-tamamo.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g8-title-tamamo.png') });
 
   const bossName = await page.evaluate(() => document.getElementById('title-vs-p').textContent);
   if (bossName !== '玉藻前') errors.push(`タイトルの大将名が「${bossName}」(期待: 玉藻前)`);
@@ -79,7 +79,7 @@ const { chromium } = require('playwright');
   await page.click('#btn-start');
   await page.waitForSelector('#screen-battle.active');
   await page.waitForTimeout(1400);
-  await page.screenshot({ path: 'test/shot-g9-battle.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-g9-battle.png') });
   const placed = await page.evaluate(() => G.board[5][2].id);
   if (placed !== 'tamamo') errors.push(`盤面の大将が${placed}(期待: tamamo)`);
 

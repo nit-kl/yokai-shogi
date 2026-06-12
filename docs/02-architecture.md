@@ -55,14 +55,14 @@ HTTPS│     HTTPS│                 WSS│
 
 ## エンジン共有戦略(最重要)
 
-現状 `js/game.js` / `js/data.js` はグローバル定義のJS。Phase 0で **TypeScript ESMモジュール**に移植する。
+現状 `prototype/js/game.js` / `prototype/js/data.js` はグローバル定義のJS。Phase 0で **TypeScript ESMモジュール**に移植する。
 
 ```
 shared/             ← クライアント・Workers・DOの全てから import
   data.ts           (妖怪マスタ・型定義: YokaiDef, Skill, Rarity ...)
   game.ts           (エンジン: GameState, Action, GameEvent の型と純粋ロジック)
   validate.ts       (編成検証などクライアント/サーバー共用の検証)
-client/             ← 現 js/(main, menu, effects, audio, ai)をTS化
+client/             ← 現 prototype/js/(main, menu, effects, audio, ai)をTS化
 server/
   api/              (Hono: 認証・ガチャ・編成・戦績)
   do/               (BattleRoom / Matchmaker Durable Objects)

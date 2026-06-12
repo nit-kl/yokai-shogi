@@ -1,4 +1,4 @@
-/* 新スキル(妨・援・化・爆)の動作テスト: node test/skills-test.js */
+/* 新スキル(妨・援・化・爆)の動作テスト: node prototype/test/skills-test.js */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');

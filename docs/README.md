@@ -9,7 +9,7 @@
 - Webブラウザ向けを先行し、ネイティブアプリは当面スコープ外(PWA対応で代替)
 - **インフラはCloudflareに統一**: Pages(配信)/ Workers(API)/ Durable Objects(対戦)/ D1(DB)/ KV・Cron・Turnstile(補助)
 - **言語はTypeScriptに統一**(client / server / shared)。Phase 0の構造改修と同時に移行する
-- 既存資産の最大活用: `js/game.js` のルールエンジンは依存ゼロのピュアJSであり、**クライアントとサーバーで同一コードを共有**できる。これが全設計の土台になる
+- 既存資産の最大活用: `prototype/js/game.js` のルールエンジンは依存ゼロのピュアJSであり、**クライアントとサーバーで同一コードを共有**できる。これが全設計の土台になる
 
 ## ドキュメント一覧
 
@@ -37,12 +37,12 @@
 ## 現状コードベースの概要(2026-06時点)
 
 ```
-index.html / css/style.css   画面・スタイル(ビルド不要のバニラ構成)
-js/data.js    妖怪27種(8タイプ・4レアリティ)・初期配置・ガチャプール定義
-js/game.js    ルールエンジン(合法手・ダメージ・スキル8種・成り・持ち駒)※依存ゼロ
-js/ai.js      ソロ用AI(期待値評価+脅威差し引き)
-js/meta.js    メタ進行(セーブ・ガチャ抽選・ログボ・編成)※現状localStorage
-js/menu.js    ガチャ・編成・ログボUI
-js/main.js    対戦UIコントローラ
-test/         エンジン・スキル・メタ・UIの自動テスト(node + playwright)
+prototype/index.html / css/style.css   画面・スタイル(ビルド不要のバニラ構成)
+prototype/js/data.js    妖怪27種(8タイプ・4レアリティ)・初期配置・ガチャプール定義
+prototype/js/game.js    ルールエンジン(合法手・ダメージ・スキル8種・成り・持ち駒)※依存ゼロ
+prototype/js/ai.js      ソロ用AI(期待値評価+脅威差し引き)
+prototype/js/meta.js    メタ進行(セーブ・ガチャ抽選・ログボ・編成)※現状localStorage
+prototype/js/menu.js    ガチャ・編成・ログボUI
+prototype/js/main.js    対戦UIコントローラ
+prototype/test/         エンジン・スキル・メタ・UIの自動テスト(node + playwright)
 ```

@@ -30,7 +30,7 @@ durable_objects.bindings = [{ name = "BATTLE", class_name = "BattleRoom" }, ...]
 | Sentry(クライアント) | エラートラッキング | 無料枠 |
 | UptimeRobot | 外形監視 | 無料 |
 
-- 駒画像は計5MB超(512px PNG ×30枚)。**WebP変換+複数サイズ生成**をアセットパイプライン(`test/process-images.js` 系列)に追加し、Pagesの長期キャッシュで配信(初回ロード改善はリリース必須タスク)
+- 駒画像は計5MB超(512px PNG ×30枚)。**WebP変換+複数サイズ生成**をアセットパイプライン(`prototype/test/process-images.js` 系列)に追加し、Pagesの長期キャッシュで配信(初回ロード改善はリリース必須タスク)
 
 ## CI/CD(GitHub Actions)
 

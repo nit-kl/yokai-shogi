@@ -4,10 +4,10 @@
 
 | テスト | 内容 | オンライン化後の位置づけ |
 |---|---|---|
-| test/engine-test.js | ランダム自己対局200局の整合性 | **サーバーの対局エンジン検証**としてそのまま昇格(共有コードのため) |
-| test/skills-test.js | 妨・援・化・爆スキルの決定的検証 | 同上。新スキル追加時の回帰テスト |
-| test/meta-test.js | ガチャ排出率・ログボ・編成・セーブ | 抽選ロジックのサーバー移植後も同じ検証を流用 |
-| test/ui-shot / ui-gacha / ui-skills / ui-fx | playwright実ブラウザ検証 | クライアントの回帰テスト |
+| prototype/test/engine-test.js | ランダム自己対局200局の整合性 | **サーバーの対局エンジン検証**としてそのまま昇格(共有コードのため) |
+| prototype/test/skills-test.js | 妨・援・化・爆スキルの決定的検証 | 同上。新スキル追加時の回帰テスト |
+| prototype/test/meta-test.js | ガチャ排出率・ログボ・編成・セーブ | 抽選ロジックのサーバー移植後も同じ検証を流用 |
+| prototype/test/ui-shot / ui-gacha / ui-skills / ui-fx | playwright実ブラウザ検証 | クライアントの回帰テスト |
 
 > 設計上の利点: エンジン・抽選ロジックが純粋関数的でNode上で完結するため、**最重要ロジックのテストが既に高速・決定的**。この性質(Web標準APIのみ・Node API非依存)を壊さないことをレビュー基準にする(Workersで動く条件でもある)。
 

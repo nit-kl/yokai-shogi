@@ -1,14 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node test/ui-shot.js)",
-      "Bash(node test/ui-fx.js)",
-      "Bash(node test/engine-test.js)",
-      "Bash(node test/meta-test.js)",
-      "Bash(node test/ui-gacha.js)",
-      "Bash(node test/process-images.js)",
-      "Bash(node test/skills-test.js)",
-      "Bash(node test/ui-skills.js)"
+      "Bash(node prototype/test/ui-shot.js)",
+      "Bash(node prototype/test/ui-fx.js)",
+      "Bash(node prototype/test/engine-test.js)",
+      "Bash(node prototype/test/meta-test.js)",
+      "Bash(node prototype/test/ui-gacha.js)",
+      "Bash(node prototype/test/process-images.js)",
+      "Bash(node prototype/test/skills-test.js)",
+      "Bash(node prototype/test/ui-skills.js)"
     ]
   }
 }

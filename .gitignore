@@ -2,9 +2,9 @@
 node_modules/
 
 # テスト生成物(スクリーンショット)
-test/shot-*.png
-test/fx-*.png
-test/_tmp-*.js
+prototype/test/shot-*.png
+prototype/test/fx-*.png
+prototype/test/_tmp-*.js
 
 # ビルド成果物(Phase 0以降: Vite / wrangler)
 dist/

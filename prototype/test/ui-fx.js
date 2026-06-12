@@ -1,4 +1,4 @@
-/* 演出検証: node test/ui-fx.js */
+/* 演出検証: node prototype/test/ui-fx.js */
 const path = require('path');
 const { chromium } = require('playwright');
 
@@ -22,7 +22,7 @@ const { chromium } = require('playwright');
   // カットイン(スキル)
   await page.evaluate(() => { FX.cutin(YOKAI.kyubi.img, '妖狐の業火', 'ダメージ2倍!', 'boss'); });
   await page.waitForTimeout(650);
-  await page.screenshot({ path: 'test/fx-1-cutin.png' });
+  await page.screenshot({ path: path.join(__dirname, 'fx-1-cutin.png') });
   await page.waitForTimeout(1000);
 
   // 撃破バースト+ダメージ数字+シェイク
@@ -35,23 +35,23 @@ const { chromium } = require('playwright');
     FX.floatLabel(c.x, c.y - 70, '3 COMBO!', '#6bd6ff');
   });
   await page.waitForTimeout(350);
-  await page.screenshot({ path: 'test/fx-2-hit.png' });
+  await page.screenshot({ path: path.join(__dirname, 'fx-2-hit.png') });
 
   // 罠カットイン
   await page.evaluate(() => { FX.cutin(YOKAI.tengu.img, '神隠しの返し風', '反撃ダメージ 300!', 'counter'); });
   await page.waitForTimeout(650);
-  await page.screenshot({ path: 'test/fx-3-counter.png' });
+  await page.screenshot({ path: path.join(__dirname, 'fx-3-counter.png') });
   await page.waitForTimeout(1000);
 
   // リザルト(勝利)
   await page.evaluate(() => { G.winner = 'p'; G.reason = 'boss'; showResult(); });
   await page.waitForTimeout(900);
-  await page.screenshot({ path: 'test/fx-4-result.png' });
+  await page.screenshot({ path: path.join(__dirname, 'fx-4-result.png') });
 
   // ルールモーダル
   await page.evaluate(() => { document.getElementById('modal-rules').classList.remove('hidden'); });
   await page.waitForTimeout(400);
-  await page.screenshot({ path: 'test/fx-5-rules.png' });
+  await page.screenshot({ path: path.join(__dirname, 'fx-5-rules.png') });
 
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'NO PAGE ERRORS');
   await browser.close();

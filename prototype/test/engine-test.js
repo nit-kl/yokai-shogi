@@ -1,4 +1,4 @@
-/* エンジン自動対局テスト: node test/engine-test.js */
+/* エンジン自動対局テスト: node prototype/test/engine-test.js */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');

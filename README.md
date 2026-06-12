@@ -3,12 +3,19 @@
 逆転オセロニア風のバトルシステムを将棋に融合させたWebゲーム。
 **駒を取ると、取った駒の攻撃力ぶん相手の「魂力(HP)」にダメージ**が入る。
 
-## 遊び方
-
-`index.html` をブラウザで開くだけで遊べます(ビルド・サーバー不要)。
+## リポジトリ構成
 
 ```
-start index.html
+prototype/   ローカル1人用プロトタイプ(ビルド不要のバニラHTML/JS)
+docs/        オンライン対戦版リリースに向けた設計・計画ドキュメント
+```
+
+## 遊び方
+
+`prototype/index.html` をブラウザで開くだけで遊べます(ビルド・サーバー不要)。
+
+```
+start prototype/index.html
 ```
 
 ### ルール概要
@@ -44,21 +51,22 @@ start index.html
 - **編成**: タイトルの「編成」から、所持妖怪で自軍2段(10マス)を自由に配置。大将1体が必須。
 - 進行データは `localStorage` に保存(サーバー不要)。
 
-## 構成
+## プロトタイプ構成
 
 ```
-index.html        エントリポイント
-css/style.css     スタイル・アニメーション定義
-js/data.js        妖怪(駒)データ・初期配置
-js/game.js        ルールエンジン(合法手・ダメージ計算・成り・持ち駒)
-js/ai.js          敵AI(期待値評価+脅威差し引きの貪欲法)
-js/audio.js       WebAudio合成のSE/BGM(音源ファイル不要)
-js/effects.js     パーティクル・カットイン・ダメージ数字等の演出
-js/meta.js        メタ進行(セーブ・ガチャ抽選・ログインボーナス・編成)
-js/menu.js        ガチャ・編成・ログインボーナスのUI
-js/main.js        UIコントローラ
-assets/pieces/    元画像(背景焼き込みあり)
-assets/pieces/processed/  ゲームで使用する透過・縮小済み画像(色違いバリアント含む)
+prototype/index.html        エントリポイント
+prototype/css/style.css     スタイル・アニメーション定義
+prototype/js/data.js        妖怪(駒)データ・初期配置
+prototype/js/game.js        ルールエンジン(合法手・ダメージ計算・成り・持ち駒)
+prototype/js/ai.js          敵AI(期待値評価+脅威差し引きの貪欲法)
+prototype/js/audio.js       WebAudio合成のSE/BGM(音源ファイル不要)
+prototype/js/effects.js     パーティクル・カットイン・ダメージ数字等の演出
+prototype/js/meta.js        メタ進行(セーブ・ガチャ抽選・ログインボーナス・編成)
+prototype/js/menu.js        ガチャ・編成・ログインボーナスのUI
+prototype/js/main.js        UIコントローラ
+prototype/assets/pieces/    元画像(背景焼き込みあり)
+prototype/assets/pieces/processed/  ゲームで使用する透過・縮小済み画像(色違いバリアント含む)
+prototype/test/             エンジン・UIの自動テスト
 ```
 
 ## 開発ドキュメント
@@ -69,13 +77,13 @@ assets/pieces/processed/  ゲームで使用する透過・縮小済み画像(�
 ## 開発用スクリプト(要 `npm i --no-save playwright`)
 
 ```
-node test/engine-test.js      # エンジン自動対局200局の整合性テスト
-node test/skills-test.js      # 妨・援・化・爆スキルの動作テスト
-node test/meta-test.js        # ガチャ・ログボ・編成ロジックのテスト
-node test/ui-shot.js          # UIスクリーンショット検証
-node test/ui-gacha.js         # ガチャ・編成画面の動作検証
-node test/ui-skills.js        # 新スキル演出の検証
-node test/ui-fx.js            # カットイン等の演出検証
-node test/process-images.js   # assets元画像から透過駒画像を再生成
-node test/make-variants.js    # ガチャ限定妖怪の色違い画像を再生成
+node prototype/test/engine-test.js      # エンジン自動対局200局の整合性テスト
+node prototype/test/skills-test.js      # 妨・援・化・爆スキルの動作テスト
+node prototype/test/meta-test.js        # ガチャ・ログボ・編成ロジックのテスト
+node prototype/test/ui-shot.js          # UIスクリーンショット検証
+node prototype/test/ui-gacha.js         # ガチャ・編成画面の動作検証
+node prototype/test/ui-skills.js        # 新スキル演出の検証
+node prototype/test/ui-fx.js            # カットイン等の演出検証
+node prototype/test/process-images.js   # assets元画像から透過駒画像を再生成
+node prototype/test/make-variants.js    # ガチャ限定妖怪の色違い画像を再生成
 ```

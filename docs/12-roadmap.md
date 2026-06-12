@@ -18,7 +18,7 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 ゴール: 「WorkersとクライアントがTypeScriptの同じエンジンをimportできる」状態。**見た目・挙動は一切変えない**。
 
 - [ ] **gitリポジトリ化**(現状未管理)・GitHub・ブランチ運用(main + PR)
-- [ ] Vite導入、`js/` を **TypeScript ESM** に移植して `shared/`(data, game)と `client/` に分離
+- [ ] Vite導入、`prototype/js/` を **TypeScript ESM** に移植して `shared/`(data, game)と `client/` に分離
   - 順序: ① `shared/` を先にTS化(型定義 = 後のプロトコル型)→ ② client側は `// @ts-check` で受けて段階的にTS化(UIの型付けは完璧を目指さない)
 - [ ] エンジン改修(doc 02): `applyAction` の乱数注入化・`_uid` の状態オブジェクト移動・Web標準APIのみ縛りの明文化
 - [ ] 既存テストを vitest へ移植(vm読み込み → import。アサーション内容は維持)

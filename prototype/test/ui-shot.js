@@ -1,4 +1,4 @@
-/* UIスクリーンショット検証: node test/ui-shot.js */
+/* UIスクリーンショット検証: node prototype/test/ui-shot.js */
 const path = require('path');
 const { chromium } = require('playwright');
 
@@ -20,24 +20,24 @@ const { chromium } = require('playwright');
     await page.click('#btn-login-ok');
     await page.waitForTimeout(300);
   }
-  await page.screenshot({ path: 'test/shot-1-title.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-1-title.png') });
 
   // 開戦
   await page.click('#btn-start');
   await page.waitForSelector('#screen-battle.active');
   await page.waitForTimeout(1400);
-  await page.screenshot({ path: 'test/shot-2-battle.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-2-battle.png') });
 
   // 小鬼(x=1,y=4)を選択 → 移動ハイライト確認
   const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
   await cell(1, 4).click();
   await page.waitForTimeout(400);
-  await page.screenshot({ path: 'test/shot-3-select.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-3-select.png') });
 
   // (1,3)へ移動 → AIの応手まで待つ
   await cell(1, 3).click();
   await page.waitForTimeout(3500);
-  await page.screenshot({ path: 'test/shot-4-after-ai.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-4-after-ai.png') });
 
   // 数手自動で進めて戦闘演出を撮る(取れる手を優先)
   for (let i = 0; i < 14; i++) {
@@ -52,18 +52,18 @@ const { chromium } = require('playwright');
       return false;
     });
     await page.waitForTimeout(2500);
-    if (acted && i === 6) await page.screenshot({ path: 'test/shot-5-midgame.png' });
+    if (acted && i === 6) await page.screenshot({ path: path.join(__dirname, 'shot-5-midgame.png') });
     const over = await page.evaluate(() => G && !!G.winner);
     if (over) break;
   }
-  await page.screenshot({ path: 'test/shot-6-late.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-6-late.png') });
 
   // ルールモーダル
   const inBattle = await page.evaluate(() => !G.winner);
   if (inBattle) {
     await page.click('#btn-rules2');
     await page.waitForTimeout(500);
-    await page.screenshot({ path: 'test/shot-7-rules.png' });
+    await page.screenshot({ path: path.join(__dirname, 'shot-7-rules.png') });
   }
 
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'NO PAGE ERRORS');

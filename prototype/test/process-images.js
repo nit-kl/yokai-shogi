@@ -1,5 +1,5 @@
 /* 駒画像の背景(焼き込みチェッカー)除去 → 透過PNG生成
-   node test/process-images.js */
+   node prototype/test/process-images.js */
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');

@@ -1,4 +1,4 @@
-/* 新スキル演出の検証: node test/ui-skills.js */
+/* 新スキル演出の検証: node prototype/test/ui-skills.js */
 const path = require('path');
 const { chromium } = require('playwright');
 
@@ -33,7 +33,7 @@ const { chromium } = require('playwright');
   const healed = await page.evaluate(() => G.hp.p);
   if (healed !== 2250) errors.push(`回復が反映されていない: ${healed}(期待2250)`);
   await page.waitForTimeout(1300);
-  await page.screenshot({ path: 'test/shot-s1-heal.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-s1-heal.png') });
   await page.waitForTimeout(3500); // AI応手を待つ
 
   /* 鬼火の道連れ演出(プレイヤーが敵の鬼火を取ってしまう) */
@@ -45,9 +45,9 @@ const { chromium } = require('playwright');
     doAction({ kind: 'move', from: { x: 1, y: 3 }, to: { x: 1, y: 2 } });
   });
   await page.waitForTimeout(1100);
-  await page.screenshot({ path: 'test/shot-s2-explode-cutin.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-s2-explode-cutin.png') });
   await page.waitForTimeout(2200);
-  await page.screenshot({ path: 'test/shot-s3-explode-after.png' });
+  await page.screenshot({ path: path.join(__dirname, 'shot-s3-explode-after.png') });
 
   const gone = await page.evaluate(() => G.board[2][1] === null && !G.hands.p.onibi);
   if (!gone) errors.push('道連れ処理が盤面に反映されていない');
