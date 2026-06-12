@@ -5,6 +5,8 @@ node_modules/
 prototype/test/shot-*.png
 prototype/test/fx-*.png
 prototype/test/_tmp-*.js
+test/e2e/shot-*.png
+test/e2e/fx-*.png
 
 # ビルド成果物(Phase 0以降: Vite / wrangler)
 dist/

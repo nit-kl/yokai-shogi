@@ -1,0 +1,23 @@
+// 妖怪将棋 API(Cloudflare Workers)- Phase 0 雛形
+// 実装は Phase 1(Hono + D1)から。doc 02 / 09 参照
+// ローカル開発: npm run api:dev
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "yokai-shogi-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+  // 日本向けのためDOは東京近傍に配置予定(Phase 2でlocation hint設定)
+  "observability": {
+    "enabled": true
+  },
+  "env": {
+    // ステージング: wrangler deploy --env staging
+    "staging": {
+      "name": "yokai-shogi-api-staging"
+    },
+    // 本番: wrangler deploy --env production
+    "production": {
+      "name": "yokai-shogi-api-production"
+    }
+  }
+}
