@@ -1,0 +1,28 @@
+# 依存(package-lock.json はコミットする: docs/07 のlockfile方針)
+node_modules/
+
+# テスト生成物(スクリーンショット)
+test/shot-*.png
+test/fx-*.png
+test/_tmp-*.js
+
+# ビルド成果物(Phase 0以降: Vite / wrangler)
+dist/
+.wrangler/
+
+# 環境変数・シークレット
+.env
+.env.*
+.dev.vars
+
+# ログ
+*.log
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# エディタ
+.vscode/
+.idea/

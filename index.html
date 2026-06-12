@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>妖怪将棋 〜百鬼夜行の盤上決戦〜</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👹</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ローディング画面 -->
+  <div id="screen-loading" class="screen active">
+    <div class="loading-inner">
+      <div class="loading-mark">妖</div>
+      <div class="loading-label">百鬼召喚中…</div>
+      <div class="loading-bar"><div id="loading-fill"></div></div>
+      <div id="loading-pct">0%</div>
+    </div>
+  </div>
+
+  <!-- タイトル画面 -->
+  <div id="screen-title" class="screen">
+    <div class="fog fog-a"></div>
+    <div class="fog fog-b"></div>
+    <div class="title-bosses">
+      <img id="title-boss-l" src="" alt="九尾の狐" draggable="false">
+      <img id="title-boss-r" src="" alt="酒呑童子" draggable="false">
+    </div>
+    <div class="title-currency">
+      <span class="cur-tickets">🎟 ×0</span>
+      <span class="cur-yoryoku">妖力 0</span>
+    </div>
+    <div class="title-center">
+      <div class="title-sub-top">百鬼夜行の盤上決戦</div>
+      <h1 class="title-logo">妖怪将棋</h1>
+      <div class="title-vs"><span id="title-vs-p" class="vs-name">九尾の狐</span> <span class="vs-mark">VS</span> 酒呑童子</div>
+      <div class="title-buttons">
+        <button id="btn-start" class="btn btn-gold">開 戦</button>
+        <button id="btn-rules" class="btn btn-dark">遊び方</button>
+      </div>
+      <div class="title-buttons title-buttons-sub">
+        <button id="btn-gacha" class="btn btn-dark btn-sub">妖怪ガチャ</button>
+        <button id="btn-formation" class="btn btn-dark btn-sub">編 成</button>
+      </div>
+    </div>
+    <div class="title-foot">駒を取って相手の魂力を削れ ― 魂力0か大将討伐で勝利</div>
+  </div>
+
+  <!-- ガチャ画面 -->
+  <div id="screen-gacha" class="screen">
+    <div class="menu-col">
+      <div class="menu-head">
+        <button id="btn-gacha-back" class="tool-btn" title="戻る">←</button>
+        <h2 class="menu-title">妖怪ガチャ</h2>
+        <div class="currency">
+          <span class="cur-tickets">🎟 ×0</span>
+          <span class="cur-yoryoku">妖力 0</span>
+        </div>
+      </div>
+      <div class="gacha-center">
+        <div class="gacha-orb"><span>召</span></div>
+        <div class="gacha-note">チケットはログインボーナスと勝利報酬で手に入る</div>
+        <div class="title-buttons">
+          <button id="btn-pull1" class="btn btn-gold">1回召喚<small>チケット1枚</small></button>
+          <button id="btn-pull10" class="btn btn-gold">10連召喚<small>10枚・SR以上確定</small></button>
+        </div>
+        <button id="btn-exchange" class="btn btn-dark btn-sub">妖力300 → チケット1枚</button>
+        <div class="gacha-rates">排出率: N 40% / R 40% / SR 16% / SSR 4% ・ 被りは妖力に変換</div>
+      </div>
+    </div>
+    <!-- 召喚結果 -->
+    <div id="gacha-result" class="hidden">
+      <div id="gacha-cards" class="gacha-cards"></div>
+      <button id="btn-gacha-ok" class="btn btn-gold">OK</button>
+    </div>
+  </div>
+
+  <!-- 編成画面 -->
+  <div id="screen-formation" class="screen">
+    <div class="menu-col">
+      <div class="menu-head">
+        <button id="btn-form-back" class="tool-btn" title="保存して戻る">←</button>
+        <h2 class="menu-title">編 成</h2>
+        <button id="btn-form-reset" class="btn btn-dark btn-sub">初期配置</button>
+      </div>
+      <div class="form-zone-label">⬆ 敵陣方向</div>
+      <div id="form-grid"></div>
+      <div id="form-info" class="form-info"></div>
+      <div id="form-bench"></div>
+      <div id="form-error"></div>
+    </div>
+  </div>
+
+  <!-- バトル画面 -->
+  <div id="screen-battle" class="screen">
+    <div class="battle-col">
+
+      <div id="enemy-hud" class="hud hud-enemy">
+        <div class="hud-avatar"><img id="enemy-avatar" src="" alt="酒呑童子" draggable="false"></div>
+        <div class="hud-mid">
+          <div class="hud-name"><span class="hud-side-tag tag-enemy">敵将</span>酒呑童子</div>
+          <div class="hp-bar hp-enemy">
+            <div class="hp-ghost" id="enemy-hp-ghost"></div>
+            <div class="hp-fill" id="enemy-hp-fill"></div>
+            <div class="hp-text" id="enemy-hp-text">3000 / 3000</div>
+          </div>
+          <div class="hand-tray" id="enemy-hand"></div>
+        </div>
+        <div class="combo-badge" id="enemy-combo"></div>
+      </div>
+
+      <div id="board-wrap">
+        <div id="board-frame">
+          <div id="board-cells"></div>
+          <div id="board-pieces"></div>
+        </div>
+        <div id="turn-banner"></div>
+        <div id="thinking" class="hidden"><span></span>相手思考中…</div>
+      </div>
+
+      <div id="piece-info" class="hidden">
+        <img id="info-img" src="" alt="">
+        <div class="info-body">
+          <div class="info-line1"><span id="info-type" class="type-chip"></span><span id="info-name"></span><span id="info-atk"></span></div>
+          <div class="info-skill"><span id="info-skill-name"></span><span id="info-skill-desc"></span></div>
+        </div>
+      </div>
+
+      <div id="player-hud" class="hud hud-player">
+        <div class="hud-avatar"><img id="player-avatar" src="" alt="九尾の狐" draggable="false"></div>
+        <div class="hud-mid">
+          <div class="hud-name"><span class="hud-side-tag tag-player">自軍</span><span id="player-name">九尾の狐</span></div>
+          <div class="hp-bar hp-player">
+            <div class="hp-ghost" id="player-hp-ghost"></div>
+            <div class="hp-fill" id="player-hp-fill"></div>
+            <div class="hp-text" id="player-hp-text">3000 / 3000</div>
+          </div>
+          <div class="hand-tray" id="player-hand"></div>
+        </div>
+        <div class="combo-badge" id="player-combo"></div>
+      </div>
+
+      <div class="battle-tools">
+        <button id="btn-mute" class="tool-btn" title="サウンド">🔊</button>
+        <button id="btn-resign" class="tool-btn" title="投了">🏳</button>
+        <button id="btn-rules2" class="tool-btn" title="遊び方">❔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- リザルト画面 -->
+  <div id="screen-result" class="screen">
+    <div class="result-inner">
+      <img id="result-boss" src="" alt="" draggable="false">
+      <div id="result-title"></div>
+      <div id="result-sub"></div>
+      <div id="result-reward" class="hidden"></div>
+      <div class="title-buttons">
+        <button id="btn-retry" class="btn btn-gold">再 戦</button>
+        <button id="btn-title" class="btn btn-dark">タイトルへ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- スキルカットイン -->
+  <div id="cutin" class="hidden">
+    <div class="cutin-bg"></div>
+    <div class="cutin-lines"></div>
+    <img id="cutin-img" src="" alt="" draggable="false">
+    <div class="cutin-texts">
+      <div id="cutin-name"></div>
+      <div id="cutin-sub"></div>
+    </div>
+  </div>
+
+  <!-- ログインボーナスモーダル -->
+  <div id="modal-login" class="modal hidden">
+    <div class="modal-box login-box">
+      <h2>ログインボーナス</h2>
+      <div class="login-day">連続ログイン <b id="login-day">1</b> 日目</div>
+      <div class="login-reward">🎟 ガチャチケット <b id="login-tickets">×1</b></div>
+      <div id="login-next" class="login-next"></div>
+      <button id="btn-login-ok" class="btn btn-gold">受け取る</button>
+    </div>
+  </div>
+
+  <!-- ルールモーダル -->
+  <div id="modal-rules" class="modal hidden">
+    <div class="modal-box">
+      <h2>遊び方</h2>
+      <div class="rules-scroll">
+        <p><b>勝利条件:</b> 相手の<b>魂力(HP)を0</b>にするか、相手の<b>大将(ボス駒)を取る</b>と勝ち。</p>
+        <p><b>ダメージ:</b> 敵の駒を取ると、<b>取った駒の攻撃力</b>ぶん相手の魂力にダメージ!</p>
+        <p><b>コンボ:</b> 自分の手番で連続して駒を取り続けるとダメージ倍率上昇(最大2倍)。取らない手を指すとリセット。</p>
+        <p><b>持ち駒:</b> 取った敵の妖怪は自分の配下に。手駒をタップして空きマスに召喚できる。</p>
+        <p><b>成り:</b> 敵陣(奥2段)に入ると自動で<b>成り</b>、攻撃力1.5倍&amp;動きが強化される。</p>
+        <h3>妖怪タイプ</h3>
+        <p><span class="type-chip t-attack">攻</span> 戦闘スキル持ち。取った時に追加ダメージや会心が発動。</p>
+        <p><span class="type-chip t-defense">守</span> 盤上にいる間、自軍が受けるダメージを軽減する。</p>
+        <p><span class="type-chip t-ambush">罠</span> <b>取られた時</b>、取った相手に反撃ダメージ!</p>
+        <p><span class="type-chip t-debuff">妨</span> 盤上にいる間、敵軍を弱体化(コンボ無効・会心封じ・与ダメ減)。</p>
+        <p><span class="type-chip t-support">援</span> 駒を取った時、自軍の魂力を回復する。</p>
+        <p><span class="type-chip t-transform">化</span> <b>取られた時</b>に化かす。ダメージ半減&amp;相手の持ち駒にならない。</p>
+        <p><span class="type-chip t-trap">爆</span> <b>取られた時</b>、取った駒を道連れに消滅。大将で取ると即敗北!</p>
+        <p><span class="type-chip t-boss">大将</span> 王将。取られたら即敗北。会心スキル持ち。</p>
+        <h3>駒の動き</h3>
+        <div id="rules-pieces"></div>
+      </div>
+      <button id="btn-close-rules" class="btn btn-gold">閉じる</button>
+    </div>
+  </div>
+
+  <canvas id="fx-canvas"></canvas>
+  <div id="fx-layer"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
