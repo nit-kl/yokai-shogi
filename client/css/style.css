@@ -1035,6 +1035,10 @@ html, body {
 }
 .title-link-btn:hover { background: rgba(40, 32, 56, 0.85); }
 .link-box { max-width: 440px; text-align: center; }
+.online-box { max-width: 440px; text-align: center; gap: 0.8rem; }
+.online-code-row { display: flex; gap: 0.6rem; justify-content: center; }
+.online-code-row input { width: 10rem; text-align: center; letter-spacing: 0.18em; text-transform: uppercase; }
+#online-status { color: #fff2a8; font-size: 0.78rem; padding: 0.35rem 0.6rem; background: rgba(0,0,0,0.55); border-radius: 999px; }
 .link-desc { font-size: 0.82rem; line-height: 1.6; color: #d8d2e4; margin: 0.6em 0; }
 .link-code {
   font-family: ui-monospace, "Courier New", monospace;

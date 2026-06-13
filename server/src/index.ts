@@ -13,8 +13,17 @@ import { meRoutes } from './routes/me';
 import { gachaRoutes } from './routes/gacha';
 import { soloRoutes } from './routes/solo';
 import { runDailyJobs } from './cron';
+import { verifyJwt } from './lib/jwt';
+import { matchRoutes } from './routes/matches';
+import { BattleRoom } from './do/battle-room';
+import { Matchmaker } from './do/matchmaker';
 
 const app = new Hono<AppEnv>();
+
+app.use('/v1/*', async (c, next) => {
+  if (c.env.MAINTENANCE === '1') return apiError(c, 'MAINTENANCE', 'メンテナンス中です');
+  await next();
+});
 
 /* CORS: 許可オリジンは環境変数で管理(doc 07) */
 app.use('*', async (c, next) => {
@@ -36,7 +45,7 @@ app.get('/healthz', async c => {
   }
 });
 
-app.get('/', c => c.json({ ok: true, service: 'yokai-shogi-api', phase: 1 }));
+app.get('/', c => c.json({ ok: true, service: 'yokai-shogi-api', phase: 2 }));
 
 /* v1 API(doc 04) */
 const v1 = new Hono<AppEnv>();
@@ -44,6 +53,7 @@ v1.route('/', authRoutes);
 v1.route('/', meRoutes);
 v1.route('/', gachaRoutes);
 v1.route('/', soloRoutes);
+v1.route('/', matchRoutes);
 app.route('/v1', v1);
 
 app.notFound(c => apiError(c, 'VALIDATION', '不明なエンドポイントです'));
@@ -52,8 +62,31 @@ app.onError((err, c) => {
   return apiError(c, 'INTERNAL', 'サーバーエラーが発生しました');
 });
 
+async function battleGateway(request: Request, env: Env): Promise<Response> {
+  if (env.MAINTENANCE === '1') return new Response('Maintenance', { status: 503 });
+  const url = new URL(request.url);
+  if (url.searchParams.get('v') !== '1') return new Response('Unsupported protocol version', { status: 400 });
+  const claims = await verifyJwt(url.searchParams.get('token') || '', env.JWT_SECRET);
+  if (!claims) return new Response('Unauthorized', { status: 401 });
+  const user = await env.DB.prepare('SELECT status FROM users WHERE id = ?1').bind(claims.sub).first<{ status: string }>();
+  if (!user || user.status !== 'active') return new Response('Unauthorized', { status: 401 });
+  const headers = new Headers(request.headers);
+  headers.set('X-User-Id', claims.sub);
+  const matchId = url.searchParams.get('matchId');
+  const stub = matchId
+    ? env.BATTLE.get(env.BATTLE.idFromName(matchId))
+    : env.MATCHMAKER.get(env.MATCHMAKER.idFromName('global'));
+  return stub.fetch(new Request(request, { headers }));
+}
+
+export { BattleRoom, Matchmaker };
+
 export default {
-  fetch: app.fetch,
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const url = new URL(request.url);
+    if (url.pathname === '/v1/battle') return battleGateway(request, env);
+    return app.fetch(request, env, ctx);
+  },
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(runDailyJobs(env));
   },

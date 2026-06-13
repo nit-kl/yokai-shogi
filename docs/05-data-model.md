@@ -143,10 +143,8 @@ CREATE TABLE login_bonus_logs (
 
 ```
 meta        : { matchId, mode, users:{p,e}, formations, rngSeed, startedAt, ruleVersion }
-state       : GameStateスナップショット(1手ごとに上書き)
-actions:<seq>: { side, action, events }       -- 終局時にD1へ転記
+runtime     : { game, timers, seq, rngState, actions[] } -- 1手ごとに1行上書き。終局時にactionsをD1へ転記
 flushed     : D1反映済みフラグ(立つまでDO側を保持・再試行)
-timers      : 持ち時間・切断猶予の期限
 ```
 
 ## マスタデータの方針
@@ -168,7 +166,7 @@ timers      : 持ち時間・切断猶予の期限
 
 | データ | バックアップ | 保持 |
 |---|---|---|
-| D1全体 | **Time Travel(30日間の任意時点復元)** が標準で効く + 週次 `wrangler d1 export` をR2へ退避 | - |
+| D1全体 | **Time Travel(Freeは7日 / Paidは30日の任意時点復元)** が標準で効く + 必要に応じて `wrangler d1 export` を退避 | - |
 | users/profiles/yokai/currency | 同上 | 退会後90日で物理削除(doc 11) |
 | match_actions | 同上 | 90日(以降は matches の集計結果のみ)。容量と相談 |
 | アプリログ | -(Workers Logs) | 30日 |

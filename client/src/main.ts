@@ -15,12 +15,20 @@ import { MenuUI } from './menu';
 import { FX } from './effects';
 import { AudioSys } from './audio';
 import { $, sleep, showScreen } from './util';
+import type { ServerBattleMessage } from '../../shared/battle';
+import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 
 let G: GameState | null = null; // ゲーム状態
 let busy = false;               // 演出中・AI思考中の入力ロック
 type Sel = { kind: 'piece'; x: number; y: number; moves: MoveTarget[] } | { kind: 'hand'; id: string; drops: Pos[] } | null;
 let sel: Sel = null;            // 選択中
 const pieceEls = new Map<number, HTMLElement>(); // uid -> DOM要素
+let online: OnlineConnection | null = null;
+let onlineSide: Side | null = null;
+let onlineMatch: { matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string } | null = null;
+let onlineEndReason: string | null = null;
+let onlineReward = 0;
+let onlineSeq = 0;
 
 const COLORS_P = ['#ffd24a', '#ff9a3c', '#fff6d8', '#ffe9a0'];
 const COLORS_E = ['#ff5d5d', '#c84aff', '#ffd0d0', '#ff9a8a'];
@@ -75,11 +83,23 @@ function enterTitle() {
   showScreen('screen-title');
   FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.05);
   MenuUI.onEnterTitle();
+  $('btn-online').classList.toggle('hidden', !Meta.online);
 }
 
 /* ---------- ボタン類 ---------- */
 function wireButtons() {
   $('btn-start').onclick = () => { AudioSys.init(); AudioSys.play('click'); startBattle(); };
+  $('btn-online').onclick = () => openOnline();
+  $('btn-online-close').onclick = () => closeOnlineModal();
+  $('btn-online-random').onclick = () => { connectMatchmaker(); online?.send({ t: 'join_queue' }); $('online-message').textContent = '対戦相手を探しています…'; };
+  $('btn-online-create').onclick = () => { connectMatchmaker(); online?.send({ t: 'create_room' }); };
+  $('btn-online-join').onclick = () => {
+    const code = $<HTMLInputElement>('online-code-input').value.trim().toUpperCase();
+    if (!code) return;
+    connectMatchmaker();
+    online?.send({ t: 'join_room', code });
+    $('online-message').textContent = 'ルームへ参加しています…';
+  };
   $('btn-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-rules2').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-close-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.add('hidden'); };
@@ -90,16 +110,125 @@ function wireButtons() {
   $('btn-resign').onclick = () => {
     if (!G || G.winner || busy) return;
     if (confirm('投了しますか?')) {
+      if (onlineSide) { online?.send({ t: 'resign' }); return; }
       G.winner = 'e'; G.reason = 'resign';
       showResult();
     }
   };
-  $('btn-retry').onclick = () => { AudioSys.play('click'); startBattle(); };
+  $('btn-retry').onclick = () => {
+    AudioSys.play('click');
+    if (onlineSide) { online?.close(); onlineSide = null; onlineMatch = null; enterTitle(); }
+    else startBattle();
+  };
   $('btn-title').onclick = () => {
     AudioSys.play('click');
     AudioSys.stopBgm();
+    online?.close();
+    online = null; onlineSide = null; onlineMatch = null;
     enterTitle();
   };
+}
+
+function openOnline() {
+  AudioSys.play('click');
+  $('online-message').textContent = '対戦方法を選んでください';
+  $('online-room-code').classList.add('hidden');
+  $('modal-online').classList.remove('hidden');
+}
+
+function closeOnlineModal() {
+  online?.close();
+  online = null;
+  $('modal-online').classList.add('hidden');
+}
+
+function connectMatchmaker() {
+  if (online) return;
+  const url = Meta.battleUrl();
+  if (!url) { $('online-message').textContent = 'オンライン接続が利用できません'; return; }
+  online = new OnlineConnection(url);
+  online.onMessage = message => { void onOnlineMessage(message); };
+  online.onState = state => {
+    if (state === 'disconnected' && onlineMatch) {
+      $('online-status').textContent = '再接続中…';
+      setTimeout(() => online?.connect({
+        matchId: onlineMatch!.matchId, reconnectToken: onlineMatch!.reconnectToken,
+      }), 1000);
+    } else if (state !== 'connected') {
+      $('online-message').textContent = state === 'error' ? '接続エラーが発生しました' : '接続が切れました';
+    }
+  };
+  online.connect();
+}
+
+async function onOnlineMessage(message: ServerBattleMessage) {
+  if (message.t === 'queued') {
+    $('online-message').textContent = `対戦相手を探しています(待機 ${message.position}番目)`;
+  } else if (message.t === 'room_created') {
+    $('online-message').textContent = 'このコードを相手に伝えてください';
+    $('online-room-code').textContent = message.code;
+    $('online-room-code').classList.remove('hidden');
+  } else if (message.t === 'error') {
+    $('online-message').textContent = message.message;
+    busy = false;
+  } else if (message.t === 'match_found') {
+    onlineSide = message.side;
+    onlineSeq = 0;
+    onlineMatch = {
+      matchId: message.matchId, reconnectToken: message.reconnectToken,
+      opponentName: message.opponent.name, opponentBossId: message.opponent.bossId,
+    };
+    $('modal-online').classList.add('hidden');
+    online!.connect({ matchId: message.matchId, reconnectToken: message.reconnectToken });
+  } else if (message.t === 'snapshot') {
+    if (!onlineSide) return;
+    const entering = !$('screen-battle').classList.contains('active');
+    const shouldRender = entering || message.seq <= onlineSeq;
+    G = stateForView(message.state, onlineSide);
+    if (entering) startOnlineBattle();
+    if (shouldRender) { renderAll(); updateHUD(); }
+    onlineSeq = message.seq;
+    busy = G.turn !== 'p';
+    $('online-status').textContent = `残り ${Math.ceil(message.remainMs / 1000)}秒`;
+  } else if (message.t === 'events') {
+    if (!onlineSide) return;
+    busy = true;
+    for (const event of eventsForView(message.events, onlineSide)) await animEvent(event);
+    renderAll();
+    updateHUD();
+    onlineSeq = message.seq;
+    if (G && !G.winner) busy = G.turn !== 'p';
+  } else if (message.t === 'your_turn') {
+    $('online-status').textContent = `あなたの手番・残り ${Math.ceil(message.remainMs / 1000)}秒`;
+    if (G?.turn === 'p') { busy = false; showBanner('p'); }
+  } else if (message.t === 'opponent_disconnected') {
+    $('online-status').textContent = `相手が切断中・猶予 ${Math.ceil(message.graceMs / 1000)}秒`;
+  } else if (message.t === 'game_end') {
+    if (!G || !onlineSide) return;
+    G.winner = message.winner === 'draw' ? null : (message.winner === onlineSide ? 'p' : 'e');
+    onlineEndReason = message.reason;
+    onlineReward = message.reward.tickets;
+    showResult();
+  }
+}
+
+function startOnlineBattle() {
+  busy = true;
+  sel = null;
+  pieceEls.forEach(el => el.remove());
+  pieceEls.clear();
+  hideInfo();
+  clearSel();
+  showScreen('screen-battle');
+  const boss = YOKAI[Meta.bossId()];
+  $<HTMLImageElement>('player-avatar').src = boss.img;
+  $('player-name').textContent = Meta.data.name;
+  $<HTMLImageElement>('enemy-avatar').src = YOKAI[onlineMatch?.opponentBossId || ENEMY_BOSS].img;
+  $('enemy-hud').querySelector('.hud-name')!.lastChild!.textContent = onlineMatch?.opponentName || '対戦相手';
+  $('online-status').classList.remove('hidden');
+  FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
+  AudioSys.init();
+  AudioSys.startBgm();
 }
 
 /* ============================== 盤の構築 ============================== */
@@ -284,6 +413,10 @@ function onHandClick(id: string) {
 
 /* ============================== 対局進行 ============================== */
 function startBattle() {
+  onlineSide = null;
+  onlineEndReason = null;
+  onlineReward = 0;
+  $('online-status').classList.add('hidden');
   G = Game.newState(Meta.formationRows());
   busy = false;
   sel = null;
@@ -310,6 +443,11 @@ async function doAction(action: Action) {
   clearSel();
   hideInfo();
   document.querySelectorAll('.cell').forEach(c => c.classList.remove('hl-last'));
+
+  if (onlineSide) {
+    online?.send({ t: 'action', action: actionToServer(action, onlineSide) });
+    return;
+  }
 
   const events = Game.applyAction(G!, action);
   for (const ev of events) await animEvent(ev);
@@ -475,9 +613,10 @@ function showBanner(side: Side) {
 function showResult() {
   busy = true;
   AudioSys.stopBgm();
+  const draw = onlineEndReason === 'draw';
   const win = G!.winner === 'p';
   $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : ENEMY_BOSS].img;
-  if (win) {
+  if (win && !onlineSide) {
     /* ソロ勝利報酬はサーバー(またはローカル)が日次上限つきで付与。結果を待って表示を確定 */
     $('result-reward').textContent = '勝利報酬を確認中…';
     $('result-reward').classList.remove('hidden');
@@ -488,11 +627,14 @@ function showResult() {
     }).catch(() => {
       $('result-reward').textContent = '勝利報酬の付与に失敗しました(通信状態を確認)';
     });
+  } else if (win && onlineSide && onlineReward > 0) {
+    $('result-reward').textContent = `勝利報酬: ガチャチケット 🎟 +${onlineReward}`;
+    $('result-reward').classList.remove('hidden');
   } else {
     $('result-reward').classList.add('hidden');
   }
   const title = $('result-title');
-  title.textContent = win ? '討伐成功' : '敗北';
+  title.textContent = draw ? '引き分け' : win ? '討伐成功' : '敗北';
   title.className = win ? 'win' : 'lose';
   const reasons: Record<string, string> = {
     boss: win ? '敵大将・酒呑童子を討ち取った!' : '我が大将が討ち取られた…',
@@ -500,8 +642,11 @@ function showResult() {
     explode: win ? '鬼火が敵大将を道連れにした!' : '我が大将が鬼火の道連れに…',
     nomoves: win ? '敵軍は身動きが取れなくなった!' : '我が軍は身動きが取れなくなった…',
     resign: '投了した…',
+    timeout: win ? '相手の持ち時間が切れた' : '持ち時間が切れた…',
+    disconnect: win ? '相手の再接続猶予が切れた' : '再接続猶予が切れた…',
+    draw: '300手に達したため引き分け',
   };
-  $('result-sub').textContent = (G!.reason && reasons[G!.reason]) || '';
+  $('result-sub').textContent = reasons[onlineEndReason || G!.reason || ''] || '';
   showScreen('screen-result');
   AudioSys.play(win ? 'win' : 'lose');
   if (win) {

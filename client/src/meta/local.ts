@@ -155,6 +155,8 @@ export class LocalMeta implements MetaProvider {
     throw new Error('引き継ぎはオンライン接続時のみ利用できます');
   }
 
+  battleUrl(): string | null { return null; }
+
   async recordSoloWin(): Promise<number> {
     this.blob.wins++;
     const today = this.dateStr();

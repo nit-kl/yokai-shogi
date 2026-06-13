@@ -41,6 +41,7 @@ async function cleanupDormantGuests(db: D1Database): Promise<number> {
       AND u.created_at < datetime('now', '-30 days')
       AND (p.last_login_date IS NULL OR p.last_login_date < ?1)
       AND NOT EXISTS (SELECT 1 FROM auth_identities a WHERE a.user_id = u.id)
+      AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.p_user_id = u.id OR m.e_user_id = u.id)
     LIMIT 200`).bind(cutoffDate).all<{ id: string }>();
 
   for (const { id } of rs.results) {
@@ -70,6 +71,7 @@ export async function runDailyJobs(env: Env): Promise<{
   dormantDeleted: number; tokensDeleted: number;
 }> {
   const db = env.DB;
+  await db.prepare('UPDATE user_profiles SET online_win_reward_count = 0').run();
 
   const tickets = await checkCurrencyInvariant(db, 'tickets');
   const yoryoku = await checkCurrencyInvariant(db, 'yoryoku');

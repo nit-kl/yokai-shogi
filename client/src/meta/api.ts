@@ -26,6 +26,7 @@ export class ApiMeta implements MetaProvider {
   constructor(private client: ApiClient) {}
 
   get userId(): string | null { return this.client.userId; }
+  battleUrl(): string | null { return this.client.battleUrl(); }
 
   async init(): Promise<LoginBonus | null> {
     await this.client.ensureSession();
