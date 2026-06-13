@@ -1,9 +1,10 @@
-/* 本番(Pages)スモークテスト: タイトル表示と開戦までを確認
+/* 本番(Pages)スモークテスト: タイトル表示とソロ開戦までを確認
+   Turnstile有効時はオンライン初期化を避け、同意→ソロで進む。
    node test/e2e/smoke-live.mjs [URL] */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { acceptConsentIfNeeded, dismissLegacyLoginModal, waitForTitle } from './helpers.mjs';
+import { acceptConsentForSolo, dismissLegacyLoginModal, waitForTitle } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.argv[2] || 'https://yokai-shogi.pages.dev/';
@@ -15,7 +16,7 @@ page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 
 await page.goto(BASE_URL);
-await acceptConsentIfNeeded(page);
+await acceptConsentForSolo(page);
 await waitForTitle(page);
 await dismissLegacyLoginModal(page);
 await page.screenshot({ path: path.join(dir, 'live-1-title.png') });

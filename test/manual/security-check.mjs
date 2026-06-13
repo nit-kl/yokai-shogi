@@ -85,10 +85,15 @@ async function guestToken() {
   else fail('WS: 改ざんトークンは接続不可', '接続できてしまった');
 }
 
-// 7. ゲスト作成は成功（Turnstile有効時は手動確認が必要）
+// 7. ゲスト作成（Turnstile無効時のみ成功。有効時は手動確認）
 try {
-  const token = await guestToken();
-  if (token) pass('REST: ゲスト作成成功');
+  const config = await (await fetch(`${BASE}/v1/auth/config`)).json();
+  if (!config.turnstileRequired) {
+    const token = await guestToken();
+    if (token) pass('REST: ゲスト作成成功');
+  } else {
+    results.push({ name: 'REST: ゲスト作成成功', ok: true, detail: 'Turnstile有効のためスキップ(手動確認)' });
+  }
 } catch (e) {
   fail('REST: ゲスト作成成功', String(e));
 }

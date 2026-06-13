@@ -27,13 +27,16 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 
 ## A. クローズドβ前の必須作業
 
-### A-1. コードのコミット・PR・mainマージ `要オーナー操作` ⬜ 未完了
+### A-1. コードのコミット・PR・mainマージ `要オーナー操作` ⬜ PR作成待ち
 
-- Phase 2の変更をレビューし、PR経由でmainへマージする。
-- CIの `typecheck` / `test` / `test:workers` / `build` / `test:e2e` がすべて成功していることを確認する。
-- mainマージだけではAPI/DO/D1は更新されないことに注意する。
+- ブランチ `feat/phase2-ops-prep` を push 済み。
+- PR: https://github.com/nit-kl/yokai-shogi/pull/new/feat/phase2-ops-prep
 
-### A-2. staging用の接続方法を決める `要オーナー操作` ⬜ 未完了
+### A-2. staging用の接続方法を決める `要オーナー操作` ✅ 完了
+
+- Pagesプロジェクト `yokai-shogi-staging` 作成済み。
+- URL: https://yokai-shogi-staging.pages.dev/
+- デプロイ: `npm run pages:deploy:staging`
 
 `server/wrangler.jsonc` のstaging `ALLOWED_ORIGINS` に `https://yokai-shogi-staging.pages.dev` を追加済み。
 
@@ -60,12 +63,13 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 3. `https://yokai-shogi-api-staging.<account>.workers.dev/healthz` が200を返すことを確認する。
 4. Analytics Engineに `yokai_shogi_metrics_staging` が作成されていることを確認する。
 
-### A-5. staging接続スモークテスト `要オーナー操作` ⬜ 未完了
+### A-5. staging接続スモークテスト `要オーナー操作` ⬜ 一部完了
 
-自動補助:
-- 本番タイトル: `node test/e2e/smoke-live.mjs https://yokai-shogi.pages.dev/`
-- stagingランダム2局: `npm run build:staging && npm run dev` のあと `node test/e2e/battle-staging-smoke.mjs`
-- セキュリティREST/WS: `node test/manual/security-check.mjs`
+自動補助（結果）:
+- 本番ソロ: `node test/e2e/smoke-live.mjs` ✅（Turnstile有効後はソロ経路）
+- 本番ランダム2局: `node test/e2e/battle-staging-smoke.mjs https://yokai-shogi.pages.dev/` ✅（Turnstile有効化**前**に実施済み）
+- staging Pages: Turnstile有効のためヘッドレス自動テスト不可 → **手動ブラウザ**で確認
+- セキュリティREST/WS: `node test/manual/security-check.mjs` ✅
 
 手動確認:
 - 4ブラウザでランダムマッチを2局同時に成立させる。
@@ -87,7 +91,10 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 
 ## B. オープンβ前の公開ブロッカー
 
-### B-1. Turnstileを有効化する `要オーナー操作` ⬜ stagingのみ有効 / production未設定
+### B-1. Turnstileを有効化する `要オーナー操作` ⬜ production秘密鍵設定済み・ドメイン登録要確認
+
+- staging / production ともに `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` 設定済み。
+- **残り**: Cloudflare Turnstileダッシュボードで `yokai-shogi.pages.dev` 等をホスト名に追加し、実ブラウザでゲスト作成を確認。
 
 公開状態で未設定のままにすると、botによるゲスト大量作成でD1無料枠を消費される。
 
@@ -99,6 +106,13 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
    - `npx wrangler secret put TURNSTILE_SITE_KEY --config server/wrangler.jsonc --env production`
    - `npx wrangler secret put TURNSTILE_SECRET_KEY --config server/wrangler.jsonc --env production`
 4. 正常なゲスト作成と、不正・欠落トークン拒否を確認する。
+
+**重要**: Turnstileウィジェットの「ホスト名管理」に以下を追加すること。
+- `yokai-shogi.pages.dev`
+- `yokai-shogi-staging.pages.dev`
+- `localhost`（ローカル開発用）
+
+未追加だとエラー `110200` となり、ブラウザでもゲスト作成が失敗する。
 
 秘密鍵だけ先に設定するとゲスト作成に失敗する。サイトキーと秘密鍵は同じ環境へセットで設定する。
 
@@ -175,7 +189,7 @@ SDK組み込み済み(`client/src/sentry.ts`)。`VITE_SENTRY_DSN` をビルド�
 2. DO・D1・Analytics Engine bindingを確認する。
 3. `/healthz` と既存REST APIが正常であることを確認する。
 
-### C-4. production Pagesデプロイ `要オーナー操作` ✅ 完了
+### C-4. production Pagesデプロイ `要オーナー操作` ✅ 完了（feat/phase2-ops-prep 版を main に反映済み）
 
 - `npm run pages:deploy`、またはmainマージ後のGitHub Actions deployジョブでオンライン版を配信する。
 - API/DOより先にPagesを公開しない。

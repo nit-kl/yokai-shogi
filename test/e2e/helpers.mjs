@@ -12,6 +12,18 @@ export async function acceptConsentIfNeeded(page) {
   }
 }
 
+/** 同意モーダル: ソロ動作確認用（Turnstile不要） */
+export async function acceptConsentForSolo(page) {
+  const consent = page.locator('#modal-consent:not(.hidden)');
+  try {
+    await consent.waitFor({ state: 'visible', timeout: 60000 });
+    await page.click('#btn-consent-local');
+    await waitForTitle(page);
+  } catch {
+    await waitForTitle(page);
+  }
+}
+
 /** 旧ログインボーナスモーダル(互換) */
 export async function dismissLegacyLoginModal(page) {
   if (await page.locator('#modal-login:not(.hidden)').count()) {
