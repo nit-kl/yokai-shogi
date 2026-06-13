@@ -43,3 +43,49 @@ jobs:
           path: test/e2e/*.png
           if-no-files-found: ignore
           retention-days: 14
+
+  # Cloudflare Pages デプロイ(main push = 本番 / PR = プレビュー)
+  # リポジトリSecretsに CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID が必要(docs/13 参照)
+  # 未設定の間はスキップされる(失敗にはならない)
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check Cloudflare secrets
+        id: check
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CF_TOKEN" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "CLOUDFLARE_API_TOKEN が未設定のためデプロイをスキップします(設定手順: docs/13-pages-github-deploy.md)"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ok == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.check.outputs.ok == 'true'
+        run: npm ci
+
+      - name: Build client
+        if: steps.check.outputs.ok == 'true'
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        if: steps.check.outputs.ok == 'true'
+        run: >
+          npx wrangler pages deploy client/dist
+          --project-name=yokai-shogi
+          --branch=${{ github.event_name == 'push' && 'main' || github.head_ref }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
