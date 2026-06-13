@@ -2,44 +2,57 @@
 
 Phase 2 のコード実装後、オンライン対戦をクローズドβ・オープンβとして公開するまでに必要な作業をまとめる。
 
+## 進捗サマリー (2026-06-13 更新)
+
+| 区分 | 状態 |
+|---|---|
+| A. クローズドβ前 | A-3/A-4/C-2〜C-4 は完了。A-1(コミット)・A-2(staging Pages)・A-5/A-6(手動スモーク)が残り |
+| B. オープンβ前 | B-3完了。B-1(Turnstile本番)・B-5(Sentry DSN)・B-6(UptimeRobot)・B-9/B-10(手動)が残り |
+| C. production反映 | C-2〜C-4完了。C-5(公開直後確認)が残り |
+| D. β運用 | 限定公開開始後 |
+
 `要オーナー操作` はCloudflare/GitHub/外部サービスの画面操作、秘密情報、公開判断など、コード作業だけでは完了しない項目。
 `実装依頼が必要` は現時点でコードが未実装のため、設定だけでは完了しない項目。
 
 ## 現在の重要な前提
 
 - CIのdeployジョブが配信するのは **Pagesクライアントのみ**。D1マイグレーションとAPI/DOデプロイは自動化されていない。
-- production/staging APIはPhase 1版がデプロイ済みだが、Phase 2のD1マイグレーション・BattleRoom DO・Matchmaker DOは未反映。
-- stagingの`ALLOWED_ORIGINS`はlocalhostのみ。現在のままではPagesプレビューからstaging APIへ接続できない。
-- Sentryクライアント組み込み、ゲーム内メンテナンス表示は未実装。
+- **コード実装は完了済み**(BattleRoom/Matchmaker DO、オンラインUI、同意UI、Turnstileクライアント、Sentry組み込み、メンテナンス表示、法務HTML)。
+- production APIは Phase 2 コードへデプロイする必要がある(旧Phase 1だと `/v1/auth/config` が404相当になる)。
+- stagingの`ALLOWED_ORIGINS`に `https://yokai-shogi-staging.pages.dev` を追加済み。staging Pagesプロジェクトの作成は要オーナー操作。
+- Sentryは `VITE_SENTRY_DSN` 未設定時は無効。DSN取得とGitHub Secrets登録は要オーナー操作。
 - Cloudflare無料枠を保護するため、自動負荷試験は実施しない。
 
 ---
 
 ## A. クローズドβ前の必須作業
 
-### A-1. コードのコミット・PR・mainマージ `要オーナー操作`
+### A-1. コードのコミット・PR・mainマージ `要オーナー操作` ⬜ PR作成待ち
 
-- Phase 2の変更をレビューし、PR経由でmainへマージする。
-- CIの `typecheck` / `test` / `test:workers` / `build` / `test:e2e` がすべて成功していることを確認する。
-- mainマージだけではAPI/DO/D1は更新されないことに注意する。
+- ブランチ `feat/phase2-ops-prep` を push 済み。
+- PR: https://github.com/nit-kl/yokai-shogi/pull/new/feat/phase2-ops-prep
 
-### A-2. staging用の接続方法を決める `実装依頼が必要`
+### A-2. staging用の接続方法を決める `要オーナー操作` ✅ 完了
 
-現在、staging APIのCORS許可はlocalhostのみで、Pagesプレビューからは接続できない。次のどちらかを実施する。
+- Pagesプロジェクト `yokai-shogi-staging` 作成済み。
+- URL: https://yokai-shogi-staging.pages.dev/
+- デプロイ: `npm run pages:deploy:staging`
 
-1. 推奨: staging専用Pages URLを固定し、そのOriginを `server/wrangler.jsonc` のstaging `ALLOWED_ORIGINS` に追加する。
-2. 一時対応: ローカルViteクライアントからstaging APIへ接続して確認する。
+`server/wrangler.jsonc` のstaging `ALLOWED_ORIGINS` に `https://yokai-shogi-staging.pages.dev` を追加済み。
 
-任意のPagesプレビューOriginを無条件許可する設定は採らない。
+1. Cloudflare Pagesで staging 用プロジェクト(または固定ブランチ)を作成し、`https://yokai-shogi-staging.pages.dev` で配信する。
+   - コマンド: `npm run pages:deploy:staging`（初回は `wrangler pages project create yokai-shogi-staging` が必要な場合あり）
+2. ビルド時に `npm run build:staging` でstaging APIへ接続する版をデプロイする。
+3. 一時対応としてローカルVite(`VITE_API_URL=... npm run dev`)からstaging APIへ接続して確認してもよい。
 
-### A-3. staging D1バックアップ確認・マイグレーション `要オーナー操作`
+### A-3. staging D1バックアップ確認・マイグレーション `要オーナー操作` ✅ 完了
 
 1. `npx wrangler d1 info yokai-shogi-db-staging --config server/wrangler.jsonc --env staging`
 2. D1がTime Travel対応のproduction backendであることを確認する。
 3. `npm run db:migrate:staging`
 4. CloudflareダッシュボードまたはD1クエリで `matches` / `match_actions` / `online_win_reward_count` の追加を確認する。
 
-### A-4. staging API/DOデプロイ `要オーナー操作`
+### A-4. staging API/DOデプロイ `要オーナー操作` ✅ 完了
 
 1. `npm run api:deploy:staging`
 2. デプロイ出力で以下のbindingを確認する。
@@ -50,9 +63,15 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 3. `https://yokai-shogi-api-staging.<account>.workers.dev/healthz` が200を返すことを確認する。
 4. Analytics Engineに `yokai_shogi_metrics_staging` が作成されていることを確認する。
 
-### A-5. staging接続スモークテスト `要オーナー操作`
+### A-5. staging接続スモークテスト `要オーナー操作` ⬜ 一部完了
 
-- 2ブラウザでフレンドルームを作成・参加し、1局完走する。
+自動補助（結果）:
+- 本番ソロ: `node test/e2e/smoke-live.mjs` ✅（Turnstile有効後はソロ経路）
+- 本番ランダム2局: `node test/e2e/battle-staging-smoke.mjs https://yokai-shogi.pages.dev/` ✅（Turnstile有効化**前**に実施済み）
+- staging Pages: Turnstile有効のためヘッドレス自動テスト不可 → **手動ブラウザ**で確認
+- セキュリティREST/WS: `node test/manual/security-check.mjs` ✅
+
+手動確認:
 - 4ブラウザでランダムマッチを2局同時に成立させる。
 - 非手番側の着手が拒否されることをDevToolsから確認する。
 - 対局中に片方を再読み込みし、60秒以内に復帰できることを確認する。
@@ -62,7 +81,7 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 - ランダムマッチ勝利報酬と、フレンドマッチ報酬なしを確認する。
 - Analytics Engineに `match_found` / `match_end` が記録されることを確認する。
 
-### A-6. stagingでデプロイ中の対局復元を確認 `要オーナー操作`
+### A-6. stagingでデプロイ中の対局復元を確認 `要オーナー操作` ⬜ 未完了
 
 1. フレンド対局を開始し、数手進める。
 2. 対局中に `npm run api:deploy:staging` を再実行する。
@@ -72,7 +91,10 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 
 ## B. オープンβ前の公開ブロッカー
 
-### B-1. Turnstileを有効化する `実装依頼が必要 + 要オーナー操作`
+### B-1. Turnstileを有効化する `要オーナー操作` ⬜ production秘密鍵設定済み・ドメイン登録要確認
+
+- staging / production ともに `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` 設定済み。
+- **残り**: Cloudflare Turnstileダッシュボードで `yokai-shogi.pages.dev` 等をホスト名に追加し、実ブラウザでゲスト作成を確認。
 
 公開状態で未設定のままにすると、botによるゲスト大量作成でD1無料枠を消費される。
 
@@ -85,59 +107,51 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
    - `npx wrangler secret put TURNSTILE_SECRET_KEY --config server/wrangler.jsonc --env production`
 4. 正常なゲスト作成と、不正・欠落トークン拒否を確認する。
 
+**重要**: Turnstileウィジェットの「ホスト名管理」に以下を追加すること。
+- `yokai-shogi.pages.dev`
+- `yokai-shogi-staging.pages.dev`
+- `localhost`（ローカル開発用）
+
+未追加だとエラー `110200` となり、ブラウザでもゲスト作成が失敗する。
+
 秘密鍵だけ先に設定するとゲスト作成に失敗する。サイトキーと秘密鍵は同じ環境へセットで設定する。
 
-### B-2. 利用規約・プライバシーポリシーを完成・公開する `実装依頼が必要 + 要オーナー操作`
+### B-2. 利用規約・プライバシーポリシーを完成・公開する `要オーナー操作` ⬜ 内容最終確認が残り
 
-- [docs/legal/](legal/) の運営者名・問い合わせ窓口・プレースホルダを確定する。
-- 公開内容を確認し、必要なら専門家へ相談する。
-- 現在のMarkdown文書はPagesクライアントから配信されないため、ブラウザで閲覧できる画面または公開URLを実装する。
+### B-3. 初回同意UIを実装する `完了` ✅
 
-### B-3. 初回同意UIを実装する `実装依頼が必要`
+`client/src/main.ts` の同意モーダル(`CONSENT_KEY`)で実装済み。文書改定時はキーを更新して再同意させる。
 
-- 初回オンライン利用時に規約・プライバシーポリシーへのリンクと同意を表示する。
-- 同意しない場合はオンライン機能を開始しない。
-- 文書の改定時に再同意させるため、同意バージョンを保持する。
-
-Phase 1でPhase 2へ先送りされた項目であり、現時点では未実装。
-
-### B-4. 問い合わせ・障害告知経路を開設する `実装依頼が必要 + 要オーナー操作`
+### B-4. 問い合わせ・障害告知経路を開設する `要オーナー操作` ⬜ 未完了
 
 - 問い合わせ用メールアドレスまたはフォームを用意する。
 - 障害告知用の外部経路を1つ用意する。
 - 利用規約・プライバシーポリシー・ゲーム画面から到達できるようにする。
 
-### B-5. Sentryクライアント監視を組み込む `実装依頼が必要 + 要オーナー操作`
+### B-5. Sentryクライアント監視を組み込む `要オーナー操作` ⬜ DSN未設定
 
-- Sentryプロジェクトを作成しDSNを取得する。
-- クライアントへSentry SDKとリリース識別子を組み込む。
-- 意図的なテスト例外でイベント受信を確認する。
-- 新種エラー・短時間の急増に通知を設定する。
+SDK組み込み済み(`client/src/sentry.ts`)。`VITE_SENTRY_DSN` をビルド時に渡すか、GitHub ActionsのdeployジョブへSecret追加する。
 
-現時点ではSentry SDK未導入のため、アカウント作成だけでは監視できない。
-
-### B-6. UptimeRobotを設定する `要オーナー操作`
+### B-6. UptimeRobotを設定する `要オーナー操作` ⬜ 未完了
 
 - production `/healthz` を5分間隔で監視する。
 - 2回連続失敗でメール等へ通知する。
 - テスト停止または一時的なURL変更で通知経路を確認する。
 
-### B-7. Analytics Engineの確認クエリを用意する `要オーナー操作`
+### B-7. Analytics Engineの確認クエリを用意する `要オーナー操作` ✅
 
-- `match_found` / `match_end` を日別・mode別・reason別に確認できるSQLクエリを保存する。
-- `match_end / match_found` から対局完走率を算出できることを確認する。
-- Analytics Engineはイベント保存だけ実装済みで、ダッシュボード・通知は自動作成されない。
+[docs/analytics-queries.md](analytics-queries.md) にSQLを保存済み。ダッシュボードで実行して保存すること。
 
-### B-8. メンテナンス・ロールバック手順を確認する `要オーナー操作`
+### B-8. メンテナンス・ロールバック手順を確認する `要オーナー操作` ⬜ 未完了
 
-- 現在のメンテナンスモードは `MAINTENANCE=1` へ設定変更して再デプロイする方式。KV即時切替・クライアントバナーは未実装。
+- 現在のメンテナンスモードは `MAINTENANCE=1` へ設定変更して再デプロイする方式。クライアントは `/healthz` の `maintenance` フラグでバナー表示する。
 - CloudflareダッシュボードからAPI Workerを直前バージョンへロールバックできることを確認する。
 - Pagesを直前デプロイへロールバックできることを確認する。
 - D1 Time Travelは無料プランでは過去7日まで。復元コマンドは破壊的なので、stagingでのみ訓練する。
 
-### B-9. セキュリティ手動検証 `要オーナー操作`
+### B-9. セキュリティ手動検証 `要オーナー操作` ⬜ 一部自動化済み
 
-DevToolsまたはテストクライアントから以下を確認する。
+`node test/manual/security-check.mjs` でREST/WS/CORSの自動検証。対局中の着手拒否は手動。
 
 - トークンなし・改ざんトークンでWebSocket接続できない。
 - 非手番着手・不正座標・不正な持ち駒・高速連打が拒否される。
@@ -146,7 +160,7 @@ DevToolsまたはテストクライアントから以下を確認する。
 - 切断勝ち・時間切れ勝ちで報酬が付与されない。
 - CORSで許可外OriginからREST APIを利用できない。
 
-### B-10. 実機・ブラウザ確認 `要オーナー操作`
+### B-10. 実機・ブラウザ確認 `要オーナー操作` ⬜ 未完了
 
 - PC: Chrome / Edge / Firefox / Safari(macOSがある場合)
 - モバイル: iOS Safari / Android Chrome
@@ -163,24 +177,24 @@ DevToolsまたはテストクライアントから以下を確認する。
 - Cloudflareダッシュボードで当日のWorkers / DO / D1使用量に余裕がある。
 - `JWT_SECRET` と `TURNSTILE_SECRET_KEY` がproductionに設定済みである。
 
-### C-2. production D1マイグレーション `要オーナー操作`
+### C-2. production D1マイグレーション `要オーナー操作` ✅ 完了
 
 1. 現在時刻とD1 Time Travel bookmarkを記録する。
 2. `npm run db:migrate:prod`
 3. `matches` / `match_actions` / `online_win_reward_count` の追加を確認する。
 
-### C-3. production API/DOデプロイ `要オーナー操作`
+### C-3. production API/DOデプロイ `要オーナー操作` ✅ 完了
 
 1. `npm run api:deploy`
 2. DO・D1・Analytics Engine bindingを確認する。
 3. `/healthz` と既存REST APIが正常であることを確認する。
 
-### C-4. production Pagesデプロイ `要オーナー操作`
+### C-4. production Pagesデプロイ `要オーナー操作` ✅ 完了（feat/phase2-ops-prep 版を main に反映済み）
 
 - `npm run pages:deploy`、またはmainマージ後のGitHub Actions deployジョブでオンライン版を配信する。
 - API/DOより先にPagesを公開しない。
 
-### C-5. production公開直後の確認 `要オーナー操作`
+### C-5. production公開直後の確認 `要オーナー操作` ⬜ 未完了
 
 - 2ブラウザでフレンドマッチを1局完走する。
 - ランダムマッチ成立・再接続・投了を確認する。

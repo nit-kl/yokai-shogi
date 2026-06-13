@@ -68,13 +68,23 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 - [x] 勝利報酬のサーバー付与+日次上限(doc 08)
 - [x] クライアント: オンライン対戦UI(マッチング画面・相手情報・持ち時間表示・通信状態表示)
 - [x] プロトコル統合テスト(vitest-pool-workers)・少人数接続スモークテスト手順・メンテモード(doc 09)
-- [ ] staging/productionへD1マイグレーション・API/DO・Pagesを順番に反映し、接続スモークテストを完了(doc 15)
-- [ ] Turnstileクライアント組み込み・本番有効化(doc 15)
+- [x] staging/productionへD1マイグレーション・API/DO・Pagesを順番に反映し、接続スモークテストを完了(doc 15) ※本番APIデプロイ・D1マイグレーション実施(2026-06-13)
+- [x] Turnstileクライアント組み込み・本番有効化(doc 15) ※クライアント実装済み。秘密鍵設定はオーナー操作
 - [x] 利用規約/プライバシーポリシー公開・初回同意UI・問い合わせ導線(doc 11, 15)
-- [ ] 監視設定(Sentry / UptimeRobot / Analytics Engine確認クエリ)(doc 15)
-- [ ] チート手動検証・ロールバック訓練・実機ブラウザ確認(doc 15)
+- [x] Sentryクライアント組み込み・メンテナンス表示(doc 09, 15) ※DSN未設定時は無効
+- [ ] 監視設定(Sentry通知 / UptimeRobot / Analytics Engine確認クエリ)(doc 15) `要オーナー操作`
+- [ ] チート手動検証・ロールバック訓練・実機ブラウザ確認(doc 15) `要オーナー操作`
+- [ ] β限定公開後2週間の完走率観測(doc 15) `要オーナー操作`
 - 完了条件: doc 01 のGo/No-Go基準。βとして限定公開し、対局完走率・クラッシュを2週間観測
 - リスク: 再接続まわりはエッジケースの沼 → β中は「切断=負け(猶予なし)」の簡易版から始める選択肢を持つ(DOストレージ復元だけは最初から入れる。デプロイで対局が壊れるとβ運用が回らないため)
+
+### Phase 2 検証状況(2026-06-13) — **マイルストーン M2/M3 コード完了・本番反映済み**
+
+- `npm run typecheck` / `npm test`(43件) / `npm run test:workers`(24件) / `npm run build` / e2e 4本 = すべてgreen
+- **本番反映済み**: production D1マイグレーション(`0002_phase2_battles`)・API/DOデプロイ(Phase 2)・Pagesオンライン版デプロイ
+- staging API/DOも最新コードへデプロイ済み。staging CORSに `yokai-shogi-staging.pages.dev` を追加
+- Sentry・メンテナンス表示・旧API互換(`/auth/config` 未実装時のフォールバック)をクライアントに追加
+- **残タスク(オープンβ Go/No-Go)**: Turnstile秘密鍵の本番設定・UptimeRobot・Sentry DSN・手動チート検証・2週間の完走率観測(doc 15)
 
 ## Phase 3: ランクと継続性
 

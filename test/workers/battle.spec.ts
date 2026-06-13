@@ -133,4 +133,60 @@ describe('Matchmaker DO', () => {
     expect(guestFound.side).toBe('e');
     expect(hostFound.matchId).toBe(guestFound.matchId);
   });
+
+  it('ランダムマッチを成立させる', async () => {
+    const p = await createPlayer('待機A');
+    const e = await createPlayer('待機B');
+    const pSocket = await connectMatchmaker(p);
+    const eSocket = await connectMatchmaker(e);
+
+    pSocket.ws.send(JSON.stringify({ t: 'join_queue' }));
+    eSocket.ws.send(JSON.stringify({ t: 'join_queue' }));
+    const [pFound, eFound] = await Promise.all([
+      pSocket.nextType('match_found'),
+      eSocket.nextType('match_found'),
+    ]);
+    expect(pFound.matchId).toBe(eFound.matchId);
+    expect(new Set([pFound.side, eFound.side])).toEqual(new Set(['p', 'e']));
+  });
+});
+
+describe('オンライン報酬', () => {
+  it('ランダムマッチ勝利でチケットを付与し、フレンドマッチでは付与しない', async () => {
+    async function playResign(mode: 'random' | 'friend', resignSide: 'p' | 'e') {
+      const p = await createPlayer('先手');
+      const e = await createPlayer('後手');
+      const matchId = crypto.randomUUID();
+      const stub = env.BATTLE.get(env.BATTLE.idFromName(matchId));
+      const init = await stub.fetch('https://battle/init', {
+        method: 'POST',
+        body: JSON.stringify({ matchId, mode, players: { p, e } }),
+      });
+      expect(init.status).toBe(201);
+      const pws = await connect(stub, p, matchId);
+      const ews = await connect(stub, e, matchId);
+      await pws.nextType('snapshot');
+      await ews.nextType('snapshot');
+      await pws.nextType('your_turn');
+      const resigner = resignSide === 'p' ? pws : ews;
+      const winner = resignSide === 'p' ? ews : pws;
+      resigner.ws.send(JSON.stringify({ t: 'resign' }));
+      const end = await winner.nextType('game_end');
+      return { p, e, end, matchId };
+    }
+
+    const random = await playResign('random', 'e');
+    expect(random.end).toMatchObject({ t: 'game_end', winner: 'p', reward: { tickets: 1 } });
+    const randomProfile = await env.DB.prepare(
+      'SELECT tickets, online_win_reward_count FROM user_profiles WHERE user_id = ?1',
+    ).bind(random.p.userId).first<{ tickets: number; online_win_reward_count: number }>();
+    expect(randomProfile).toEqual({ tickets: 1, online_win_reward_count: 1 });
+
+    const friend = await playResign('friend', 'e');
+    expect(friend.end).toMatchObject({ t: 'game_end', winner: 'p', reward: { tickets: 0 } });
+    const friendProfile = await env.DB.prepare(
+      'SELECT tickets FROM user_profiles WHERE user_id = ?1',
+    ).bind(friend.p.userId).first<{ tickets: number }>();
+    expect(friendProfile?.tickets).toBe(0);
+  });
 });

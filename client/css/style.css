@@ -1040,6 +1040,17 @@ html, body {
 .online-code-row input { width: 10rem; text-align: center; letter-spacing: 0.18em; text-transform: uppercase; }
 #online-status { color: #fff2a8; font-size: 0.78rem; padding: 0.35rem 0.6rem; background: rgba(0,0,0,0.55); border-radius: 999px; }
 #turnstile-wrap { width: min(300px, 90vw); margin-top: 1rem; }
+.maintenance-banner {
+  width: min(360px, 90vw);
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(20, 16, 32, 0.92);
+  border: 1px solid rgba(255, 180, 80, 0.35);
+  text-align: center;
+}
+.maintenance-title { color: #ffd24a; font-size: 1.1rem; margin-bottom: 0.5rem; }
+.maintenance-text { color: #d8d2e4; font-size: 0.82rem; line-height: 1.6; margin: 0 0 0.8rem; }
 .title-foot-links { display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap; justify-content: center; }
 .title-foot-links a, .consent-links a { color: #d8d2e4; font-size: 0.75rem; }
 .consent-box { max-width: 460px; text-align: center; }

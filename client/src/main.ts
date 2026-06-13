@@ -15,6 +15,8 @@ import { MenuUI } from './menu';
 import { FX } from './effects';
 import { AudioSys } from './audio';
 import { $, sleep, showScreen } from './util';
+import { initSentry, captureException } from './sentry';
+import { fetchApiStatus } from './status';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 
@@ -40,6 +42,7 @@ const COLORS_E = ['#ff5d5d', '#c84aff', '#ffd0d0', '#ff9a8a'];
 
 /* ============================== 起動 ============================== */
 window.addEventListener('DOMContentLoaded', () => {
+  void initSentry();
   FX.init();
   buildBoardCells();
   buildRulesPieces();
@@ -58,11 +61,37 @@ async function boot() {
     showConsent();
     return;
   }
+  const status = await fetchApiStatus();
+  if (status?.maintenance) {
+    await preloadImages();
+    showMaintenance();
+    return;
+  }
   await Promise.all([
     preloadImages(),
-    Meta.init().catch(err => { console.error('[meta] init failed', err); return null; }),
+    Meta.init().catch(err => {
+      if (Meta.maintenance) { showMaintenance(); return null; }
+      console.error('[meta] init failed', err);
+      captureException(err);
+      return null;
+    }),
   ]);
   if (!resumeOnlineMatch()) enterTitle();
+}
+
+function showMaintenance(): void {
+  showScreen('screen-loading');
+  $('maintenance-banner').classList.remove('hidden');
+  $('btn-maintenance-retry').onclick = () => {
+    $('maintenance-banner').classList.add('hidden');
+    void boot();
+  };
+  $('btn-maintenance-local').onclick = async () => {
+    $('maintenance-banner').classList.add('hidden');
+    Meta.useLocal();
+    await Meta.init();
+    enterTitle();
+  };
 }
 
 function hasConsent(): boolean {
@@ -203,7 +232,9 @@ function connectMatchmaker(extra: Record<string, string> = {}) {
   online = new OnlineConnection(url);
   online.onMessage = message => { void onOnlineMessage(message); };
   online.onState = state => {
-    if (state === 'disconnected' && onlineMatch) {
+    if (state === 'connected' && onlineMatch) {
+      $('online-status').textContent = '接続済み';
+    } else if (state === 'disconnected' && onlineMatch) {
       $('online-status').textContent = '再接続中…';
       setTimeout(() => online?.connect({
         matchId: onlineMatch!.matchId, reconnectToken: onlineMatch!.reconnectToken,
@@ -263,6 +294,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     G.winner = message.winner === 'draw' ? null : (message.winner === onlineSide ? 'p' : 'e');
     onlineEndReason = message.reason;
     onlineReward = message.reward.tickets;
+    if (message.reward.tickets > 0) Meta.addTickets(message.reward.tickets);
     clearOnlineMatch();
     showResult();
   }
