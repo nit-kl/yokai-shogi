@@ -29,6 +29,7 @@ class MetaFacade {
 
   get data(): MetaState { return this.provider.data; }
   get online(): boolean { return this.provider.data.online; }
+  get onlineAvailable(): boolean { return !!API_URL && !this.forceLocal; }
   isOnboardingDone(): boolean { return this.provider.data.onboardingDone; }
   useLocal(): void { this.forceLocal = true; this.provider = new LocalMeta(); }
 

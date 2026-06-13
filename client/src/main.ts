@@ -175,7 +175,7 @@ function enterTitle() {
   AudioSys.init();
   AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
-  $('btn-online').classList.toggle('hidden', !Meta.online);
+  $('btn-online').classList.toggle('hidden', !Meta.onlineAvailable);
 }
 
 /* ---------- ボタン類 ---------- */
@@ -183,7 +183,7 @@ function wireButtons() {
   $('btn-start').onclick = () => { AudioSys.init(); AudioSys.play('click'); openSolo(); };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-solo-battle').onclick = () => { AudioSys.play('click'); startBattle(); };
-  $('btn-online').onclick = () => openOnline();
+  $('btn-online').onclick = () => { void openOnline(); };
   $('btn-online-close').onclick = () => closeOnlineModal();
   $('btn-online-random').onclick = () => { connectMatchmaker(); online?.send({ t: 'join_queue' }); $('online-message').textContent = '対戦相手を探しています…'; };
   $('btn-online-create').onclick = () => { connectMatchmaker(); online?.send({ t: 'create_room' }); };
@@ -264,11 +264,24 @@ function renderSoloSelect() {
   }
 }
 
-function openOnline() {
+async function openOnline() {
   AudioSys.play('click');
-  $('online-message').textContent = '対戦方法を選んでください';
   $('online-room-code').classList.add('hidden');
   $('modal-online').classList.remove('hidden');
+  if (!Meta.online) {
+    $('online-message').textContent = 'オンラインへ接続しています…';
+    try {
+      await Meta.init();
+      if (!Meta.online) throw new Error('online connection unavailable');
+      MenuUI.onEnterTitle();
+    } catch (err) {
+      console.error('[meta] online retry failed', err);
+      captureException(err);
+      $('online-message').textContent = 'オンライン接続に失敗しました。通信状態を確認して、もう一度お試しください';
+      return;
+    }
+  }
+  $('online-message').textContent = '対戦方法を選んでください';
 }
 
 function closeOnlineModal() {
