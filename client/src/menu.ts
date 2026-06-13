@@ -19,28 +19,81 @@ export const MenuUI = {
     $('btn-gacha').onclick = () => { AudioSys.play('click'); this.openGacha(); };
     $('btn-formation').onclick = () => { AudioSys.play('click'); this.openFormation(); };
     $('btn-gacha-back').onclick = () => { AudioSys.play('click'); this._enterTitle(); };
-    $('btn-pull1').onclick = () => this.doPull(1);
-    $('btn-pull10').onclick = () => this.doPull(10);
-    $('btn-exchange').onclick = () => {
-      if (Meta.exchange()) { AudioSys.play('promote'); this.refreshCurrency(); }
+    $('btn-pull1').onclick = () => { void this.doPull(1); };
+    $('btn-pull10').onclick = () => { void this.doPull(10); };
+    $('btn-exchange').onclick = async () => {
+      $<HTMLButtonElement>('btn-exchange').disabled = true;
+      if (await Meta.exchange()) AudioSys.play('promote');
+      this.refreshCurrency();
     };
     $('btn-gacha-ok').onclick = () => {
       AudioSys.play('click');
       $('gacha-result').classList.add('hidden');
     };
-    $('btn-form-back').onclick = () => { AudioSys.play('click'); this.saveFormation(); };
+    $('btn-form-back').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     $('btn-form-reset').onclick = () => {
       AudioSys.play('click');
       this.rows = SETUP.slice(ROWS - 2).map(r => [...r]);
       this.benchSel = null;
       this.renderFormation();
     };
+    this.initLinkCode();
   },
 
-  /* タイトル表示のたびに呼ばれる: ログインボーナス判定+通貨表示 */
+  /* ============================== データ引き継ぎ ============================== */
+  initLinkCode() {
+    $('btn-link').onclick = () => { AudioSys.play('click'); this.openLink(); };
+    $('btn-link-close').onclick = () => { AudioSys.play('click'); $('modal-link').classList.add('hidden'); };
+    $('btn-link-issue').onclick = async () => {
+      const btn = $<HTMLButtonElement>('btn-link-issue');
+      btn.disabled = true;
+      $('link-msg').textContent = '';
+      try {
+        const code = await Meta.issueLinkCode();
+        const disp = $('link-code-display');
+        disp.textContent = code;
+        disp.classList.remove('hidden');
+        $('link-msg').textContent = 'コードを発行しました。メモして保管してください。';
+      } catch (e) {
+        $('link-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    $('btn-link-redeem').onclick = async () => {
+      const input = $<HTMLInputElement>('link-code-input');
+      const code = input.value.trim();
+      if (!code) { $('link-msg').textContent = 'コードを入力してください'; return; }
+      const btn = $<HTMLButtonElement>('btn-link-redeem');
+      btn.disabled = true;
+      $('link-msg').textContent = '引き継ぎ中…';
+      try {
+        await Meta.redeemLinkCode(code);
+        $('link-msg').textContent = '引き継ぎが完了しました。タイトルに戻ります。';
+        input.value = '';
+        $('link-code-display').classList.add('hidden');
+        setTimeout(() => { $('modal-link').classList.add('hidden'); this._enterTitle(); }, 900);
+      } catch (e) {
+        $('link-msg').textContent = e instanceof Error ? e.message : '引き継ぎに失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  },
+
+  openLink() {
+    $('link-msg').textContent = '';
+    $('link-code-display').classList.add('hidden');
+    $<HTMLInputElement>('link-code-input').value = '';
+    $('modal-link').classList.remove('hidden');
+  },
+
+  /* タイトル表示のたびに呼ばれる: 通貨表示+ログインボーナス演出
+     (ボーナス判定は Meta.init() で済んでおり、結果は pendingLoginBonus にある) */
   onEnterTitle() {
     this.refreshCurrency();
-    const bonus = Meta.claimLoginBonus();
+    const bonus = Meta.pendingLoginBonus;
+    Meta.pendingLoginBonus = null;
     if (bonus) {
       $('login-day').textContent = String(bonus.day);
       $('login-tickets').textContent = `×${bonus.tickets}`;
@@ -63,6 +116,8 @@ export const MenuUI = {
     $<HTMLButtonElement>('btn-pull1').disabled = d.tickets < 1;
     $<HTMLButtonElement>('btn-pull10').disabled = d.tickets < 10;
     $<HTMLButtonElement>('btn-exchange').disabled = d.yoryoku < Meta.EXCHANGE_COST;
+    /* データ引き継ぎはオンライン(サーバー権威)時のみ提供 */
+    $('btn-link').classList.toggle('hidden', !d.online);
   },
 
   /* ============================== ガチャ ============================== */
@@ -73,11 +128,19 @@ export const MenuUI = {
     FX.setAmbient(['rgba(200,120,255,0.5)', 'rgba(232,196,106,0.5)'], 0.06);
   },
 
-  doPull(count: number) {
-    const results = Meta.pull(count);
+  async doPull(count: 1 | 10) {
+    /* 連打・二重送信を防ぐ */
+    $<HTMLButtonElement>('btn-pull1').disabled = true;
+    $<HTMLButtonElement>('btn-pull10').disabled = true;
+    let results: GachaResult[] | null = null;
+    try {
+      results = await Meta.pull(count);
+    } catch {
+      results = null;
+    }
+    this.refreshCurrency();
     if (!results) return;
     AudioSys.play('cutin');
-    this.refreshCurrency();
     this.showResults(results);
   },
 
@@ -204,12 +267,17 @@ export const MenuUI = {
     this.renderFormation();
   },
 
-  saveFormation() {
-    const err = Meta.setFormation(this.rows);
-    if (err) {
-      $('form-error').textContent = `⚠ ${err}`;
-      return;
+  async saveFormation() {
+    /* 即時にローカル検証してから保存(オフライン版・API版とも setFormation 内で再検証) */
+    const localErr = Meta.validateFormation(this.rows);
+    if (localErr) { $('form-error').textContent = `⚠ ${localErr}`; return; }
+    let err: string | null = null;
+    try {
+      err = await Meta.setFormation(this.rows);
+    } catch {
+      err = '保存に失敗しました。通信状態を確認してください';
     }
+    if (err) { $('form-error').textContent = `⚠ ${err}`; return; }
     this._enterTitle();
   },
 };

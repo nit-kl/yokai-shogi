@@ -9,21 +9,34 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:online": "vite build --mode online",
     "preview": "vite preview --port 4173 --strictPort",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p server --noEmit",
     "test": "vitest run",
+    "test:workers": "vitest run -c vitest.workers.config.ts",
     "test:e2e": "node test/e2e/run.mjs",
     "images": "node scripts/optimize-images.mjs",
     "api:dev": "wrangler dev --config server/wrangler.jsonc",
-    "api:deploy": "wrangler deploy --config server/wrangler.jsonc",
-    "pages:deploy": "npm run build && wrangler pages deploy client/dist --project-name=yokai-shogi"
+    "api:deploy": "wrangler deploy --config server/wrangler.jsonc --env production",
+    "api:deploy:staging": "wrangler deploy --config server/wrangler.jsonc --env staging",
+    "db:migrate:local": "wrangler d1 migrations apply yokai-shogi-db-staging --config server/wrangler.jsonc --local",
+    "db:migrate:staging": "wrangler d1 migrations apply yokai-shogi-db-staging --config server/wrangler.jsonc --env staging --remote",
+    "db:migrate:prod": "wrangler d1 migrations apply yokai-shogi-db --config server/wrangler.jsonc --env production --remote",
+    "pages:deploy": "npm run build:online && wrangler pages deploy client/dist --project-name=yokai-shogi"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.16.15",
+    "@cloudflare/workers-types": "^4.20260612.1",
+    "@types/node": "^25.9.3",
     "playwright": "^1.53.0",
     "sharp": "^0.34.0",
     "typescript": "^5.8.0",
     "vite": "^7.0.0",
-    "vitest": "^3.2.0",
+    "vitest": "^4.1.8",
     "wrangler": "^4.20.0"
+  },
+  "dependencies": {
+    "hono": "^4.12.25",
+    "zod": "^4.4.3"
   }
 }

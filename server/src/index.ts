@@ -1,25 +1,60 @@
 /* ============================================================
-   妖怪将棋 API - Phase 0 雛形(疎通確認のみ)
-   Phase 1 で Hono + D1 による認証・ガチャ・編成APIを実装する(doc 04)
-   shared/ のエンジンが Workers で import できることの確認を兼ねる
+   妖怪将棋 API(Workers + Hono + D1)- Phase 1
+   メタ系(認証・ガチャ・編成)のサーバー権威化(doc 02 / 04)
+   対戦(Durable Objects)は Phase 2
    ============================================================ */
 
-import { Game } from '../../shared/game';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import type { AppEnv, Env } from './env';
+import { apiError } from './lib/errors';
+import { authRoutes } from './routes/auth';
+import { meRoutes } from './routes/me';
+import { gachaRoutes } from './routes/gacha';
+import { soloRoutes } from './routes/solo';
+import { runDailyJobs } from './cron';
 
-export interface Env {
-  // Phase 1 で D1 / KV / Turnstile のバインディングを追加
-}
+const app = new Hono<AppEnv>();
+
+/* CORS: 許可オリジンは環境変数で管理(doc 07) */
+app.use('*', async (c, next) => {
+  const allowed = (c.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+  return cors({
+    origin: origin => (allowed.includes(origin) ? origin : null),
+    allowHeaders: ['Authorization', 'Content-Type'],
+    maxAge: 86400,
+  })(c, next);
+});
+
+/* 死活監視(doc 09) */
+app.get('/healthz', async c => {
+  try {
+    await c.env.DB.prepare('SELECT 1').first();
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ ok: false }, 503);
+  }
+});
+
+app.get('/', c => c.json({ ok: true, service: 'yokai-shogi-api', phase: 1 }));
+
+/* v1 API(doc 04) */
+const v1 = new Hono<AppEnv>();
+v1.route('/', authRoutes);
+v1.route('/', meRoutes);
+v1.route('/', gachaRoutes);
+v1.route('/', soloRoutes);
+app.route('/v1', v1);
+
+app.notFound(c => apiError(c, 'VALIDATION', '不明なエンドポイントです'));
+app.onError((err, c) => {
+  console.error('[unhandled]', err instanceof Error ? err.stack || err.message : String(err));
+  return apiError(c, 'INTERNAL', 'サーバーエラーが発生しました');
+});
 
 export default {
-  async fetch(_req: Request, _env: Env): Promise<Response> {
-    // 共有エンジンがWorkersランタイムで動作することの自己診断
-    const s = Game.newState();
-    const engineOk = Game.getAllActions(s, 'p').length > 0;
-    return Response.json({
-      ok: true,
-      service: 'yokai-shogi-api',
-      phase: 0,
-      engine: engineOk ? 'shared engine loaded' : 'engine error',
-    });
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(runDailyJobs(env));
   },
 };

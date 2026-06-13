@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // meta/index.ts を読むテストが現れても __API_URL__ が解決できるよう保険(node testはオフライン扱い)
+  define: { __API_URL__: '""' },
   test: {
     environment: 'node',
     include: ['test/**/*.test.ts'],
