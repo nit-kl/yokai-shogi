@@ -1,0 +1,341 @@
+/* ============================================================
+   妖怪将棋 - 駒データ定義(shared: クライアント/サーバー共用)
+   移動はすべて「自分視点」(前 = dy:-1)。敵側は自動で反転される。
+   ※ このモジュールは Web標準APIのみ・I/Oなし を厳守する(doc 02)
+   ============================================================ */
+
+export type Side = 'p' | 'e';
+export type YokaiType =
+  | 'attack' | 'defense' | 'ambush' | 'debuff'
+  | 'support' | 'transform' | 'trap' | 'boss';
+export type Rarity = 'N' | 'R' | 'SR' | 'SSR';
+
+export type XY = readonly [number, number];
+
+export interface MoveSet {
+  steps?: readonly XY[];
+  jumps?: readonly XY[];
+  slides?: readonly XY[];
+}
+
+export type Skill =
+  | { kind: 'crit'; name: string; desc: string; chance: number; mult: number }
+  | { kind: 'zone'; name: string; desc: string; bonus: number }
+  | { kind: 'rush'; name: string; desc: string; minDist: number; mult: number }
+  | { kind: 'aura'; name: string; desc: string; reduce: number }
+  | { kind: 'weaken'; name: string; desc: string; reduce: number }
+  | { kind: 'jam'; name: string; desc: string }
+  | { kind: 'chill'; name: string; desc: string }
+  | { kind: 'heal'; name: string; desc: string; amount: number }
+  | { kind: 'counter'; name: string; desc: string; dmg: number }
+  | { kind: 'decoy'; name: string; desc: string }
+  | { kind: 'explode'; name: string; desc: string };
+
+export interface YokaiDef {
+  id: string;
+  name: string;
+  type: YokaiType;
+  atk: number;
+  rarity: Rarity;
+  gachaOnly?: boolean;
+  img: string;    // フルサイズ(512px WebP)
+  imgSm: string;  // 小サイズ(チップ・一覧用 WebP)
+  moveText: string;
+  skill: Skill;
+  moves: MoveSet;
+  promoted?: MoveSet;
+  dropLimit?: number; // 相手陣最奥 n 段には打てない
+}
+
+export const COLS = 5;
+export const ROWS = 6;
+export const MAX_HP = 3000;
+export const ZONE_DEPTH = 2; // 敵陣の深さ(成りゾーン)
+
+const STEPS_ALL8: readonly XY[] = [[0,-1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[1,1],[-1,1]];
+const STEPS_GOLD: readonly XY[] = [[0,-1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1]];
+const STEPS_DIAG4: readonly XY[] = [[1,-1],[-1,-1],[1,1],[-1,1]];
+const STEPS_ORTHO4: readonly XY[] = [[0,-1],[1,0],[-1,0],[0,1]];
+
+export const TYPE_INFO: Record<YokaiType, { label: string; cls: string; color: string }> = {
+  attack:    { label: '攻', cls: 't-attack',    color: '#ff6b4a' },
+  defense:   { label: '守', cls: 't-defense',   color: '#4aa8ff' },
+  ambush:    { label: '罠', cls: 't-ambush',    color: '#b06bff' },
+  debuff:    { label: '妨', cls: 't-debuff',    color: '#6bd6e8' },
+  support:   { label: '援', cls: 't-support',   color: '#7cf2a4' },
+  transform: { label: '化', cls: 't-transform', color: '#d8a05a' },
+  trap:      { label: '爆', cls: 't-trap',      color: '#ff9a3c' },
+  boss:      { label: '大将', cls: 't-boss',    color: '#ffc83d' },
+};
+
+/* レアリティ: weight=ガチャ排出比, yoryoku=被り時の妖力変換量 */
+export const RARITY_INFO: Record<Rarity, { label: string; cls: string; color: string; weight: number; yoryoku: number }> = {
+  N:   { label: 'N',   cls: 'r-n',   color: '#9aa0b5', weight: 40, yoryoku: 20 },
+  R:   { label: 'R',   cls: 'r-r',   color: '#58b6ff', weight: 40, yoryoku: 50 },
+  SR:  { label: 'SR',  cls: 'r-sr',  color: '#c88aff', weight: 16, yoryoku: 150 },
+  SSR: { label: 'SSR', cls: 'r-ssr', color: '#ffd24a', weight: 4,  yoryoku: 400 },
+};
+
+const img = (name: string) => `assets/pieces/${name}.webp`;
+const imgSm = (name: string) => `assets/pieces/sm/${name}.webp`;
+
+export const YOKAI: Record<string, YokaiDef> = {
+  /* ---------- 大将 ---------- */
+  kyubi: {
+    id: 'kyubi', name: '九尾の狐', type: 'boss', atk: 400, rarity: 'SSR',
+    img: img('kyubi'), imgSm: imgSm('kyubi'),
+    moveText: '全方向に1マス',
+    skill: { kind: 'crit', name: '妖狐の業火', desc: '駒を取った時、20%で狐火が燃え上がりダメージ2倍', chance: 0.2, mult: 2 },
+    moves: { steps: STEPS_ALL8 },
+  },
+  shuten: {
+    id: 'shuten', name: '酒呑童子', type: 'boss', atk: 400, rarity: 'SSR',
+    img: img('shuten'), imgSm: imgSm('shuten'),
+    moveText: '全方向に1マス',
+    skill: { kind: 'crit', name: '鬼神の剛腕', desc: '駒を取った時、20%で剛腕が唸りダメージ2倍', chance: 0.2, mult: 2 },
+    moves: { steps: STEPS_ALL8 },
+  },
+
+  /* ---------- 攻タイプ ---------- */
+  kooni: {
+    id: 'kooni', name: '小鬼', type: 'attack', atk: 150, rarity: 'N',
+    img: img('kooni'), imgSm: imgSm('kooni'),
+    moveText: '前に1マス(成:金の動き)',
+    skill: { kind: 'crit', name: '鬼火', desc: '駒を取った時、30%で鬼火が爆ぜダメージ1.5倍', chance: 0.3, mult: 1.5 },
+    moves: { steps: [[0,-1]] },
+    promoted: { steps: STEPS_GOLD },
+    dropLimit: 1, // 最奥1段には打てない
+  },
+  nekomata: {
+    id: 'nekomata', name: '猫又', type: 'attack', atk: 200, rarity: 'R',
+    img: img('nekomata'), imgSm: imgSm('nekomata'),
+    moveText: '斜めに1マス(成:斜め+前後)',
+    skill: { kind: 'zone', name: '化け猫の祟り', desc: '敵陣で駒を取るとダメージ+120', bonus: 120 },
+    moves: { steps: STEPS_DIAG4 },
+    promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
+  },
+  ittan: {
+    id: 'ittan', name: '一反木綿', type: 'attack', atk: 250, rarity: 'R',
+    img: img('ittan'), imgSm: imgSm('ittan'),
+    moveText: '前にどこまでも(成:+横・後ろ1マス)',
+    skill: { kind: 'rush', name: '風斬り', desc: '3マス以上移動して駒を取るとダメージ2倍', minDist: 3, mult: 2 },
+    moves: { slides: [[0,-1]] },
+    promoted: { slides: [[0,-1]], steps: [[1,0],[-1,0],[0,1]] },
+    dropLimit: 1,
+  },
+  nue: {
+    id: 'nue', name: '鵺', type: 'attack', atk: 300, rarity: 'SR',
+    img: img('nue'), imgSm: imgSm('nue'),
+    moveText: '前へ変則跳び・駒を飛び越す(成:+斜め1マス)',
+    skill: { kind: 'crit', name: '混沌の咆哮', desc: '駒を取った時、25%で雷鳴が轟きダメージ1.8倍', chance: 0.25, mult: 1.8 },
+    moves: { jumps: [[1,-2],[-1,-2]] },
+    promoted: { jumps: [[1,-2],[-1,-2]], steps: STEPS_DIAG4 },
+    dropLimit: 2, // 最奥2段には打てない
+  },
+
+  /* ---------- 守タイプ ---------- */
+  kappa: {
+    id: 'kappa', name: '河童', type: 'defense', atk: 120, rarity: 'N',
+    img: img('kappa'), imgSm: imgSm('kappa'),
+    moveText: '縦横に1マス(成:全方向1マス)',
+    skill: { kind: 'aura', name: '水神の加護', desc: '盤上にいる間、自軍の受けるダメージ-15%', reduce: 0.15 },
+    moves: { steps: STEPS_ORTHO4 },
+    promoted: { steps: STEPS_ALL8 },
+  },
+  nurikabe: {
+    id: 'nurikabe', name: 'ぬりかべ', type: 'defense', atk: 100, rarity: 'R',
+    img: img('nurikabe'), imgSm: imgSm('nurikabe'),
+    moveText: '前と横に1マス(成:縦横+斜め前)',
+    skill: { kind: 'aura', name: '鉄壁', desc: '盤上にいる間、自軍の受けるダメージ-20%', reduce: 0.2 },
+    moves: { steps: [[0,-1],[1,0],[-1,0]] },
+    promoted: { steps: [[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1]] },
+  },
+
+  /* ---------- 罠タイプ ---------- */
+  tengu: {
+    id: 'tengu', name: '天狗', type: 'ambush', atk: 220, rarity: 'SR',
+    img: img('tengu'), imgSm: imgSm('tengu'),
+    moveText: '斜めに1〜2マス飛行・駒を飛び越す(成:+前後1マス)',
+    skill: { kind: 'counter', name: '神隠しの返し風', desc: '取られた時、取った相手に300の反撃ダメージ!', dmg: 300 },
+    moves: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]] },
+    promoted: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]], steps: [[0,-1],[0,1]] },
+  },
+  rokuro: {
+    id: 'rokuro', name: 'ろくろ首', type: 'ambush', atk: 180, rarity: 'R',
+    img: img('rokuro'), imgSm: imgSm('rokuro'),
+    moveText: '横にどこまでも+前1マス(成:+後ろ・斜め前)',
+    skill: { kind: 'counter', name: '怨念の絞めつけ', desc: '取られた時、取った相手に250の反撃ダメージ!', dmg: 250 },
+    moves: { slides: [[1,0],[-1,0]], steps: [[0,-1]] },
+    promoted: { slides: [[1,0],[-1,0]], steps: [[0,-1],[0,1],[1,-1],[-1,-1]] },
+  },
+
+  /* ==================== ガチャ限定妖怪 ==================== */
+  aooni: {
+    id: 'aooni', name: '青鬼', type: 'attack', atk: 190, rarity: 'R', gachaOnly: true,
+    img: img('aooni'), imgSm: imgSm('aooni'),
+    moveText: '前と斜め前に1マス(成:金の動き)',
+    skill: { kind: 'crit', name: '青碧の剛撃', desc: '駒を取った時、25%で剛撃が走りダメージ1.6倍', chance: 0.25, mult: 1.6 },
+    moves: { steps: [[0,-1],[1,-1],[-1,-1]] },
+    promoted: { steps: STEPS_GOLD },
+    dropLimit: 1,
+  },
+  kasha: {
+    id: 'kasha', name: '火車', type: 'attack', atk: 230, rarity: 'R', gachaOnly: true,
+    img: img('kasha'), imgSm: imgSm('kasha'),
+    moveText: '斜めに1マス(成:斜め+前後)',
+    skill: { kind: 'zone', name: '獄炎の車輪', desc: '敵陣で駒を取るとダメージ+150', bonus: 150 },
+    moves: { steps: STEPS_DIAG4 },
+    promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
+  },
+  kamaitachi: {
+    id: 'kamaitachi', name: '鎌鼬', type: 'attack', atk: 230, rarity: 'R', gachaOnly: true,
+    img: img('kamaitachi'), imgSm: imgSm('kamaitachi'),
+    moveText: '前にどこまでも(成:+横・後ろ1マス)',
+    skill: { kind: 'rush', name: '真空斬り', desc: '2マス以上移動して駒を取るとダメージ1.8倍', minDist: 2, mult: 1.8 },
+    moves: { slides: [[0,-1]] },
+    promoted: { slides: [[0,-1]], steps: [[1,0],[-1,0],[0,1]] },
+    dropLimit: 1,
+  },
+  hitouban: {
+    id: 'hitouban', name: '飛頭蛮', type: 'ambush', atk: 200, rarity: 'R', gachaOnly: true,
+    img: img('hitouban'), imgSm: imgSm('hitouban'),
+    moveText: '横にどこまでも+前1マス(成:+後ろ・斜め前)',
+    skill: { kind: 'counter', name: '宙飛ぶ怨嗟', desc: '取られた時、取った相手に300の反撃ダメージ!', dmg: 300 },
+    moves: { slides: [[1,0],[-1,0]], steps: [[0,-1]] },
+    promoted: { slides: [[1,0],[-1,0]], steps: [[0,-1],[0,1],[1,-1],[-1,-1]] },
+  },
+  suiko: {
+    id: 'suiko', name: '水虎', type: 'defense', atk: 180, rarity: 'SR', gachaOnly: true,
+    img: img('suiko'), imgSm: imgSm('suiko'),
+    moveText: '縦横に1マス(成:全方向1マス)',
+    skill: { kind: 'aura', name: '大水の帳', desc: '盤上にいる間、自軍の受けるダメージ-22%', reduce: 0.22 },
+    moves: { steps: STEPS_ORTHO4 },
+    promoted: { steps: STEPS_ALL8 },
+  },
+  oonyudo: {
+    id: 'oonyudo', name: '大入道', type: 'defense', atk: 140, rarity: 'SR', gachaOnly: true,
+    img: img('oonyudo'), imgSm: imgSm('oonyudo'),
+    moveText: '前と横に1マス(成:縦横+斜め前)',
+    skill: { kind: 'aura', name: '巨影の威圧', desc: '盤上にいる間、自軍の受けるダメージ-25%', reduce: 0.25 },
+    moves: { steps: [[0,-1],[1,0],[-1,0]] },
+    promoted: { steps: [[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1]] },
+  },
+  daitengu: {
+    id: 'daitengu', name: '大天狗', type: 'ambush', atk: 260, rarity: 'SR', gachaOnly: true,
+    img: img('daitengu'), imgSm: imgSm('daitengu'),
+    moveText: '斜めに1〜2マス飛行・駒を飛び越す(成:+前後1マス)',
+    skill: { kind: 'counter', name: '天狗颪', desc: '取られた時、取った相手に400の反撃ダメージ!', dmg: 400 },
+    moves: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]] },
+    promoted: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]], steps: [[0,-1],[0,1]] },
+  },
+  raiju: {
+    id: 'raiju', name: '雷獣', type: 'attack', atk: 330, rarity: 'SR', gachaOnly: true,
+    img: img('raiju'), imgSm: imgSm('raiju'),
+    moveText: '前へ変則跳び・駒を飛び越す(成:+斜め1マス)',
+    skill: { kind: 'crit', name: '迅雷の牙', desc: '駒を取った時、30%で雷が落ちダメージ1.8倍', chance: 0.3, mult: 1.8 },
+    moves: { jumps: [[1,-2],[-1,-2]] },
+    promoted: { jumps: [[1,-2],[-1,-2]], steps: STEPS_DIAG4 },
+    dropLimit: 2,
+  },
+  ibaraki: {
+    id: 'ibaraki', name: '茨木童子', type: 'attack', atk: 320, rarity: 'SSR', gachaOnly: true,
+    img: img('ibaraki'), imgSm: imgSm('ibaraki'),
+    moveText: '金の動き(成:全方向1マス)',
+    skill: { kind: 'crit', name: '夜叉の腕', desc: '駒を取った時、30%で鬼腕が唸りダメージ2倍', chance: 0.3, mult: 2 },
+    moves: { steps: STEPS_GOLD },
+    promoted: { steps: STEPS_ALL8 },
+  },
+  tamamo: {
+    id: 'tamamo', name: '玉藻前', type: 'boss', atk: 450, rarity: 'SSR', gachaOnly: true,
+    img: img('tamamo'), imgSm: imgSm('tamamo'),
+    moveText: '全方向に1マス',
+    skill: { kind: 'crit', name: '傾国の妖炎', desc: '駒を取った時、25%で妖炎が荒れ狂いダメージ2.2倍', chance: 0.25, mult: 2.2 },
+    moves: { steps: STEPS_ALL8 },
+  },
+
+  /* ---------- 妨タイプ(敵軍を弱体化) ---------- */
+  sunakake: {
+    id: 'sunakake', name: '砂かけ婆', type: 'debuff', atk: 120, rarity: 'N', gachaOnly: true,
+    img: img('sunakake'), imgSm: imgSm('sunakake'),
+    moveText: '前と斜め前に1マス(成:金の動き)',
+    skill: { kind: 'jam', name: '目つぶしの砂', desc: '盤上にいる間、敵の会心スキルを封じる' },
+    moves: { steps: [[0,-1],[1,-1],[-1,-1]] },
+    promoted: { steps: STEPS_GOLD },
+  },
+  tsuchigumo: {
+    id: 'tsuchigumo', name: '土蜘蛛', type: 'debuff', atk: 180, rarity: 'R', gachaOnly: true,
+    img: img('tsuchigumo'), imgSm: imgSm('tsuchigumo'),
+    moveText: '斜めに1マス+前へ2マス跳び(成:+縦横1マス)',
+    skill: { kind: 'weaken', name: '蝕む毒糸', desc: '盤上にいる間、敵軍の与えるダメージ-12%', reduce: 0.12 },
+    moves: { steps: STEPS_DIAG4, jumps: [[0,-2]] },
+    promoted: { steps: [...STEPS_DIAG4, ...STEPS_ORTHO4], jumps: [[0,-2]] },
+  },
+  yukionna: {
+    id: 'yukionna', name: '雪女', type: 'debuff', atk: 220, rarity: 'SR', gachaOnly: true,
+    img: img('yukionna'), imgSm: imgSm('yukionna'),
+    moveText: '斜め前と前後に1マス(成:全方向1マス)',
+    skill: { kind: 'chill', name: '凍てつく吐息', desc: '盤上にいる間、敵のコンボ倍率を無効化する' },
+    moves: { steps: [[1,-1],[-1,-1],[0,-1],[0,1]] },
+    promoted: { steps: STEPS_ALL8 },
+  },
+
+  /* ---------- 援タイプ(自軍を支援) ---------- */
+  zashiki: {
+    id: 'zashiki', name: '座敷童子', type: 'support', atk: 130, rarity: 'SR', gachaOnly: true,
+    img: img('zashiki'), imgSm: imgSm('zashiki'),
+    moveText: '縦横に1マス(成:全方向1マス)',
+    skill: { kind: 'heal', name: '福招き', desc: '駒を取った時、自軍の魂力を250回復する', amount: 250 },
+    moves: { steps: STEPS_ORTHO4 },
+    promoted: { steps: STEPS_ALL8 },
+  },
+
+  /* ---------- 化タイプ(化かして身を守る) ---------- */
+  tanuki: {
+    id: 'tanuki', name: '化け狸', type: 'transform', atk: 160, rarity: 'R', gachaOnly: true,
+    img: img('tanuki'), imgSm: imgSm('tanuki'),
+    moveText: '前3方向と後ろに1マス(成:金の動き)',
+    skill: { kind: 'decoy', name: '葉隠れの術', desc: '取られた時、正体は葉っぱ! ダメージ半減&相手の持ち駒にならない' },
+    moves: { steps: [[0,-1],[1,-1],[-1,-1],[0,1]] },
+    promoted: { steps: STEPS_GOLD },
+  },
+
+  /* ---------- 爆タイプ(取ると爆発) ---------- */
+  onibi: {
+    id: 'onibi', name: '鬼火', type: 'trap', atk: 100, rarity: 'SR', gachaOnly: true,
+    img: img('onibi'), imgSm: imgSm('onibi'),
+    moveText: '斜めに1マス(成:+前後1マス)',
+    skill: { kind: 'explode', name: '道連れの爆炎', desc: '取られた時、取った駒を道連れにして消滅させる(大将なら即敗北!)' },
+    moves: { steps: STEPS_DIAG4 },
+    promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
+  },
+
+  /* ---------- ガチャ限定・新大将 ---------- */
+  nurarihyon: {
+    id: 'nurarihyon', name: 'ぬらりひょん', type: 'boss', atk: 430, rarity: 'SSR', gachaOnly: true,
+    img: img('nurarihyon'), imgSm: imgSm('nurarihyon'),
+    moveText: '全方向に1マス',
+    skill: { kind: 'crit', name: '百鬼夜行の総帥', desc: '駒を取った時、30%で百鬼が応えダメージ1.8倍', chance: 0.3, mult: 1.8 },
+    moves: { steps: STEPS_ALL8 },
+  },
+};
+
+/* ガチャ排出対象(酒呑童子は敵専用のため除外、九尾の狐は初期所持) */
+export const GACHA_POOL: string[] = Object.values(YOKAI)
+  .filter(y => y.id !== 'shuten' && y.id !== 'kyubi')
+  .map(y => y.id);
+
+/* 初期配置(y=0 が敵陣最奥、y=5 が自陣最奥) */
+export const SETUP: (string | null)[][] = [
+  ['rokuro', 'nurikabe', 'shuten', 'kappa', 'tengu'],   // y0 敵・奥
+  ['nue', 'nekomata', null, 'kooni', 'ittan'],          // y1 敵・前
+  [null, null, null, null, null],                       // y2
+  [null, null, null, null, null],                       // y3
+  ['ittan', 'kooni', null, 'nekomata', 'nue'],          // y4 自・前
+  ['tengu', 'kappa', 'kyubi', 'nurikabe', 'rokuro'],    // y5 自・奥
+];
+
+export const PLAYER_BOSS = 'kyubi';
+export const ENEMY_BOSS = 'shuten';
+
+/* プリロード対象画像 */
+export const ALL_IMAGES: string[] = Object.values(YOKAI).flatMap(y => [y.img, y.imgSm]);

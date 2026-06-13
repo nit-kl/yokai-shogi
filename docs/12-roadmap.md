@@ -17,15 +17,16 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 
 ゴール: 「WorkersとクライアントがTypeScriptの同じエンジンをimportできる」状態。**見た目・挙動は一切変えない**。
 
-- [ ] **gitリポジトリ化**(現状未管理)・GitHub・ブランチ運用(main + PR)
-- [ ] Vite導入、`prototype/js/` を **TypeScript ESM** に移植して `shared/`(data, game)と `client/` に分離
-  - 順序: ① `shared/` を先にTS化(型定義 = 後のプロトコル型)→ ② client側は `// @ts-check` で受けて段階的にTS化(UIの型付けは完璧を目指さない)
-- [ ] エンジン改修(doc 02): `applyAction` の乱数注入化・`_uid` の状態オブジェクト移動・Web標準APIのみ縛りの明文化
-- [ ] 既存テストを vitest へ移植(vm読み込み → import。アサーション内容は維持)
-- [ ] CI(GitHub Actions): `tsc --noEmit` + vitest + playwright
-- [ ] wrangler プロジェクト雛形(local/staging/production 環境定義)+ Pagesデプロイ(この時点で現ソロ版をPages配信に乗せる)
-- [ ] 画像最適化(WebP・サイズ別)
-- 完了条件: 全既存テストgreen+ブラウザでの動作が現状と同一(ui-shotスクリーンショット比較)+ Pages上で現行ゲームが動く
+- [x] **gitリポジトリ化**(現状未管理)・GitHub・ブランチ運用(main + PR)
+- [x] Vite導入、`prototype/js/` を **TypeScript ESM** に移植して `shared/`(data, game)と `client/` に分離
+  - 全ファイルTS化で実施(UIの型付けは実利優先。e2e用フックは `window.yk` に集約)
+- [x] エンジン改修(doc 02): `applyAction` の乱数注入化(`opts.rand`)・`_uid` → `GameState.nextUid` へ移動・Web標準APIのみ縛りの明文化
+- [x] 既存テストを vitest へ移植(vm読み込み → import。アサーション内容は維持)
+- [x] CI(GitHub Actions): `tsc --noEmit` + vitest + playwright(`.github/workflows/ci.yml`)
+- [x] wrangler プロジェクト雛形(staging/production 環境定義。`npm run api:dev` で共有エンジンのWorkers動作確認済み)
+- [x] Pagesデプロイ(https://yokai-shogi.pages.dev/ で稼働確認済み。再デプロイは `npm run pages:deploy`)
+- [x] 画像最適化(WebP・サイズ別: 512px + 小160px。約10MB → 1.8MB)
+- 完了条件: 全既存テストgreen ✅+ブラウザでの動作が現状と同一(ui-shotスクリーンショット比較 ✅)+ Pages上で現行ゲームが動く ✅ → **Phase 0 / M0 完了(2026-06-13)**
 
 ## Phase 1: サーバー権威メタ
 

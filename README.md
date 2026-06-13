@@ -3,20 +3,26 @@
 逆転オセロニア風のバトルシステムを将棋に融合させたWebゲーム。
 **駒を取ると、取った駒の攻撃力ぶん相手の「魂力(HP)」にダメージ**が入る。
 
-## リポジトリ構成
+## リポジトリ構成(Phase 0 完了後)
 
 ```
-prototype/   ローカル1人用プロトタイプ(ビルド不要のバニラHTML/JS)
+shared/      ルールエンジン+駒マスタ(TypeScript・依存ゼロ。クライアント/サーバー共用)
+client/      ゲーム本体(Vite + TypeScript。UI・AI・メタ進行・演出)
+server/      Cloudflare Workers API の雛形(実装は Phase 1 から)
+test/        vitest ユニットテスト + playwright e2e テスト
+scripts/     画像最適化などの開発スクリプト
+prototype/   旧ローカル1人用プロトタイプ(移植元。挙動比較のため保存)
 docs/        オンライン対戦版リリースに向けた設計・計画ドキュメント
 ```
 
-## 遊び方
-
-`prototype/index.html` をブラウザで開くだけで遊べます(ビルド・サーバー不要)。
+## 遊び方(開発サーバー)
 
 ```
-start prototype/index.html
+npm install
+npm run dev          # http://localhost:5173
 ```
+
+旧プロトタイプは従来どおり `prototype/index.html` をブラウザで開くだけでも遊べます。
 
 ### ルール概要
 
@@ -51,22 +57,23 @@ start prototype/index.html
 - **編成**: タイトルの「編成」から、所持妖怪で自軍2段(10マス)を自由に配置。大将1体が必須。
 - 進行データは `localStorage` に保存(サーバー不要)。
 
-## プロトタイプ構成
+## コード構成
 
 ```
-prototype/index.html        エントリポイント
-prototype/css/style.css     スタイル・アニメーション定義
-prototype/js/data.js        妖怪(駒)データ・初期配置
-prototype/js/game.js        ルールエンジン(合法手・ダメージ計算・成り・持ち駒)
-prototype/js/ai.js          敵AI(期待値評価+脅威差し引きの貪欲法)
-prototype/js/audio.js       WebAudio合成のSE/BGM(音源ファイル不要)
-prototype/js/effects.js     パーティクル・カットイン・ダメージ数字等の演出
-prototype/js/meta.js        メタ進行(セーブ・ガチャ抽選・ログインボーナス・編成)
-prototype/js/menu.js        ガチャ・編成・ログインボーナスのUI
-prototype/js/main.js        UIコントローラ
-prototype/assets/pieces/    元画像(背景焼き込みあり)
-prototype/assets/pieces/processed/  ゲームで使用する透過・縮小済み画像(色違いバリアント含む)
-prototype/test/             エンジン・UIの自動テスト
+shared/data.ts             妖怪(駒)データ・初期配置・型定義
+shared/game.ts             ルールエンジン(合法手・ダメージ計算・成り・持ち駒)
+                           ※ Web標準APIのみ・I/Oなし(Workers/ブラウザ/vitestで同一動作)
+client/index.html          エントリポイント
+client/css/style.css       スタイル・アニメーション定義
+client/src/main.ts         UIコントローラ
+client/src/menu.ts         ガチャ・編成・ログインボーナスのUI
+client/src/meta.ts         メタ進行(セーブ・ガチャ抽選・ログインボーナス・編成)
+client/src/ai.ts           敵AI(期待値評価+脅威差し引きの貪欲法)
+client/src/audio.ts        WebAudio合成のSE/BGM(音源ファイル不要)
+client/src/effects.ts      パーティクル・カットイン・ダメージ数字等の演出
+client/public/assets/      最適化済み駒画像(WebP 512px + 小160px)
+server/src/index.ts        Workers API 雛形(Phase 1 で Hono + D1 実装)
+server/wrangler.jsonc      wrangler 設定(staging / production 環境定義)
 ```
 
 ## 開発ドキュメント
@@ -74,16 +81,20 @@ prototype/test/             エンジン・UIの自動テスト
 オンライン対戦対応の本格リリースに向けた設計・計画は [docs/](docs/README.md) を参照。
 (アーキテクチャ / オンライン対戦設計 / API仕様 / DB設計 / 認証 / セキュリティ / 経済設計 / 運用 / テスト戦略 / 法務 / ロードマップ)
 
-## 開発用スクリプト(要 `npm i --no-save playwright`)
+## 開発コマンド
 
 ```
-node prototype/test/engine-test.js      # エンジン自動対局200局の整合性テスト
-node prototype/test/skills-test.js      # 妨・援・化・爆スキルの動作テスト
-node prototype/test/meta-test.js        # ガチャ・ログボ・編成ロジックのテスト
-node prototype/test/ui-shot.js          # UIスクリーンショット検証
-node prototype/test/ui-gacha.js         # ガチャ・編成画面の動作検証
-node prototype/test/ui-skills.js        # 新スキル演出の検証
-node prototype/test/ui-fx.js            # カットイン等の演出検証
-node prototype/test/process-images.js   # assets元画像から透過駒画像を再生成
-node prototype/test/make-variants.js    # ガチャ限定妖怪の色違い画像を再生成
+npm run dev            # 開発サーバー(Vite)
+npm run build          # 本番ビルド → client/dist
+npm run preview        # ビルド成果物の確認サーバー(port 4173)
+npm run typecheck      # tsc --noEmit
+npm test               # vitest(エンジン・スキル・メタのユニットテスト)
+npm run test:e2e       # playwright e2e(要: 事前に npm run build)
+npm run images         # prototype の駒画像から WebP を再生成
+npm run api:dev        # Workers API をローカル起動(wrangler dev)
+npm run pages:deploy   # Cloudflare Pages へデプロイ(要: wrangler login)
 ```
+
+CI(GitHub Actions)は push / PR ごとに typecheck + vitest + build + e2e を実行する。
+
+旧プロトタイプの画像生成スクリプト(`prototype/test/process-images.js` など)はそのまま残してある。

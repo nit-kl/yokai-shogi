@@ -27,6 +27,7 @@
 | 10 | [テスト戦略](10-test-strategy.md) | テストピラミッド・既存テスト資産の発展・負荷試験 |
 | 11 | [法務・コンプライアンス](11-legal-compliance.md) | 利用規約・プライバシー・ガチャ表記・未成年配慮 |
 | 12 | [開発ロードマップ](12-roadmap.md) | フェーズ分割・マイルストーン・リリース判定基準 |
+| 13 | [GitHub連携デプロイ手順書](13-pages-github-deploy.md) | Pages自動デプロイの設定手順・料金・ロールバック |
 
 ## 読み方
 
@@ -34,15 +35,19 @@
 - サーバー実装に着手する前に: 03 → 04 → 05 → 07
 - リリース準備: 09 → 10 → 11
 
-## 現状コードベースの概要(2026-06時点)
+## 現状コードベースの概要(2026-06時点・Phase 0 完了)
 
 ```
-prototype/index.html / css/style.css   画面・スタイル(ビルド不要のバニラ構成)
-prototype/js/data.js    妖怪27種(8タイプ・4レアリティ)・初期配置・ガチャプール定義
-prototype/js/game.js    ルールエンジン(合法手・ダメージ・スキル8種・成り・持ち駒)※依存ゼロ
-prototype/js/ai.js      ソロ用AI(期待値評価+脅威差し引き)
-prototype/js/meta.js    メタ進行(セーブ・ガチャ抽選・ログボ・編成)※現状localStorage
-prototype/js/menu.js    ガチャ・編成・ログボUI
-prototype/js/main.js    対戦UIコントローラ
-prototype/test/         エンジン・スキル・メタ・UIの自動テスト(node + playwright)
+shared/data.ts          妖怪27種(8タイプ・4レアリティ)・初期配置・ガチャプール・型定義
+shared/game.ts          ルールエンジン(合法手・ダメージ・スキル8種・成り・持ち駒)
+                        ※依存ゼロ・乱数注入対応(opts.rand)・uid採番は GameState.nextUid
+client/src/ai.ts        ソロ用AI(期待値評価+脅威差し引き)
+client/src/meta.ts      メタ進行(セーブ・ガチャ抽選・ログボ・編成)※現状localStorage
+client/src/menu.ts      ガチャ・編成・ログボUI
+client/src/main.ts      対戦UIコントローラ(e2e用フック: window.yk)
+client/public/assets/   WebP最適化済み駒画像(512px + 小160px)
+server/                 Workers雛形(wrangler.jsonc + 疎通用エントリ。実装はPhase 1)
+test/*.test.ts          vitest ユニットテスト(エンジン・スキル・メタ)
+test/e2e/*.mjs          playwright e2e(vite preview に対して実行)
+prototype/              移植元プロトタイプ(挙動比較リファレンスとして保存)
 ```
