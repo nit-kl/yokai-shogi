@@ -100,7 +100,7 @@
         </div>
       </div>
       <div class="gacha-center">
-        <div class="gacha-orb"><span>召</span></div>
+        <div class="gacha-orb"><span>召</span><i></i></div>
         <div class="gacha-note">チケットはログインボーナスと勝利報酬で手に入る</div>
         <div class="title-buttons">
           <button id="btn-pull1" class="btn btn-gold">1回召喚<small>チケット1枚</small></button>
@@ -110,8 +110,15 @@
         <div class="gacha-rates">排出率: N 40% / R 40% / SR 16% / SSR 4% ・ 被りは妖力に変換</div>
       </div>
     </div>
+    <div id="gacha-summon" class="hidden">
+      <div class="summon-rays"></div>
+      <div class="summon-circle"><span>召</span></div>
+      <div class="summon-text">百鬼召喚</div>
+    </div>
     <!-- 召喚結果 -->
     <div id="gacha-result" class="hidden">
+      <div class="gacha-result-rays"></div>
+      <div id="gacha-result-title">召喚結果</div>
       <div id="gacha-cards" class="gacha-cards"></div>
       <button id="btn-gacha-ok" class="btn btn-gold">OK</button>
     </div>

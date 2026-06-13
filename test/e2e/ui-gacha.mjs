@@ -31,7 +31,9 @@ await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-g2-gacha.png') });
 
 await page.click('#btn-pull10');
+await page.waitForSelector('#gacha-summon:not(.hidden)');
 await page.waitForSelector('#gacha-result:not(.hidden)');
+await page.locator('#gacha-summon').waitFor({ state: 'hidden' });
 await page.waitForTimeout(1800);
 await page.screenshot({ path: path.join(dir, 'shot-g3-pull10.png') });
 const cards = await page.locator('.gacha-card').count();

@@ -160,6 +160,11 @@ export const AudioSys = {
         this._osc('sine', 440, t, 0.12, 0.2);
         this._osc('sine', 587, t + 0.08, 0.18, 0.2);
         break;
+      case 'summon':
+        this._noise(t, 1.1, 0.22, 1800);
+        this._osc('sine', 90, t, 1.3, 0.55, null, 360);
+        [220, 330, 440, 660, 880].forEach((f, i) => this._osc('triangle', f, t + 0.18 + i * 0.14, 0.5, 0.18));
+        break;
       case 'win': {
         const seq = [523, 659, 784, 1047, 784, 1047, 1319];
         seq.forEach((f, i) => {

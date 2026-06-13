@@ -3,7 +3,7 @@
    ============================================================ */
 
 import { COLS, ROWS, SETUP, YOKAI, TYPE_INFO, RARITY_INFO, formationWithBoss } from '../../shared/data';
-import { $, showScreen } from './util';
+import { $, sleep, showScreen } from './util';
 import { AudioSys } from './audio';
 import { FX } from './effects';
 import { Meta } from './meta';
@@ -160,15 +160,19 @@ export const MenuUI = {
     /* 連打・二重送信を防ぐ */
     $<HTMLButtonElement>('btn-pull1').disabled = true;
     $<HTMLButtonElement>('btn-pull10').disabled = true;
+    this.startSummon(count);
     let results: GachaResult[] | null = null;
     try {
-      results = await Meta.pull(count);
+      [results] = await Promise.all([Meta.pull(count), sleep(count === 10 ? 1450 : 1100)]);
     } catch {
       results = null;
     }
     this.refreshCurrency();
-    if (!results) return;
-    AudioSys.play('cutin');
+    if (!results) {
+      $('gacha-summon').classList.add('hidden');
+      return;
+    }
+    this.finishSummon(results);
     this.showResults(results);
     if (this.onboardingMode === 'gacha' && count === 10) {
       $('btn-gacha-ok').onclick = () => {
@@ -179,10 +183,41 @@ export const MenuUI = {
     }
   },
 
+  startSummon(count: 1 | 10) {
+    const summon = $('gacha-summon');
+    summon.className = count === 10 ? 'summon-ten' : 'summon-one';
+    summon.querySelector('.summon-text')!.textContent = count === 10 ? '百鬼十連召喚' : '百鬼召喚';
+    AudioSys.play('summon');
+    const orb = document.querySelector('.gacha-orb') as HTMLElement;
+    const r = orb.getBoundingClientRect();
+    FX.ring(r.left + r.width / 2, r.top + r.height / 2, '#c88aff', 30, 110);
+    FX.burst(r.left + r.width / 2, r.top + r.height / 2, ['#c88aff', '#ffd24a', '#6bd6ff'], 48, 5);
+  },
+
+  finishSummon(results: GachaResult[]) {
+    const summon = $('gacha-summon');
+    const rarity = results.some(r => r.rarity === 'SSR') ? 'ssr'
+      : results.some(r => r.rarity === 'SR') ? 'sr'
+      : results.some(r => r.rarity === 'R') ? 'r' : 'n';
+    summon.classList.add(`finish-${rarity}`);
+    const colors = rarity === 'ssr' ? ['#ffd24a', '#fff6d8', '#ff9a3c']
+      : rarity === 'sr' ? ['#c88aff', '#e8d0ff', '#6bd6ff']
+      : ['#58b6ff', '#d8f0ff', '#9aa0b5'];
+    FX.burst(innerWidth / 2, innerHeight / 2, colors, rarity === 'ssr' ? 100 : 64, rarity === 'ssr' ? 9 : 7);
+    FX.ring(innerWidth / 2, innerHeight / 2, colors[0], 36, 160);
+    AudioSys.play(rarity === 'ssr' ? 'win' : 'promote');
+    setTimeout(() => summon.classList.add('hidden'), 420);
+  },
+
   showResults(results: GachaResult[]) {
     const wrap = $('gacha-cards');
     wrap.innerHTML = '';
     wrap.classList.toggle('many', results.length > 1);
+    const result = $('gacha-result');
+    result.className = results.some(r => r.rarity === 'SSR') ? 'result-ssr'
+      : results.some(r => r.rarity === 'SR') ? 'result-sr' : 'result-normal';
+    $('gacha-result-title').textContent = results.some(r => r.rarity === 'SSR')
+      ? '大妖怪 降臨' : results.some(r => r.rarity === 'SR') ? '希少妖怪 出現' : '召喚結果';
     results.forEach((r, i) => {
       const def = YOKAI[r.id];
       const ri = RARITY_INFO[r.rarity];
@@ -196,8 +231,14 @@ export const MenuUI = {
         (r.isNew ? `<div class="gc-tag gc-new">NEW!</div>`
                  : `<div class="gc-tag gc-dupe">妖力 +${r.yoryoku}</div>`);
       wrap.appendChild(card);
+      setTimeout(() => {
+        const rect = card.getBoundingClientRect();
+        const colors = r.rarity === 'SSR' ? ['#ffd24a', '#fff6d8', '#ff9a3c']
+          : r.rarity === 'SR' ? ['#c88aff', '#e8d0ff'] : ['#58b6ff', '#9aa0b5'];
+        FX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, colors, r.rarity === 'SSR' ? 34 : 14, 3.5);
+      }, i * 130 + 180);
     });
-    $('gacha-result').classList.remove('hidden');
+    result.classList.remove('hidden');
 
     /* SSRはお祭り */
     if (results.some(r => r.rarity === 'SSR')) {
