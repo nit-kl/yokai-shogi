@@ -1,0 +1,4 @@
+# ローカル開発用シークレット: このファイルを .dev.vars にコピーして値を設定する
+# (.dev.vars は .gitignore 済み。本番/stagingは `wrangler secret put` で設定)
+JWT_SECRET=local-dev-secret-change-me
+# TURNSTILE_SECRET_KEY=  # 未設定なら検証スキップ(ローカル開発)

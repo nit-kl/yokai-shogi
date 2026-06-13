@@ -92,9 +92,9 @@ await page.screenshot({ path: path.join(dir, 'shot-g9-battle.png') });
 const placed = await page.evaluate(() => window.yk.G.board[5][2].id);
 if (placed !== 'tamamo') errors.push(`盤面の大将が${placed}(期待: tamamo)`);
 
-/* 大将なし編成は保存できないことの確認 */
-await page.evaluate(() => {
-  const err = window.yk.Meta.setFormation([[null,null,null,null,null],[null,null,null,null,null]]);
+/* 大将なし編成は保存できないことの確認(setFormationは非同期) */
+await page.evaluate(async () => {
+  const err = await window.yk.Meta.setFormation([[null,null,null,null,null],[null,null,null,null,null]]);
   if (!err) throw new Error('大将なし編成が通ってしまった');
 });
 

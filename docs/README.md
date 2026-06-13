@@ -28,6 +28,7 @@
 | 11 | [法務・コンプライアンス](11-legal-compliance.md) | 利用規約・プライバシー・ガチャ表記・未成年配慮 |
 | 12 | [開発ロードマップ](12-roadmap.md) | フェーズ分割・マイルストーン・リリース判定基準 |
 | 13 | [GitHub連携デプロイ手順書](13-pages-github-deploy.md) | Pages自動デプロイの設定手順・料金・ロールバック |
+| 14 | [Phase 1 オーナー作業チェックリスト](14-phase1-owner-tasks.md) | 運営者が手で行う必要がある作業(コミット/本番切替/Turnstile/規約 等) |
 
 ## 読み方
 
@@ -35,19 +36,26 @@
 - サーバー実装に着手する前に: 03 → 04 → 05 → 07
 - リリース準備: 09 → 10 → 11
 
-## 現状コードベースの概要(2026-06時点・Phase 0 完了)
+## 現状コードベースの概要(2026-06時点・Phase 1 完了 / M1達成)
 
 ```
 shared/data.ts          妖怪27種(8タイプ・4レアリティ)・初期配置・ガチャプール・型定義
 shared/game.ts          ルールエンジン(合法手・ダメージ・スキル8種・成り・持ち駒)
                         ※依存ゼロ・乱数注入対応(opts.rand)・uid採番は GameState.nextUid
+shared/gacha.ts         ガチャ抽選・10連確定枠・被り変換・排出率 ※クライアント/サーバー共用
+shared/validate.ts      編成・表示名の検証 ※クライアント/サーバー共用(権威検証もこれを使う)
 client/src/ai.ts        ソロ用AI(期待値評価+脅威差し引き)
-client/src/meta.ts      メタ進行(セーブ・ガチャ抽選・ログボ・編成)※現状localStorage
-client/src/menu.ts      ガチャ・編成・ログボUI
+client/src/meta/        メタ進行: MetaProvider 抽象 + ローカル版/API版2実装 + ファサード
+client/src/menu.ts      ガチャ・編成・ログボ・データ引き継ぎUI
 client/src/main.ts      対戦UIコントローラ(e2e用フック: window.yk)
 client/public/assets/   WebP最適化済み駒画像(512px + 小160px)
-server/                 Workers雛形(wrangler.jsonc + 疎通用エントリ。実装はPhase 1)
-test/*.test.ts          vitest ユニットテスト(エンジン・スキル・メタ)
-test/e2e/*.mjs          playwright e2e(vite preview に対して実行)
+server/src/             Workers API(Hono): routes(auth/me/gacha/solo)・cron・lib(jwt/crypto/time)
+server/migrations/      D1スキーマ / server/wrangler.jsonc  staging・production 環境定義
+test/*.test.ts          vitest(エンジン・スキル・メタ・APIクライアント配線)
+test/workers/*.spec.ts  vitest-pool-workers(実Workersランタイム+ローカルD1のAPI統合テスト)
+test/e2e/*.mjs          playwright e2e(オフライン4本 + オンライン2台同期 sync-online)
 prototype/              移植元プロトタイプ(挙動比較リファレンスとして保存)
 ```
+
+- API稼働中: staging `yokai-shogi-api-staging` / production `yokai-shogi-api-production`(ともに *.workers.dev)
+- 本番クライアントをサーバー権威に切り替えるには `npm run pages:deploy`(オンライン版)。詳細は doc 12 の Phase 1 検証状況

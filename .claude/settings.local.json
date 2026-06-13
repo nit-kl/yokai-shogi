@@ -8,7 +8,27 @@
       "Bash(node prototype/test/ui-gacha.js)",
       "Bash(node prototype/test/process-images.js)",
       "Bash(node prototype/test/skills-test.js)",
-      "Bash(node prototype/test/ui-skills.js)"
+      "Bash(node prototype/test/ui-skills.js)",
+      "Bash(node -e ' *)",
+      "Bash(node *)",
+      "PowerShell(Copy-Item *)",
+      "PowerShell(npx tsc -p server --noEmit)",
+      "PowerShell(npx vitest run -c vitest.workers.config.ts 2>&1 | Select-Object -Last 45)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 30)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 30)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 12)",
+      "PowerShell(npm run *)",
+      "PowerShell(node test/e2e/run.mjs 2>&1 | Select-Object -Last 20)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 15; npx vitest run 2>&1 | Select-Object -Last 14)",
+      "PowerShell(npx wrangler d1 migrations apply yokai-shogi-db-staging --config server/wrangler.jsonc --env staging --remote 2>&1 | Select-Object -Last 15)",
+      "PowerShell(npx wrangler deploy --config server/wrangler.jsonc --env staging 2>&1 | Select-Object -Last 18)",
+      "PowerShell($c = Get-Content client/css/style.css -Raw; \"total lines: $\\(\\(Get-Content client/css/style.css\\).Count\\)\"; $c.Substring\\([Math]::Max\\(0,$c.Length-220\\)\\))",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 15)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 10; npx vitest run 2>&1 | Select-Object -Last 12)",
+      "PowerShell(npm install *)",
+      "PowerShell(node test/e2e/run.mjs 2>&1 | Select-Object -Last 10)",
+      "PowerShell(git status --short; \"--- untracked dirs ---\"; git status --porcelain | Where-Object { $_ -match '^\\\\?\\\\?' })"
     ]
   }
 }

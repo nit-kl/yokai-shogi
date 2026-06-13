@@ -27,34 +27,44 @@ const COLORS_E = ['#ff5d5d', '#c84aff', '#ffd0d0', '#ff9a8a'];
 
 /* ============================== 起動 ============================== */
 window.addEventListener('DOMContentLoaded', () => {
-  Meta.load();
   FX.init();
   buildBoardCells();
   buildRulesPieces();
   wireButtons();
   MenuUI.init({ enterTitle });
-  preloadImages();
+  void boot();
   // 初回操作でオーディオ起動
   const audioKick = () => { AudioSys.init(); AudioSys.resume(); };
   addEventListener('pointerdown', audioKick, { once: true });
 });
 
+/* 画像プリロードとメタ初期化(認証・ログボ判定)を待ってからタイトルへ */
+async function boot() {
+  await Promise.all([
+    preloadImages(),
+    Meta.init().catch(err => { console.error('[meta] init failed', err); return null; }),
+  ]);
+  enterTitle();
+}
+
 /* ---------- 画像プリロード ---------- */
-function preloadImages() {
-  let done = 0;
-  const total = ALL_IMAGES.length;
-  const update = () => {
-    const pct = Math.round(done / total * 100);
-    $('loading-fill').style.width = pct + '%';
-    $('loading-pct').textContent = pct + '%';
-    if (done >= total) setTimeout(enterTitle, 450);
-  };
-  ALL_IMAGES.forEach(src => {
-    const img = new Image();
-    img.onload = img.onerror = () => { done++; update(); };
-    img.src = src;
+function preloadImages(): Promise<void> {
+  return new Promise(resolve => {
+    let done = 0;
+    const total = ALL_IMAGES.length;
+    const update = () => {
+      const pct = Math.round(done / total * 100);
+      $('loading-fill').style.width = pct + '%';
+      $('loading-pct').textContent = pct + '%';
+      if (done >= total) setTimeout(resolve, 450);
+    };
+    ALL_IMAGES.forEach(src => {
+      const img = new Image();
+      img.onload = img.onerror = () => { done++; update(); };
+      img.src = src;
+    });
+    update();
   });
-  update();
 }
 
 function enterTitle() {
@@ -468,9 +478,16 @@ function showResult() {
   const win = G!.winner === 'p';
   $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : ENEMY_BOSS].img;
   if (win) {
-    const reward = Meta.onWin();
-    $('result-reward').textContent = `勝利報酬: ガチャチケット 🎟 +${reward}`;
+    /* ソロ勝利報酬はサーバー(またはローカル)が日次上限つきで付与。結果を待って表示を確定 */
+    $('result-reward').textContent = '勝利報酬を確認中…';
     $('result-reward').classList.remove('hidden');
+    Meta.recordSoloWin().then(reward => {
+      $('result-reward').textContent = reward > 0
+        ? `勝利報酬: ガチャチケット 🎟 +${reward}`
+        : '本日の勝利報酬は上限に達しました';
+    }).catch(() => {
+      $('result-reward').textContent = '勝利報酬の付与に失敗しました(通信状態を確認)';
+    });
   } else {
     $('result-reward').classList.add('hidden');
   }

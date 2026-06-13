@@ -1,23 +1,60 @@
-// 妖怪将棋 API(Cloudflare Workers)- Phase 0 雛形
-// 実装は Phase 1(Hono + D1)から。doc 02 / 09 参照
-// ローカル開発: npm run api:dev
+// 妖怪将棋 API(Cloudflare Workers + Hono + D1)
+// ローカル開発: npm run api:dev(ローカルD1。マイグレーション: npm run db:migrate:local)
+// シークレット: JWT_SECRET(必須)/ TURNSTILE_SECRET_KEY(任意: 未設定なら検証スキップ)
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "yokai-shogi-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-06-01",
-  // 日本向けのためDOは東京近傍に配置予定(Phase 2でlocation hint設定)
   "observability": {
     "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yokai-shogi-db-staging",
+      "database_id": "9f69cb38-cd54-4300-8d8d-9adcc0f8ad58",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 19 * * *"] // JST 04:00(日次リセットに合わせる: doc 08)
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173"
   },
   "env": {
     // ステージング: wrangler deploy --env staging
     "staging": {
-      "name": "yokai-shogi-api-staging"
+      "name": "yokai-shogi-api-staging",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "yokai-shogi-db-staging",
+          "database_id": "9f69cb38-cd54-4300-8d8d-9adcc0f8ad58",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "triggers": { "crons": ["0 19 * * *"] },
+      "vars": {
+        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173"
+      }
     },
     // 本番: wrangler deploy --env production
     "production": {
-      "name": "yokai-shogi-api-production"
+      "name": "yokai-shogi-api-production",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "yokai-shogi-db",
+          "database_id": "222c5403-5215-408f-b651-8eaf867156a1",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "triggers": { "crons": ["0 19 * * *"] },
+      "vars": {
+        "ALLOWED_ORIGINS": "https://yokai-shogi.pages.dev"
+      }
     }
   }
 }

@@ -32,16 +32,29 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 
 ゴール: ガチャ・チケット・編成がサーバー管理になり、複数端末で同じデータが使える。対戦はまだソロのみ。
 
-- [ ] サーバー骨格(Workers + Hono + D1マイグレーション)
-- [ ] ゲスト認証(Turnstile付き)→ トークン管理(doc 06)
-- [ ] GET /me(ログボ付与込み)・ガチャ・交換・編成API(doc 04)
-- [ ] currency_logs / gacha_logs / 冪等性 / 条件付きUPDATE+batchパターン確立(doc 05, 07)
-- [ ] クライアント: meta を API版に差し替え(オフライン時はローカル版へフォールバック)
-- [ ] アカウント連携(パスキー)※Google連携はPhase 3へ後送可
-- [ ] Cron Triggers(経済整合チェック・休眠ゲスト削除)
-- [ ] 利用規約/プライバシーポリシー初版(doc 11)
-- 完了条件: 2台のブラウザで同一アカウントの所持・チケットが同期。改ざん検証(doc 10)合格
-- リスク: 認証は初実装だと想定超過しがち → パスキーが重ければ「ゲスト+引き継ぎコード」で先行リリースする逃げ道を用意
+- [x] サーバー骨格(Workers + Hono + D1マイグレーション)
+  - `server/src/index.ts`(Hono)・`server/migrations/0001_init.sql`・D1作成済み(本番 `yokai-shogi-db` / staging `yokai-shogi-db-staging`、ともにAPACリージョン)
+- [x] ゲスト認証 → トークン管理(doc 06)
+  - `/auth/guest`・`/auth/refresh`(ローテーション+再利用検知)。JWTはWebCrypto(HS256)。**Turnstileは秘密鍵未設定ならスキップ**=ローカル/CI動作、本番で `TURNSTILE_SECRET_KEY` 設定により有効化(雛形実装済み)
+- [x] GET /me(ログボ付与込み)・ガチャ・交換・編成API(doc 04)
+  - 加えて `/me/name`(表示名)・`/solo/win`(ソロ勝利報酬・日次上限2枚)・`/gacha/rates`(排出率公開)も実装
+- [x] currency_logs / gacha_logs / 冪等性 / 条件付きUPDATE+batchパターン確立(doc 05, 07)
+- [x] クライアント: meta を API版に差し替え(オフライン時はローカル版へフォールバック)
+  - `client/src/meta/` に `MetaProvider` インターフェース + ローカル版/API版の2実装 + ファサード。`VITE_API_URL` 未設定/オフラインは自動でローカル版にフォールバック
+- [x] アカウント連携: **引き継ぎコードで先行実装**。サーバー(`/auth/link-code` 発行・`/auth/login/link-code` 復元)+ クライアントUI(タイトルの「データ引き継ぎ」モーダル、オンライン時のみ表示)。パスキー本体はPhase 3へ後送(下記リスク回避策を採用)
+- [x] Cron Triggers(経済整合チェック・休眠ゲスト削除)
+  - JST04:00。不変条件(残高=ログ合計・所持数整合)違反をログ出力、休眠ゲスト(30日・連携なし)削除、期限切れトークン掃除
+- [x] 利用規約/プライバシーポリシー初版(doc 11): [docs/legal/](legal/) に作成。**同意UIの組み込みはオープンβ(Phase 2)**、連絡先窓口はプレースホルダ
+- 完了条件: 改ざん検証(doc 10)合格 ✅(Workers統合テストで未所持編成・チケット改ざん・二重引き等の拒否を確認) / **2台のブラウザで同一アカウント同期 ✅**(staging相手に2ブラウザコンテキストで引き継ぎコード→チケット・所持が同期することを実証: `test/e2e/sync-online.mjs`)
+- リスク対応: 認証はリスク回避策どおり「ゲスト+引き継ぎコード」で先行(パスキーはPhase 3)
+
+### Phase 1 検証状況(2026-06-13) — **マイルストーン M1 達成**
+
+- `npm run typecheck`(client+server)/ `npm test`(node 40件)/ `npm run test:workers`(実Workersランタイム+ローカルD1 19件)/ `npm run build` / e2e 4本(オフライン経路)= すべてgreen
+- **デプロイ済み**: API を staging(`yokai-shogi-api-staging`) / production(`yokai-shogi-api-production`) にデプロイ、D1(本番/staging)へリモートマイグレーション適用、`JWT_SECRET` 設定済み。`Turnstile` は秘密鍵未設定のためスキップ中(公開時に有効化)
+- **2台同期を staging で実証済み**(`test/e2e/sync-online.mjs`)
+- ビルド切替: `npm run build`=オフライン版(ローカルメタ・e2e用) / `npm run build:online`=本番API接続版(Pages配信用、CIのdeployジョブが使用)
+- **残タスク(本番公開の最後の一歩)**: 本番Pagesをオンライン版で再デプロイ(`npm run pages:deploy`、またはPRマージでCIの `deploy` ジョブが実行)すると、本番(`yokai-shogi.pages.dev`)がサーバー権威=2台同期対応に切り替わる。**既存localStorageデータはフレッシュスタート(doc 05方針)** となるため、切替タイミングはリリース判断に委ねる
 
 ## Phase 2: オンライン対戦MVP
 
