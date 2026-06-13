@@ -44,6 +44,47 @@ export const MenuUI = {
       this.renderFormation();
     };
     this.initLinkCode();
+    this.initProfile();
+  },
+
+  /* ============================== プロフィール ============================== */
+  initProfile() {
+    $('btn-profile').onclick = () => { AudioSys.play('click'); this.openProfile(); };
+    $('btn-profile-close').onclick = () => { AudioSys.play('click'); $('modal-profile').classList.add('hidden'); };
+    $('btn-profile-save').onclick = () => { void this.saveProfile(); };
+    $<HTMLInputElement>('profile-name-input').onkeydown = ev => {
+      if (ev.key === 'Enter') void this.saveProfile();
+    };
+  },
+
+  openProfile() {
+    $<HTMLInputElement>('profile-name-input').value = Meta.data.name;
+    $('profile-msg').textContent = '';
+    $('modal-profile').classList.remove('hidden');
+    setTimeout(() => $<HTMLInputElement>('profile-name-input').focus(), 0);
+  },
+
+  async saveProfile() {
+    const button = $<HTMLButtonElement>('btn-profile-save');
+    const name = $<HTMLInputElement>('profile-name-input').value;
+    button.disabled = true;
+    $('profile-msg').textContent = '';
+    try {
+      const err = await Meta.setName(name);
+      if (err) {
+        $('profile-msg').textContent = err;
+        return;
+      }
+      AudioSys.play('promote');
+      $('title-player-name').textContent = Meta.data.name;
+      $('player-name').textContent = Meta.data.name;
+      $('profile-msg').textContent = 'プレイヤーネームを変更しました';
+      setTimeout(() => $('modal-profile').classList.add('hidden'), 650);
+    } catch (e) {
+      $('profile-msg').textContent = e instanceof Error ? e.message : '変更に失敗しました';
+    } finally {
+      button.disabled = false;
+    }
   },
 
   /* ============================== データ引き継ぎ ============================== */
@@ -98,6 +139,7 @@ export const MenuUI = {
      (ボーナス判定は Meta.init() で済んでおり、結果は pendingLoginBonus にある) */
   onEnterTitle() {
     this.refreshCurrency();
+    $('title-player-name').textContent = Meta.data.name;
     const bonus = Meta.pendingLoginBonus;
     Meta.pendingLoginBonus = null;
     if (bonus) {

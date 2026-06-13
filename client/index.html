@@ -44,10 +44,12 @@
       <span class="cur-tickets">🎟 ×0</span>
       <span class="cur-yoryoku">妖力 0</span>
     </div>
+    <button id="btn-profile" class="title-profile" title="プレイヤーネームを変更">
+      <span>プレイヤー</span><b id="title-player-name">プレイヤー</b>
+    </button>
     <div class="title-center">
       <div class="title-sub-top">百鬼夜行の盤上決戦</div>
       <h1 class="title-logo">妖怪将棋</h1>
-      <div class="title-vs"><span id="title-vs-p" class="vs-name">九尾の狐</span> <span class="vs-mark">VS</span> 酒呑童子</div>
       <div class="title-buttons">
         <button id="btn-start" class="btn btn-gold">ソロ対戦</button>
         <button id="btn-rules" class="btn btn-dark">遊び方</button>
@@ -236,6 +238,19 @@
     <div class="cutin-texts">
       <div id="cutin-name"></div>
       <div id="cutin-sub"></div>
+    </div>
+  </div>
+
+  <!-- プロフィール設定モーダル -->
+  <div id="modal-profile" class="modal hidden">
+    <div class="modal-box profile-box">
+      <h2>プロフィール</h2>
+      <label for="profile-name-input">プレイヤーネーム</label>
+      <input id="profile-name-input" type="text" maxlength="10" placeholder="1〜10文字" autocomplete="nickname">
+      <p class="link-desc">オンライン対戦で相手に表示されます。名前は重複できます。</p>
+      <div id="profile-msg" class="link-msg"></div>
+      <button id="btn-profile-save" class="btn btn-gold">保存</button>
+      <button id="btn-profile-close" class="btn btn-dark btn-sub">閉じる</button>
     </div>
   </div>
 

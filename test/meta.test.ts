@@ -186,6 +186,14 @@ test('LocalMeta: セーブ・ロード往復(localStorage経由)', () => {
   expect(m2.data.tickets).toBe(42);
 });
 
+test('LocalMeta: プレイヤーネーム変更を保存する', async () => {
+  const m = new LocalMeta();
+  expect(await m.setName('九尾使い')).toBeNull();
+  expect(m.data.name).toBe('九尾使い');
+  expect(await m.setName('')).not.toBeNull();
+  expect(new LocalMeta().data.name).toBe('九尾使い');
+});
+
 /* ---------------------------------------------------------------- */
 test('ガチャ妖怪入りの編成で対局が回る(エンジン統合)', () => {
   const m = new LocalMeta();

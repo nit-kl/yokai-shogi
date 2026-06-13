@@ -4,7 +4,7 @@
    検証・抽選・残高はサーバーが正本。クライアントはキャッシュ表示のみ。
    ============================================================ */
 
-import { validateFormation } from '../../../shared/validate';
+import { validateDisplayName, validateFormation } from '../../../shared/validate';
 import { ApiClient, ApiError } from './client';
 import { ownedSet } from './types';
 import type { GachaResult } from './types';
@@ -92,6 +92,19 @@ export class ApiMeta implements MetaProvider {
       return null;
     } catch (e) {
       if (e instanceof ApiError && e.code === 'INVALID_FORMATION') return e.message;
+      throw e;
+    }
+  }
+
+  async setName(name: string): Promise<string | null> {
+    const local = validateDisplayName(name);
+    if (local) return local;
+    try {
+      const res = await this.client.put<{ name: string }>('/v1/me/name', { name });
+      this.data.name = res.name;
+      return null;
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'VALIDATION') return e.message;
       throw e;
     }
   }

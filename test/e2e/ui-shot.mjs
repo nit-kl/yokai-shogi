@@ -21,6 +21,13 @@ await skipOnboarding(page);
 await page.waitForTimeout(800);
 await page.screenshot({ path: path.join(dir, 'shot-1-title.png') });
 
+// プレイヤーネーム変更
+await page.click('#btn-profile');
+await page.fill('#profile-name-input', '九尾使い');
+await page.click('#btn-profile-save');
+await page.locator('#modal-profile').waitFor({ state: 'hidden' });
+if (await page.locator('#title-player-name').textContent() !== '九尾使い') errors.push('タイトルにプレイヤーネームが反映されていない');
+
 // 駒一覧
 await page.click('#btn-pieces');
 await page.waitForSelector('#screen-pieces.active');

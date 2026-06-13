@@ -171,7 +171,6 @@ function enterTitle() {
   const boss = YOKAI[Meta.bossId()];
   $<HTMLImageElement>('title-boss-l').src = boss.img;
   $<HTMLImageElement>('title-boss-r').src = YOKAI[ENEMY_BOSS].img;
-  $('title-vs-p').textContent = boss.name;
   showScreen('screen-title');
   FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.05);
   AudioSys.init();
@@ -578,7 +577,7 @@ function startBattle() {
   showScreen('screen-battle');
   const boss = YOKAI[Meta.bossId()];
   $<HTMLImageElement>('player-avatar').src = boss.img;
-  $('player-name').textContent = boss.name;
+  $('player-name').textContent = Meta.data.name;
   $<HTMLImageElement>('enemy-avatar').src = YOKAI[stage.bossId].img;
   $('enemy-name').textContent = YOKAI[stage.bossId].name;
   renderAll();

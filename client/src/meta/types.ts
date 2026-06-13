@@ -39,6 +39,8 @@ export interface MetaProvider {
   exchange(): Promise<boolean>;
   /** 編成保存。正常なら null、問題があればエラーメッセージ */
   setFormation(rows: (string | null)[][]): Promise<string | null>;
+  /** プレイヤー表示名を変更。正常なら null、問題があればエラーメッセージ */
+  setName(name: string): Promise<string | null>;
   /** ソロ(AI)勝利報酬。付与されたチケット数を返す(0=上限到達) */
   recordSoloWin(): Promise<number>;
   /** 引き継ぎコードを発行(別端末への持ち出し用)。オフラインは非対応で例外 */

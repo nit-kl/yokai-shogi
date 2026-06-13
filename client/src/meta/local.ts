@@ -7,7 +7,7 @@
 import { BOSS_CHOICES, EMPTY_FORMATION, formationWithBoss, type BossChoice } from '../../../shared/data';
 import { drawGacha } from '../../../shared/gacha';
 import type { GachaResult } from '../../../shared/gacha';
-import { validateFormation } from '../../../shared/validate';
+import { validateDisplayName, validateFormation } from '../../../shared/validate';
 import { EXCHANGE_COST, ownedSet } from './types';
 import type { LoginBonus, MetaProvider, MetaState } from './types';
 
@@ -163,6 +163,14 @@ export class LocalMeta implements MetaProvider {
     const err = validateFormation(rows, ownedSet(this.blob));
     if (err) return err;
     this.blob.formation = rows.map(r => [...r]);
+    this.save();
+    return null;
+  }
+
+  async setName(name: string): Promise<string | null> {
+    const err = validateDisplayName(name);
+    if (err) return err;
+    this.blob.name = name.trim();
     this.save();
     return null;
   }

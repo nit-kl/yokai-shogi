@@ -67,8 +67,8 @@ if (await page.locator('#modal-login:not(.hidden)').count()) {
 await page.waitForSelector('#screen-title.active');
 await page.screenshot({ path: path.join(dir, 'shot-g6-title.png') });
 
-const bossName = await page.evaluate(() => document.getElementById('title-vs-p').textContent);
-if (bossName !== 'ぬらりひょん') errors.push(`タイトルの大将名が「${bossName}」(期待: ぬらりひょん)`);
+const bossId = await page.evaluate(() => window.yk.Meta.bossId());
+if (bossId !== 'nurarihyon') errors.push(`タイトルの大将が${bossId}(期待: nurarihyon)`);
 
 /* 開戦で盤面に反映されているか */
 await startSoloBattle(page);

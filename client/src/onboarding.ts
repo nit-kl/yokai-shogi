@@ -56,7 +56,6 @@ export const Onboarding = {
     $('modal-onboarding-boss').classList.add('hidden');
     const boss = YOKAI[bossId];
     $<HTMLImageElement>('title-boss-l').src = boss.img;
-    $('title-vs-p').textContent = boss.name;
     step = 'gacha';
     MenuUI.setOnboardingMode('gacha');
     AudioSys.init();

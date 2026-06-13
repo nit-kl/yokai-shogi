@@ -79,6 +79,9 @@ function install(opts: { offline?: boolean } = {}) {
       server.formation = body.rows;
       return json({ rows: body.rows });
     }
+    if (path === '/v1/me/name' && method === 'PUT') {
+      return json({ name: body.name.trim() });
+    }
     if (path === '/v1/gacha/pull') {
       if (server.tickets < body.count) return errBody('INSUFFICIENT_TICKETS', 400);
       server.tickets -= body.count;
@@ -208,6 +211,16 @@ test('setFormation: 不正はサーバーのINVALID_FORMATIONメッセージを�
   const ok = await m.setFormation([['kyubi', null, null, null, null], [null, null, null, null, null]]);
   expect(ok).toBeNull();
   expect(m.data.formation[0][0]).toBe('kyubi');
+});
+
+test('setName: 表示名を検証してAPIへ保存する', async () => {
+  install();
+  const m = new ApiMeta(new ApiClient('http://api.test'));
+  await m.init();
+  expect(await m.setName('九尾使い')).toBeNull();
+  expect(m.data.name).toBe('九尾使い');
+  expect(server.requests.find(r => r.path === '/v1/me/name')?.body).toEqual({ name: '九尾使い' });
+  expect(await m.setName('<script>')).not.toBeNull();
 });
 
 test('recordSoloWin: tickets/winsを更新', async () => {

@@ -62,6 +62,7 @@ class MetaFacade {
   pull(count: 1 | 10): Promise<GachaResult[] | null> { return this.provider.pull(count); }
   exchange(): Promise<boolean> { return this.provider.exchange(); }
   setFormation(rows: (string | null)[][]): Promise<string | null> { return this.provider.setFormation(rows); }
+  setName(name: string): Promise<string | null> { return this.provider.setName(name); }
   recordSoloWin(): Promise<number> { return this.provider.recordSoloWin(); }
   issueLinkCode(): Promise<string> { return this.provider.issueLinkCode(); }
   redeemLinkCode(code: string): Promise<boolean> { return this.provider.redeemLinkCode(code); }

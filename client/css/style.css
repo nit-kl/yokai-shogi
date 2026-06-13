@@ -153,6 +153,7 @@ html, body {
   font-weight: 600;
   letter-spacing: 0.12em;
   line-height: 1.1;
+  margin-bottom: 1.2em;
   background: linear-gradient(175deg, #fff6d8 8%, var(--gold) 38%, #8a5d10 60%, #f7df9a 82%, #c99a2e 100%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -163,13 +164,6 @@ html, body {
   0%, 100% { filter: drop-shadow(0 4px 4px rgba(0,0,0,0.85)) drop-shadow(0 0 18px rgba(232,196,106,0.25)); }
   50% { filter: drop-shadow(0 4px 4px rgba(0,0,0,0.85)) drop-shadow(0 0 40px rgba(232,196,106,0.55)); }
 }
-.title-vs {
-  font-family: "Yu Mincho", serif;
-  margin: 0.8em 0 1.6em;
-  color: #cfc3ea; letter-spacing: 0.25em;
-  font-size: clamp(0.8rem, 2.6vw, 1.1rem);
-}
-.title-vs .vs-mark { color: var(--e-red); font-weight: bold; margin: 0 0.5em; }
 .title-buttons { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
 .title-foot {
   position: absolute; bottom: 4%; width: 100%; text-align: center;
@@ -895,6 +889,21 @@ html, body {
   font-size: 0.82rem; letter-spacing: 0.08em;
   color: #ffe9a0;
 }
+.title-profile {
+  position: absolute; top: 12px; left: 14px;
+  z-index: 3;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  max-width: min(42vw, 240px);
+  padding: 5px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(88,182,255,0.35);
+  background: rgba(22,17,38,0.85);
+  color: var(--paper);
+  cursor: pointer;
+}
+.title-profile span { color: #9a8fc0; font-size: 0.58rem; letter-spacing: 0.15em; }
+.title-profile b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
+.title-profile:hover { border-color: var(--p-blue); box-shadow: 0 0 14px rgba(88,182,255,0.25); }
 .title-currency span, .currency span {
   padding: 4px 12px;
   border-radius: 14px;
@@ -1330,6 +1339,19 @@ html, body {
   color: #fff;
 }
 .link-msg { min-height: 1.4em; font-size: 0.82rem; color: #ffd24a; margin: 0.6em 0; }
+.profile-box { max-width: 420px; text-align: center; align-items: center; }
+.profile-box label { color: #d8d2e4; font-size: 0.82rem; }
+#profile-name-input {
+  width: min(100%, 300px);
+  padding: 0.65em;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.3);
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+}
+#profile-name-input:focus { outline: none; border-color: var(--p-blue); box-shadow: 0 0 12px rgba(88,182,255,0.25); }
 
 /* 横長すぎる端末向け微調整 */
 @media (max-aspect-ratio: 3/5) {
