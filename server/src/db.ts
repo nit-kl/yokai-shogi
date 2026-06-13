@@ -1,18 +1,18 @@
 /* D1アクセスヘルパ・ゲーム定数(doc 05 のパターンに従う) */
 
-import { ROWS, SETUP } from '../../shared/data';
+import { EMPTY_FORMATION } from '../../shared/data';
 
 /* ---------- 経済定数(doc 08) ---------- */
 export const TICKETS_CAP = 999;
 export const YORYOKU_CAP = 99999;
 export const EXCHANGE_COST = 300;   // 妖力→チケット1枚
-export const FIRST_BONUS = 10;      // ゲスト作成時
+export const FIRST_BONUS = 10;      // ゲスト作成時(初回10連ガチャ用)
 export const STREAK_BONUS_TICKETS = 3; // 7日連続ごと
 export const SOLO_WIN_DAILY_CAP = 2;   // ソロ勝利報酬の日次上限(申告制のため低め: doc 07)
 
-/* 初期編成・初期所持(shared/data.ts の既定配置が正) */
-export const DEFAULT_FORMATION: (string | null)[][] = SETUP.slice(ROWS - 2).map(r => [...r]);
-export const INITIAL_YOKAI: string[] = [...new Set(DEFAULT_FORMATION.flat().filter((id): id is string => !!id))];
+/* 新規アカウントはオンボーディングで大将・編成を決める */
+export const DEFAULT_FORMATION: (string | null)[][] = EMPTY_FORMATION.map(r => [...r]);
+export const INITIAL_YOKAI: string[] = [];
 
 /* ---------- 行型 ---------- */
 export interface ProfileRow {
@@ -28,6 +28,7 @@ export interface ProfileRow {
   login_streak: number;
   daily_win_reward_count: number;
   daily_reset_date: string | null;
+  onboarding_done: number;
 }
 
 export async function getProfile(db: D1Database, userId: string): Promise<ProfileRow | null> {

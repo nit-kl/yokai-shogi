@@ -4,14 +4,14 @@
    サーバー版と挙動を一致させる(doc 02)。
    ============================================================ */
 
-import { ROWS, SETUP } from '../../../shared/data';
+import { BOSS_CHOICES, EMPTY_FORMATION, formationWithBoss, type BossChoice } from '../../../shared/data';
 import { drawGacha } from '../../../shared/gacha';
 import type { GachaResult } from '../../../shared/gacha';
 import { validateFormation } from '../../../shared/validate';
 import { EXCHANGE_COST, ownedSet } from './types';
 import type { LoginBonus, MetaProvider, MetaState } from './types';
 
-const FIRST_BONUS = 10;            // 初回起動時のチケット
+const FIRST_BONUS = 10;            // 初回起動時のチケット(10連ガチャ用)
 const TICKETS_CAP = 999;
 const YORYOKU_CAP = 99999;
 const SOLO_WIN_DAILY_CAP = 2;      // ソロ勝利報酬の日次上限(doc 08)
@@ -61,17 +61,16 @@ export class LocalMeta implements MetaProvider {
   }
 
   private defaults(): SaveBlob {
-    const owned: Record<string, number> = {};
-    for (const row of SETUP.slice(ROWS - 2)) for (const id of row) if (id) owned[id] = 1;
     return {
       tickets: FIRST_BONUS,
       yoryoku: 0,
-      owned,
-      formation: SETUP.slice(ROWS - 2).map(r => [...r]),
+      owned: {},
+      formation: EMPTY_FORMATION.map(r => [...r]),
       name: 'プレイヤー',
       wins: 0,
       isGuest: true,
       online: false,
+      onboardingDone: false,
       lastLogin: null,
       streak: 0,
       soloWinDate: null,
@@ -84,8 +83,12 @@ export class LocalMeta implements MetaProvider {
     try { saved = JSON.parse(this.storage().getItem(LocalMeta.KEY) as string); } catch { /* 壊れたデータは破棄 */ }
     const blob = Object.assign(this.defaults(), saved || {});
     blob.online = false;
+    /* 旧セーブ(オンボーディング導入前)は複数所持があれば完了扱い */
+    if (saved && saved.onboardingDone === undefined) {
+      blob.onboardingDone = Object.keys(saved.owned || {}).length > 1;
+    }
     if (validateFormation(blob.formation, ownedSet(blob))) {
-      blob.formation = this.defaults().formation; // 不正な編成は既定に戻す
+      blob.formation = EMPTY_FORMATION.map(r => [...r]);
     }
     return blob;
   }
@@ -113,6 +116,23 @@ export class LocalMeta implements MetaProvider {
   }
 
   async init(): Promise<LoginBonus | null> {
+    if (!this.blob.onboardingDone) return null;
+    return this.claimLoginBonus();
+  }
+
+  async pickBoss(bossId: string): Promise<string | null> {
+    if (!BOSS_CHOICES.includes(bossId as BossChoice)) return '大将として選べない妖怪です';
+    if (this.blob.onboardingDone) return 'オンボーディングは完了済みです';
+    this.blob.owned = { [bossId]: 1 };
+    this.blob.formation = formationWithBoss(bossId);
+    this.save();
+    return null;
+  }
+
+  async completeOnboarding(): Promise<LoginBonus | null> {
+    if (this.blob.onboardingDone) return this.claimLoginBonus();
+    this.blob.onboardingDone = true;
+    this.save();
     return this.claimLoginBonus();
   }
 

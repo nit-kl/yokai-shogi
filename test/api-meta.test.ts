@@ -17,6 +17,7 @@ const ls = new Map<string, string>();
 interface Server {
   tickets: number; yoryoku: number; owned: string[]; wins: number;
   formation: (string | null)[][];
+  onboardingDone: boolean;
   validAccess: string;        // 現在有効なアクセストークン
   refreshValid: boolean;      // リフレッシュトークンが有効か
   failNextAuthOnce: boolean;  // 次の認証付きリクエストで一度だけ401を返す
@@ -62,7 +63,13 @@ function install(opts: { offline?: boolean } = {}) {
     if (server.failNextAuthOnce) { server.failNextAuthOnce = false; return errBody('UNAUTHORIZED', 401); }
     if (authed !== `Bearer ${server.validAccess}`) return errBody('UNAUTHORIZED', 401);
 
-    if (path === '/v1/me') return json({ userId: 'u_1', name: 'プレイヤー', isGuest: true, tickets: server.tickets, yoryoku: server.yoryoku, loginBonus: { day: 1, tickets: 1 }, rating: 1500, wins: server.wins, losses: 0 });
+    if (path === '/v1/me') return json({
+      userId: 'u_1', name: 'プレイヤー', isGuest: true,
+      tickets: server.tickets, yoryoku: server.yoryoku,
+      onboardingDone: server.onboardingDone,
+      ...(server.onboardingDone ? { loginBonus: { day: 1, tickets: 1 } } : {}),
+      rating: 1500, wins: server.wins, losses: 0,
+    });
     if (path === '/v1/me/collection') return json({ owned: server.owned });
     if (path === '/v1/me/formation' && method === 'GET') return json({ rows: server.formation });
     if (path === '/v1/me/formation' && method === 'PUT') {
@@ -88,6 +95,15 @@ function install(opts: { offline?: boolean } = {}) {
       server.wins += 1; server.tickets += 1;
       return json({ granted: 1, tickets: server.tickets, dailyCount: 1, dailyCap: 2, wins: server.wins });
     }
+    if (path === '/v1/onboarding/boss') {
+      server.owned = [body.bossId];
+      server.formation = [[null, null, null, null, null], [null, null, body.bossId, null, null]];
+      return json({ bossId: body.bossId, owned: server.owned, rows: server.formation });
+    }
+    if (path === '/v1/onboarding/complete') {
+      server.onboardingDone = true;
+      return json({ onboardingDone: true });
+    }
     if (path === '/v1/auth/link-code') {
       server.linkCode = 'LINKCODE1234';
       return json({ code: server.linkCode });
@@ -103,6 +119,7 @@ beforeEach(() => {
   server = {
     tickets: 11, yoryoku: 0, owned: ['kyubi', 'kooni'], wins: 0,
     formation: [['kyubi', null, null, null, null], [null, null, null, null, null]],
+    onboardingDone: true,
     validAccess: '', refreshValid: false, failNextAuthOnce: false, linkCode: null, requests: [],
   };
 });

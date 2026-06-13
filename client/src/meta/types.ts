@@ -21,6 +21,7 @@ export interface MetaState {
   wins: number;
   isGuest: boolean;
   online: boolean;                 // true=サーバー権威 / false=ローカル(オフライン)
+  onboardingDone: boolean;
 }
 
 export interface LoginBonus { day: number; tickets: number; }
@@ -46,6 +47,10 @@ export interface MetaProvider {
   redeemLinkCode(code: string): Promise<boolean>;
   /** オンライン対戦WebSocket URL。オフライン版は null */
   battleUrl(): string | null;
+  /** 初回オンボーディング: 大将を選ぶ */
+  pickBoss(bossId: string): Promise<string | null>;
+  /** 初回オンボーディング完了。ログインボーナスがあれば返す */
+  completeOnboarding(): Promise<LoginBonus | null>;
 }
 
 /* ---------- data から導出する同期ヘルパ(両実装共通) ---------- */

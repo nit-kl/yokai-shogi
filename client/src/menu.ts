@@ -2,17 +2,19 @@
    妖怪将棋 - ガチャ・編成・ログインボーナスUI
    ============================================================ */
 
-import { COLS, ROWS, SETUP, YOKAI, TYPE_INFO, RARITY_INFO } from '../../shared/data';
+import { COLS, ROWS, SETUP, YOKAI, TYPE_INFO, RARITY_INFO, formationWithBoss } from '../../shared/data';
 import { $, showScreen } from './util';
 import { AudioSys } from './audio';
 import { FX } from './effects';
 import { Meta } from './meta';
 import type { GachaResult } from './meta';
+import { Onboarding } from './onboarding';
 
 export const MenuUI = {
   rows: null as unknown as (string | null)[][], // 編成画面の作業用コピー [前段, 最奥段]
   benchSel: null as string | null,              // 選択中の控え妖怪id
   _enterTitle: () => {},                        // main から注入(循環import回避)
+  onboardingMode: null as 'gacha' | 'formation' | null,
 
   init(opts: { enterTitle: () => void }) {
     this._enterTitle = opts.enterTitle;
@@ -33,7 +35,11 @@ export const MenuUI = {
     $('btn-form-back').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     $('btn-form-reset').onclick = () => {
       AudioSys.play('click');
-      this.rows = SETUP.slice(ROWS - 2).map(r => [...r]);
+      if (this.onboardingMode === 'formation') {
+        this.rows = formationWithBoss(Meta.bossId());
+      } else {
+        this.rows = SETUP.slice(ROWS - 2).map(r => [...r]);
+      }
       this.benchSel = null;
       this.renderFormation();
     };
@@ -109,12 +115,34 @@ export const MenuUI = {
     }
   },
 
+  setOnboardingMode(mode: 'gacha' | 'formation' | null) {
+    this.onboardingMode = mode;
+    $('btn-gacha-back').classList.toggle('hidden', mode === 'gacha');
+    $('btn-pull1').classList.toggle('hidden', mode === 'gacha');
+    $('btn-form-reset').classList.toggle('hidden', mode === 'formation');
+    const hint = $('onboarding-hint');
+    hint.classList.toggle('hidden', !mode);
+    if (mode === 'gacha') {
+      hint.textContent = '初回特典の10連召喚を引こう!';
+      $('screen-gacha').querySelector('.menu-col')!.insertBefore(hint, $('screen-gacha').querySelector('.gacha-center'));
+    } else if (mode === 'formation') {
+      hint.textContent = '大将と仲間を配置して保存しよう';
+      $('screen-formation').querySelector('.menu-col')!.insertBefore(hint, $('screen-formation').querySelector('.form-zone-label'));
+    } else {
+      $('app').appendChild(hint);
+    }
+  },
+
   refreshCurrency() {
     const d = Meta.data;
     for (const el of document.querySelectorAll('.cur-tickets')) el.textContent = `🎟 ×${d.tickets}`;
     for (const el of document.querySelectorAll('.cur-yoryoku')) el.textContent = `妖力 ${d.yoryoku}`;
     $<HTMLButtonElement>('btn-pull1').disabled = d.tickets < 1;
     $<HTMLButtonElement>('btn-pull10').disabled = d.tickets < 10;
+    if (this.onboardingMode === 'gacha') {
+      $<HTMLButtonElement>('btn-pull1').disabled = true;
+      $<HTMLButtonElement>('btn-pull10').disabled = d.tickets < 10;
+    }
     $<HTMLButtonElement>('btn-exchange').disabled = d.yoryoku < Meta.EXCHANGE_COST;
     /* データ引き継ぎはオンライン(サーバー権威)時のみ提供 */
     $('btn-link').classList.toggle('hidden', !d.online);
@@ -142,6 +170,13 @@ export const MenuUI = {
     if (!results) return;
     AudioSys.play('cutin');
     this.showResults(results);
+    if (this.onboardingMode === 'gacha' && count === 10) {
+      $('btn-gacha-ok').onclick = () => {
+        AudioSys.play('click');
+        $('gacha-result').classList.add('hidden');
+        Onboarding.onGachaDone();
+      };
+    }
   },
 
   showResults(results: GachaResult[]) {
@@ -278,6 +313,10 @@ export const MenuUI = {
       err = '保存に失敗しました。通信状態を確認してください';
     }
     if (err) { $('form-error').textContent = `⚠ ${err}`; return; }
+    if (Onboarding.active) {
+      await Onboarding.onFormationSaved();
+      return;
+    }
     this._enterTitle();
   },
 };

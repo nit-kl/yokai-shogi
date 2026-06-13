@@ -12,6 +12,7 @@ import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from
 import { AI } from './ai';
 import { Meta } from './meta';
 import { MenuUI } from './menu';
+import { Onboarding } from './onboarding';
 import { FX } from './effects';
 import { AudioSys } from './audio';
 import { $, sleep, showScreen } from './util';
@@ -48,6 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
   buildRulesPieces();
   wireButtons();
   MenuUI.init({ enterTitle });
+  Onboarding.init({ enterTitle });
   void boot();
   // 初回操作でオーディオ起動
   const audioKick = () => { AudioSys.init(); AudioSys.resume(); };
@@ -158,6 +160,10 @@ function preloadImages(): Promise<void> {
 }
 
 function enterTitle() {
+  if (!Meta.isOnboardingDone()) {
+    void Onboarding.start();
+    return;
+  }
   const boss = YOKAI[Meta.bossId()];
   $<HTMLImageElement>('title-boss-l').src = boss.img;
   $<HTMLImageElement>('title-boss-r').src = YOKAI[ENEMY_BOSS].img;
@@ -777,7 +783,7 @@ function buildRulesPieces() {
 /* ============================== デバッグ・e2e用フック ============================== */
 /* playwright(test/e2e)からモジュール内部にアクセスするための窓口 */
 (window as any).yk = {
-  Game, AI, Meta, MenuUI, FX, AudioSys,
+  Game, AI, Meta, MenuUI, FX, AudioSys, Onboarding,
   YOKAI, GACHA_POOL, SETUP, COLORS_P, COLORS_E,
   $, cellCenter, doAction, renderAll, updateHP, updateHUD, showResult,
   get G() { return G; },

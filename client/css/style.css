@@ -1055,6 +1055,35 @@ html, body {
 .title-foot-links a, .consent-links a { color: #d8d2e4; font-size: 0.75rem; }
 .consent-box { max-width: 460px; text-align: center; }
 .consent-links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: 0.5rem 0 1rem; }
+.onboarding-box { max-width: 520px; text-align: center; }
+.onboarding-desc { color: #d8d2e4; font-size: 0.85rem; line-height: 1.6; margin: 0.4rem 0 1rem; }
+.boss-pick-grid { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+.boss-pick-card {
+  width: 9.5rem;
+  padding: 0.65rem 0.5rem 0.75rem;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 210, 90, 0.35);
+  background: rgba(18, 14, 28, 0.92);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.boss-pick-card:hover { transform: translateY(-3px); border-color: rgba(255, 210, 90, 0.75); }
+.boss-pick-card img { width: 5.5rem; height: 5.5rem; object-fit: contain; }
+.bp-rarity { font-size: 0.7rem; color: #ffe9a0; margin-bottom: 0.25rem; }
+.bp-name { color: #fff6d8; font-size: 0.82rem; margin-top: 0.35rem; }
+.onboarding-hint {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 180, 60, 0.18);
+  border: 1px solid rgba(255, 210, 90, 0.45);
+  color: #ffe9a0;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  flex-shrink: 0;
+}
 .link-desc { font-size: 0.82rem; line-height: 1.6; color: #d8d2e4; margin: 0.6em 0; }
 .link-code {
   font-family: ui-monospace, "Courier New", monospace;

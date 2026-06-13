@@ -4,7 +4,6 @@
    - 期限切れリフレッシュトークン掃除 */
 
 import type { Env } from './env';
-import { INITIAL_YOKAI } from './db';
 import { gameDateDaysAgo } from './lib/time';
 
 interface BalanceMismatch { user_id: string; balance: number; log_sum: number; }
@@ -20,12 +19,11 @@ async function checkCurrencyInvariant(db: D1Database, currency: 'tickets' | 'yor
   return rs.results;
 }
 
-/* 不変条件2: 所持妖怪数 == 初期付与 × ユーザー数 + ガチャ新規入手の合計 */
+/* 不変条件2: 所持妖怪数 == ガチャ・オンボーディング大将の new_count 合計 */
 async function checkYokaiInvariant(db: D1Database): Promise<{ actual: number; expected: number } | null> {
   const row = await db.prepare(`
     SELECT (SELECT COUNT(*) FROM user_yokai) AS actual,
-           (SELECT COUNT(*) FROM users) * ?1 + IFNULL((SELECT SUM(new_count) FROM gacha_logs), 0) AS expected`)
-    .bind(INITIAL_YOKAI.length)
+           IFNULL((SELECT SUM(new_count) FROM gacha_logs), 0) AS expected`)
     .first<{ actual: number; expected: number }>();
   return row && row.actual !== row.expected ? row : null;
 }

@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
+import { skipOnboarding } from './helpers.mjs';
+
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
 
@@ -13,12 +15,8 @@ const errors = [];
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 
 await page.goto(BASE_URL);
-await page.waitForSelector('#screen-title.active', { timeout: 30000 });
-// 初回起動時はログインボーナスモーダルを閉じる
-if (await page.locator('#modal-login:not(.hidden)').count()) {
-  await page.click('#btn-login-ok');
-  await page.waitForTimeout(300);
-}
+await page.waitForSelector('#screen-title.active, #modal-onboarding-boss:not(.hidden)', { timeout: 30000 });
+await skipOnboarding(page);
 await page.click('#btn-start');
 await page.waitForTimeout(800);
 

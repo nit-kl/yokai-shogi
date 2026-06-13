@@ -246,7 +246,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     promoted: { steps: STEPS_ALL8 },
   },
   tamamo: {
-    id: 'tamamo', name: '玉藻前', type: 'boss', atk: 450, rarity: 'SSR', gachaOnly: true,
+    id: 'tamamo', name: '玉藻前', type: 'attack', atk: 450, rarity: 'SSR', gachaOnly: true,
     img: img('tamamo'), imgSm: imgSm('tamamo'),
     moveText: '全方向に1マス',
     skill: { kind: 'crit', name: '傾国の妖炎', desc: '駒を取った時、25%で妖炎が荒れ狂いダメージ2.2倍', chance: 0.25, mult: 2.2 },
@@ -323,6 +323,22 @@ export const YOKAI: Record<string, YokaiDef> = {
 export const GACHA_POOL: string[] = Object.values(YOKAI)
   .filter(y => y.id !== 'shuten' && y.id !== 'kyubi')
   .map(y => y.id);
+
+/* 初回オンボーディングで選べる大将(ぬらりひょんはガチャでも排出) */
+export const BOSS_CHOICES = ['kyubi', 'shuten', 'nurarihyon'] as const;
+export type BossChoice = typeof BOSS_CHOICES[number];
+
+export const EMPTY_FORMATION: (string | null)[][] = [
+  [null, null, null, null, null],
+  [null, null, null, null, null],
+];
+
+export function formationWithBoss(bossId: string): (string | null)[][] {
+  return [
+    [null, null, null, null, null],
+    [null, null, bossId, null, null],
+  ];
+}
 
 /* 初期配置(y=0 が敵陣最奥、y=5 が自陣最奥) */
 export const SETUP: (string | null)[][] = [

@@ -14,6 +14,7 @@ import { getTurnstileToken } from '../turnstile';
 interface MeResponse {
   userId: string; name: string; isGuest: boolean;
   tickets: number; yoryoku: number;
+  onboardingDone: boolean;
   loginBonus?: LoginBonus;
   rating: number; wins: number; losses: number;
 }
@@ -21,7 +22,7 @@ interface MeResponse {
 export class ApiMeta implements MetaProvider {
   readonly data: MetaState = {
     tickets: 0, yoryoku: 0, owned: {}, formation: [],
-    name: 'プレイヤー', wins: 0, isGuest: true, online: true,
+    name: 'プレイヤー', wins: 0, isGuest: true, online: true, onboardingDone: false,
   };
 
   constructor(private client: ApiClient) {}
@@ -35,7 +36,7 @@ export class ApiMeta implements MetaProvider {
   }
 
   /* /me・collection・formation を取得して読み取りモデルを更新(init・引き継ぎ後に共用) */
-  private async reload(): Promise<LoginBonus | null> {
+  async reload(): Promise<LoginBonus | null> {
     const [me, col, form] = await Promise.all([
       this.client.get<MeResponse>('/v1/me'),
       this.client.get<{ owned: string[] }>('/v1/me/collection'),
@@ -47,6 +48,7 @@ export class ApiMeta implements MetaProvider {
     this.data.isGuest = me.isGuest;
     this.data.wins = me.wins;
     this.data.online = true;
+    this.data.onboardingDone = me.onboardingDone;
     this.data.owned = Object.fromEntries(col.owned.map(id => [id, 1]));
     this.data.formation = form.rows;
     return me.loginBonus ?? null;
@@ -111,5 +113,26 @@ export class ApiMeta implements MetaProvider {
     await this.client.loginWithCode(code); // 失敗時 ApiError
     await this.reload();                   // 切り替え先アカウントのデータを取得
     return true;
+  }
+
+  async pickBoss(bossId: string): Promise<string | null> {
+    try {
+      const res = await this.client.post2<{ bossId: string; owned: string[]; rows: (string | null)[][] }>(
+        '/v1/onboarding/boss',
+        { bossId },
+      );
+      this.data.owned = Object.fromEntries(res.owned.map(id => [id, 1]));
+      this.data.formation = res.rows;
+      return null;
+    } catch (e) {
+      if (e instanceof ApiError) return e.message;
+      throw e;
+    }
+  }
+
+  async completeOnboarding(): Promise<LoginBonus | null> {
+    await this.client.post2<{ onboardingDone: boolean }>('/v1/onboarding/complete', {});
+    this.data.onboardingDone = true;
+    return this.reload();
   }
 }

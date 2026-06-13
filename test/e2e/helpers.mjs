@@ -35,3 +35,19 @@ export async function dismissLegacyLoginModal(page) {
 export async function waitForTitle(page, timeout = 90000) {
   await page.waitForSelector('#screen-title.active', { timeout });
 }
+
+/** 既存e2e用: オンボーディング済みの旧セーブ状態にする */
+export async function skipOnboarding(page) {
+  await page.evaluate(() => {
+    const { Meta, SETUP } = window.yk;
+    Meta.data.onboardingDone = true;
+    Meta.data.owned = {};
+    for (const row of SETUP.slice(-2)) for (const id of row) if (id) Meta.data.owned[id] = 1;
+    Meta.data.formation = SETUP.slice(-2).map(r => [...r]);
+    Meta.data.tickets = 11;
+    Meta.save();
+  });
+  await page.reload();
+  await waitForTitle(page);
+  await dismissLegacyLoginModal(page);
+}
