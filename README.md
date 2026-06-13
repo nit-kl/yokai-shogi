@@ -112,6 +112,7 @@ npm run test:e2e       # playwright e2e(オフライン経路。要: 事前に n
 ```
 
 API接続先は `vite.config.ts` の define で注入する(`build:online`=本番 / `VITE_API_URL=... build`=任意 / 既定=オフライン)。
+Sentryは `VITE_SENTRY_DSN` が設定されているときだけ有効(`client/src/sentry.ts`)。
 ローカルでサーバーを使う初回は `cp server/.dev.vars.example server/.dev.vars`(JWT_SECRET設定)→ `npm run db:migrate:local` → `npm run api:dev`。
 
 CI(GitHub Actions)は push / PR ごとに typecheck + vitest + test:workers + build + e2e を実行し、Cloudflare Secrets 設定時はPagesへデプロイする(docs/13)。

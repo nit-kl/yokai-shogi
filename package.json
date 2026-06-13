@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:online": "vite build --mode online",
+    "build:staging": "vite build --mode staging",
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc --noEmit && tsc -p server --noEmit",
     "test": "vitest run",
@@ -22,7 +23,8 @@
     "db:migrate:local": "wrangler d1 migrations apply yokai-shogi-db-staging --config server/wrangler.jsonc --local",
     "db:migrate:staging": "wrangler d1 migrations apply yokai-shogi-db-staging --config server/wrangler.jsonc --env staging --remote",
     "db:migrate:prod": "wrangler d1 migrations apply yokai-shogi-db --config server/wrangler.jsonc --env production --remote",
-    "pages:deploy": "npm run build:online && wrangler pages deploy client/dist --project-name=yokai-shogi"
+    "pages:deploy": "npm run build:online && wrangler pages deploy client/dist --project-name=yokai-shogi",
+    "pages:deploy:staging": "npm run build:staging && wrangler pages deploy client/dist --project-name=yokai-shogi-staging --branch=main --commit-dirty=true"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.15",
@@ -36,6 +38,7 @@
     "wrangler": "^4.20.0"
   },
   "dependencies": {
+    "@sentry/browser": "^9.39.0",
     "hono": "^4.12.25",
     "zod": "^4.4.3"
   }

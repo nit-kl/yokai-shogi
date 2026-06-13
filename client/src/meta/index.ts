@@ -5,7 +5,7 @@
    - UIはこの Meta だけを参照する(provider の差し替えを意識しない)
    ============================================================ */
 
-import { ApiClient, NetworkError } from './client';
+import { ApiClient, ApiError, NetworkError } from './client';
 import { ApiMeta } from './api';
 import { LocalMeta } from './local';
 import {
@@ -24,6 +24,8 @@ class MetaFacade {
   /** init() で受け取ったログインボーナス(タイトル表示で消費) */
   pendingLoginBonus: LoginBonus | null = null;
   private forceLocal = false;
+  /** APIがメンテナンス中のとき true */
+  maintenance = false;
 
   get data(): MetaState { return this.provider.data; }
   get online(): boolean { return this.provider.data.online; }
@@ -31,6 +33,7 @@ class MetaFacade {
 
   /* 起動: API優先・オフラインはローカルへフォールバック */
   async init(): Promise<LoginBonus | null> {
+    this.maintenance = false;
     if (API_URL && !this.forceLocal) {
       const api = new ApiMeta(new ApiClient(API_URL));
       try {
@@ -39,6 +42,10 @@ class MetaFacade {
         this.pendingLoginBonus = bonus;
         return bonus;
       } catch (e) {
+        if (e instanceof ApiError && e.code === 'MAINTENANCE') {
+          this.maintenance = true;
+          throw e;
+        }
         if (!(e instanceof NetworkError)) throw e; // サーバー側エラーは握りつぶさない
         console.warn('[meta] オフラインのためローカルデータで起動します');
       }
@@ -58,6 +65,7 @@ class MetaFacade {
   issueLinkCode(): Promise<string> { return this.provider.issueLinkCode(); }
   redeemLinkCode(code: string): Promise<boolean> { return this.provider.redeemLinkCode(code); }
   battleUrl(): string | null { return this.provider.battleUrl(); }
+  addTickets(n: number): void { if (n > 0) this.provider.data.tickets += n; }
 
   /* ---------- 同期の読み取りヘルパ(data から導出) ---------- */
   bossId(): string { return bossIdOf(this.provider.data); }

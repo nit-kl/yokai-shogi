@@ -2,6 +2,7 @@
    staging API接続版のローカルVite(http://localhost:5173)を前提に、
    4つの独立ブラウザセッションでランダムマッチ2局を同時成立させる。 */
 import { chromium } from 'playwright';
+import { acceptConsentIfNeeded, dismissLegacyLoginModal, waitForTitle } from './helpers.mjs';
 
 const BASE = process.argv[2] || 'http://localhost:5173/';
 const browser = await chromium.launch();
@@ -14,8 +15,9 @@ try {
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(`session ${i + 1}: ${error.message}`));
     await page.goto(BASE);
-    await page.waitForSelector('#screen-title.active', { timeout: 30000 });
-    if (await page.locator('#modal-login:not(.hidden)').count()) await page.click('#btn-login-ok');
+    await acceptConsentIfNeeded(page);
+    await waitForTitle(page);
+    await dismissLegacyLoginModal(page);
     await page.click('#btn-online');
     await page.click('#btn-online-random');
     sessions.push({ context, page });

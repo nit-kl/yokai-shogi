@@ -6,13 +6,23 @@ import { defineConfig } from 'vite';
    - `vite build`(既定)            → 未設定=オフライン(ローカル版。e2eのオフライン経路はこれ) */
 const PROD_API = 'https://yokai-shogi-api-production.kojileo0178.workers.dev';
 
+const STAGING_API = 'https://yokai-shogi-api-staging.kojileo0178.workers.dev';
+
 export default defineConfig(({ mode }) => {
-  const apiUrl = mode === 'online' ? PROD_API : (process.env.VITE_API_URL ?? '');
+  const apiUrl = mode === 'online'
+    ? PROD_API
+    : mode === 'staging'
+      ? STAGING_API
+      : (process.env.VITE_API_URL ?? '');
+  const sentryDsn = process.env.VITE_SENTRY_DSN ?? '';
+  const release = process.env.VITE_RELEASE ?? 'yokai-shogi@0.1.0';
   return {
     // クライアントをルートに(shared/ は ../shared として import される)
     root: 'client',
     define: {
       __API_URL__: JSON.stringify(apiUrl),
+      __SENTRY_DSN__: JSON.stringify(sentryDsn),
+      __RELEASE__: JSON.stringify(release),
     },
     build: {
       outDir: 'dist',

@@ -69,10 +69,17 @@ export class ApiClient {
         return;
       } catch (e) {
         if (e instanceof NetworkError) throw e; // オフラインはフォールバックさせる
+        if (e instanceof ApiError && e.code === 'MAINTENANCE') throw e;
         this.setRefreshToken(null);             // 失効トークンは破棄してゲスト発行へ
       }
     }
-    const config = await this.getPublic<AuthConfig>('/v1/auth/config');
+    let config: AuthConfig = { turnstileRequired: false };
+    try {
+      config = await this.getPublic<AuthConfig>('/v1/auth/config');
+    } catch (e) {
+      /* 旧API互換: /auth/config 未実装の Phase 1 デプロイ */
+      if (!(e instanceof ApiError && e.code === 'VALIDATION')) throw e;
+    }
     let turnstileToken: string | undefined;
     if (config.turnstileRequired) {
       if (!config.turnstileSiteKey || !this.turnstileProvider) throw new Error('bot検証の設定が不足しています');

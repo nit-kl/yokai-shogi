@@ -39,9 +39,9 @@ app.use('*', async (c, next) => {
 app.get('/healthz', async c => {
   try {
     await c.env.DB.prepare('SELECT 1').first();
-    return c.json({ ok: true });
+    return c.json({ ok: true, maintenance: c.env.MAINTENANCE === '1' });
   } catch {
-    return c.json({ ok: false }, 503);
+    return c.json({ ok: false, maintenance: c.env.MAINTENANCE === '1' }, 503);
   }
 });
 
