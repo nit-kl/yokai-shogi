@@ -42,6 +42,7 @@ function install(opts: { offline?: boolean } = {}) {
     const authed = (init?.headers as Record<string, string> | undefined)?.Authorization;
     server.requests.push({ method, path, body });
 
+    if (path === '/v1/auth/config') return json({ turnstileRequired: false });
     if (path === '/v1/auth/guest') {
       server.validAccess = 'access-1'; server.refreshValid = true;
       return json({ userId: 'u_1', accessToken: 'access-1', refreshToken: 'refresh-1' });
@@ -117,6 +118,18 @@ test('init: ゲスト発行 → /me・collection・formation をキャッシュ�
   expect(m.data.formation[0][0]).toBe('kyubi');
   // リフレッシュトークンが保存される
   expect(ls.get('yokaiShogi.rt.v1')).toBe('refresh-1');
+});
+
+test('ApiClient: Turnstile必須時は取得したトークンをゲスト作成へ送る', async () => {
+  const fetchMock = install();
+  fetchMock.mockImplementationOnce(async () => json({ turnstileRequired: true, turnstileSiteKey: 'site-key' }));
+  const client = new ApiClient('http://api.test');
+  await client.ensureSession(async siteKey => {
+    expect(siteKey).toBe('site-key');
+    return 'turnstile-token';
+  });
+  expect(server.requests.find(r => r.path === '/v1/auth/guest')?.body)
+    .toEqual({ turnstileToken: 'turnstile-token' });
 });
 
 test('既存リフレッシュトークンがあればゲストではなくrefreshを使う', async () => {

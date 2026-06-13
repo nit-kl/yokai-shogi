@@ -17,9 +17,11 @@ export class ApiError extends Error {
 export class NetworkError extends Error {}
 
 interface TokenResponse { userId: string; accessToken: string; refreshToken: string; }
+interface AuthConfig { turnstileRequired: boolean; turnstileSiteKey?: string; }
 
 export class ApiClient {
   private accessToken: string | null = null;
+  private turnstileProvider: ((siteKey: string) => Promise<string>) | undefined;
   userId: string | null = null;
 
   constructor(private baseUrl: string) {}
@@ -57,7 +59,8 @@ export class ApiClient {
   }
 
   /* ゲスト発行 or リフレッシュでセッションを確立 */
-  async ensureSession(turnstileToken?: string): Promise<void> {
+  async ensureSession(getTurnstileToken?: (siteKey: string) => Promise<string>): Promise<void> {
+    if (getTurnstileToken) this.turnstileProvider = getTurnstileToken;
     const rt = this.getRefreshToken();
     if (rt) {
       try {
@@ -69,8 +72,23 @@ export class ApiClient {
         this.setRefreshToken(null);             // 失効トークンは破棄してゲスト発行へ
       }
     }
+    const config = await this.getPublic<AuthConfig>('/v1/auth/config');
+    let turnstileToken: string | undefined;
+    if (config.turnstileRequired) {
+      if (!config.turnstileSiteKey || !this.turnstileProvider) throw new Error('bot検証の設定が不足しています');
+      turnstileToken = await this.turnstileProvider(config.turnstileSiteKey);
+    }
     const t = await this.post<TokenResponse>('/v1/auth/guest', turnstileToken ? { turnstileToken } : {});
     this.applyTokens(t);
+  }
+
+  private async getPublic<T>(path: string): Promise<T> {
+    let res: Response;
+    try { res = await fetch(`${this.baseUrl}${path}`); }
+    catch { throw new NetworkError(`GET ${path} failed`); }
+    const data = await res.json().catch(() => null) as any;
+    if (!res.ok) throw new ApiError(data?.error?.code ?? 'INTERNAL', data?.error?.message ?? 'error', res.status);
+    return data as T;
   }
 
   private applyTokens(t: TokenResponse): void {
@@ -104,7 +122,7 @@ export class ApiClient {
 
     let res = await doFetch();
     if (res.status === 401) {
-      await this.ensureSession();
+      await this.ensureSession(this.turnstileProvider);
       res = await doFetch();
     }
     const data = await res.json().catch(() => null) as any;

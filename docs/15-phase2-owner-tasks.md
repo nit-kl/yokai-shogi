@@ -10,7 +10,7 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 - CIのdeployジョブが配信するのは **Pagesクライアントのみ**。D1マイグレーションとAPI/DOデプロイは自動化されていない。
 - production/staging APIはPhase 1版がデプロイ済みだが、Phase 2のD1マイグレーション・BattleRoom DO・Matchmaker DOは未反映。
 - stagingの`ALLOWED_ORIGINS`はlocalhostのみ。現在のままではPagesプレビューからstaging APIへ接続できない。
-- Turnstileのクライアント組み込み、利用規約同意UI、Sentryクライアント組み込み、ゲーム内メンテナンス表示は未実装。
+- Sentryクライアント組み込み、ゲーム内メンテナンス表示は未実装。
 - Cloudflare無料枠を保護するため、自動負荷試験は実施しない。
 
 ---
@@ -78,12 +78,14 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 
 1. CloudflareダッシュボードでTurnstileウィジェットを作成する。
 2. クライアントからゲスト作成時にTurnstileトークンを送る実装を追加する。
-3. stagingで検証後、秘密鍵を設定する。
+3. stagingで検証後、サイトキーと秘密鍵を設定する。
+   - `npx wrangler secret put TURNSTILE_SITE_KEY --config server/wrangler.jsonc --env staging`
    - `npx wrangler secret put TURNSTILE_SECRET_KEY --config server/wrangler.jsonc --env staging`
+   - `npx wrangler secret put TURNSTILE_SITE_KEY --config server/wrangler.jsonc --env production`
    - `npx wrangler secret put TURNSTILE_SECRET_KEY --config server/wrangler.jsonc --env production`
 4. 正常なゲスト作成と、不正・欠落トークン拒否を確認する。
 
-秘密鍵だけ先に設定すると、現在のクライアントはゲスト作成に失敗する。
+秘密鍵だけ先に設定するとゲスト作成に失敗する。サイトキーと秘密鍵は同じ環境へセットで設定する。
 
 ### B-2. 利用規約・プライバシーポリシーを完成・公開する `実装依頼が必要 + 要オーナー操作`
 

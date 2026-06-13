@@ -23,13 +23,15 @@ class MetaFacade {
   private provider: MetaProvider = new LocalMeta();
   /** init() で受け取ったログインボーナス(タイトル表示で消費) */
   pendingLoginBonus: LoginBonus | null = null;
+  private forceLocal = false;
 
   get data(): MetaState { return this.provider.data; }
   get online(): boolean { return this.provider.data.online; }
+  useLocal(): void { this.forceLocal = true; this.provider = new LocalMeta(); }
 
   /* 起動: API優先・オフラインはローカルへフォールバック */
   async init(): Promise<LoginBonus | null> {
-    if (API_URL) {
+    if (API_URL && !this.forceLocal) {
       const api = new ApiMeta(new ApiClient(API_URL));
       try {
         const bonus = await api.init();

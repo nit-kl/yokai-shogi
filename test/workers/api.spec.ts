@@ -30,6 +30,12 @@ async function createGuest() {
 }
 
 describe('認証', () => {
+  it('認証設定: Turnstile未設定時は不要と返す', async () => {
+    const config = await api('/v1/auth/config');
+    expect(config.status).toBe(200);
+    expect(config.body).toEqual({ turnstileRequired: false });
+  });
+
   it('ゲスト作成: 初期チケット10・基本9種・初期編成', async () => {
     const g = await createGuest();
     expect(g.userId).toBeTruthy();

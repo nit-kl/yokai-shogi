@@ -17,6 +17,10 @@
       <div class="loading-label">百鬼召喚中…</div>
       <div class="loading-bar"><div id="loading-fill"></div></div>
       <div id="loading-pct">0%</div>
+      <div id="turnstile-wrap" class="hidden">
+        <div class="loading-label">初回登録の確認</div>
+        <div id="turnstile-widget"></div>
+      </div>
     </div>
   </div>
 
@@ -48,7 +52,12 @@
     </div>
     <div class="title-foot">
       <span>駒を取って相手の魂力を削れ ― 魂力0か大将討伐で勝利</span>
-      <button id="btn-link" class="title-link-btn hidden">データ引き継ぎ</button>
+      <span class="title-foot-links">
+        <a href="/legal/terms.html" target="_blank" rel="noopener noreferrer">利用規約</a>
+        <a href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">プライバシー</a>
+        <a href="https://x.com/nit_zunda_dev" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
+        <button id="btn-link" class="title-link-btn hidden">データ引き継ぎ</button>
+      </span>
     </div>
   </div>
 
@@ -188,6 +197,20 @@
       <div class="login-reward">🎟 ガチャチケット <b id="login-tickets">×1</b></div>
       <div id="login-next" class="login-next"></div>
       <button id="btn-login-ok" class="btn btn-gold">受け取る</button>
+    </div>
+  </div>
+
+  <!-- オンライン利用同意モーダル -->
+  <div id="modal-consent" class="modal hidden">
+    <div class="modal-box consent-box">
+      <h2>オンライン機能の利用について</h2>
+      <p class="link-desc">オンライン機能ではアカウントID、プレイデータ、アクセスログ等を保存します。以下を確認し、同意してからご利用ください。</p>
+      <div class="consent-links">
+        <a href="/legal/terms.html" target="_blank" rel="noopener noreferrer">利用規約を読む</a>
+        <a href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">プライバシーポリシーを読む</a>
+      </div>
+      <button id="btn-consent-accept" class="btn btn-gold">同意してオンライン機能を利用</button>
+      <button id="btn-consent-local" class="btn btn-dark btn-sub">同意せずソロで遊ぶ</button>
     </div>
   </div>
 

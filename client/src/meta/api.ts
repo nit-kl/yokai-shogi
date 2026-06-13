@@ -9,6 +9,7 @@ import { ApiClient, ApiError } from './client';
 import { ownedSet } from './types';
 import type { GachaResult } from './types';
 import type { LoginBonus, MetaProvider, MetaState } from './types';
+import { getTurnstileToken } from '../turnstile';
 
 interface MeResponse {
   userId: string; name: string; isGuest: boolean;
@@ -29,7 +30,7 @@ export class ApiMeta implements MetaProvider {
   battleUrl(): string | null { return this.client.battleUrl(); }
 
   async init(): Promise<LoginBonus | null> {
-    await this.client.ensureSession();
+    await this.client.ensureSession(getTurnstileToken);
     return this.reload();
   }
 

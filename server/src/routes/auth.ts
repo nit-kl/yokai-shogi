@@ -35,8 +35,9 @@ async function verifyTurnstile(env: Env, token: string | undefined, ip: string |
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: token, remoteip: ip }),
   });
-  const data = await res.json<{ success: boolean }>().catch(() => ({ success: false }));
-  return !!data.success;
+  const data: { success: boolean; action?: string } =
+    await res.json<{ success: boolean; action?: string }>().catch(() => ({ success: false }));
+  return !!data.success && data.action === 'guest-account';
 }
 
 /* ---------- トークン発行 ---------- */
@@ -56,6 +57,11 @@ export async function issueTokens(env: Env, userId: string, isGuest: boolean, fa
 
 export const authRoutes = new Hono<AppEnv>();
 
+authRoutes.get('/auth/config', c => c.json({
+  turnstileRequired: !!c.env.TURNSTILE_SECRET_KEY,
+  ...(c.env.TURNSTILE_SECRET_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}),
+}));
+
 /* ---------- ゲスト作成 ---------- */
 const guestSchema = z.object({ turnstileToken: z.string().max(4096).optional() });
 
@@ -65,6 +71,9 @@ authRoutes.post('/auth/guest', async c => {
 
   const body = guestSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!body.success) return apiError(c, 'VALIDATION', 'リクエストが不正です');
+  if (c.env.TURNSTILE_SECRET_KEY && !c.env.TURNSTILE_SITE_KEY) {
+    return apiError(c, 'INTERNAL', 'bot検証のサーバー設定が不足しています');
+  }
   if (!(await verifyTurnstile(c.env, body.data.turnstileToken, ip))) {
     return apiError(c, 'VALIDATION', 'bot検証に失敗しました');
   }

@@ -29,6 +29,11 @@ let onlineMatch: { matchId: string; reconnectToken: string; opponentName: string
 let onlineEndReason: string | null = null;
 let onlineReward = 0;
 let onlineSeq = 0;
+const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
+const CONSENT_KEY = 'yokaiShogi.consent.2026-06-13';
+type StoredOnlineMatch = {
+  matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string; side: Side;
+};
 
 const COLORS_P = ['#ffd24a', '#ff9a3c', '#fff6d8', '#ffe9a0'];
 const COLORS_E = ['#ff5d5d', '#c84aff', '#ffd0d0', '#ff9a8a'];
@@ -48,11 +53,59 @@ window.addEventListener('DOMContentLoaded', () => {
 
 /* 画像プリロードとメタ初期化(認証・ログボ判定)を待ってからタイトルへ */
 async function boot() {
+  if (__API_URL__ && !hasConsent()) {
+    await preloadImages();
+    showConsent();
+    return;
+  }
   await Promise.all([
     preloadImages(),
     Meta.init().catch(err => { console.error('[meta] init failed', err); return null; }),
   ]);
-  enterTitle();
+  if (!resumeOnlineMatch()) enterTitle();
+}
+
+function hasConsent(): boolean {
+  try { return localStorage.getItem(CONSENT_KEY) === 'accepted'; } catch { return false; }
+}
+
+function showConsent(): void {
+  showScreen('screen-loading');
+  $('modal-consent').classList.remove('hidden');
+  $('btn-consent-accept').onclick = () => {
+    try { localStorage.setItem(CONSENT_KEY, 'accepted'); } catch { /* ignore */ }
+    $('modal-consent').classList.add('hidden');
+    void boot();
+  };
+  $('btn-consent-local').onclick = async () => {
+    $('modal-consent').classList.add('hidden');
+    Meta.useLocal();
+    await Meta.init();
+    enterTitle();
+  };
+}
+
+function saveOnlineMatch(): void {
+  if (!onlineMatch || !onlineSide) return;
+  const stored: StoredOnlineMatch = { ...onlineMatch, side: onlineSide };
+  try { sessionStorage.setItem(ONLINE_MATCH_KEY, JSON.stringify(stored)); } catch { /* ignore */ }
+}
+
+function clearOnlineMatch(): void {
+  try { sessionStorage.removeItem(ONLINE_MATCH_KEY); } catch { /* ignore */ }
+}
+
+function resumeOnlineMatch(): boolean {
+  if (!Meta.online) return false;
+  let stored: StoredOnlineMatch | null = null;
+  try { stored = JSON.parse(sessionStorage.getItem(ONLINE_MATCH_KEY) || 'null') as StoredOnlineMatch | null; }
+  catch { clearOnlineMatch(); }
+  if (!stored?.matchId || !stored.reconnectToken || (stored.side !== 'p' && stored.side !== 'e')) return false;
+  onlineSide = stored.side;
+  onlineMatch = stored;
+  onlineSeq = 0;
+  connectMatchmaker({ matchId: stored.matchId, reconnectToken: stored.reconnectToken });
+  return true;
 }
 
 /* ---------- 画像プリロード ---------- */
@@ -108,7 +161,7 @@ function wireButtons() {
     $('btn-mute').textContent = AudioSys.toggle() ? '🔊' : '🔇';
   };
   $('btn-resign').onclick = () => {
-    if (!G || G.winner || busy) return;
+    if (!G || G.winner || (!onlineSide && busy)) return;
     if (confirm('投了しますか?')) {
       if (onlineSide) { online?.send({ t: 'resign' }); return; }
       G.winner = 'e'; G.reason = 'resign';
@@ -117,13 +170,14 @@ function wireButtons() {
   };
   $('btn-retry').onclick = () => {
     AudioSys.play('click');
-    if (onlineSide) { online?.close(); onlineSide = null; onlineMatch = null; enterTitle(); }
+    if (onlineSide) { online?.close(); clearOnlineMatch(); onlineSide = null; onlineMatch = null; enterTitle(); }
     else startBattle();
   };
   $('btn-title').onclick = () => {
     AudioSys.play('click');
     AudioSys.stopBgm();
     online?.close();
+    clearOnlineMatch();
     online = null; onlineSide = null; onlineMatch = null;
     enterTitle();
   };
@@ -142,7 +196,7 @@ function closeOnlineModal() {
   $('modal-online').classList.add('hidden');
 }
 
-function connectMatchmaker() {
+function connectMatchmaker(extra: Record<string, string> = {}) {
   if (online) return;
   const url = Meta.battleUrl();
   if (!url) { $('online-message').textContent = 'オンライン接続が利用できません'; return; }
@@ -158,7 +212,7 @@ function connectMatchmaker() {
       $('online-message').textContent = state === 'error' ? '接続エラーが発生しました' : '接続が切れました';
     }
   };
-  online.connect();
+  online.connect(extra);
 }
 
 async function onOnlineMessage(message: ServerBattleMessage) {
@@ -178,12 +232,13 @@ async function onOnlineMessage(message: ServerBattleMessage) {
       matchId: message.matchId, reconnectToken: message.reconnectToken,
       opponentName: message.opponent.name, opponentBossId: message.opponent.bossId,
     };
+    saveOnlineMatch();
     $('modal-online').classList.add('hidden');
     online!.connect({ matchId: message.matchId, reconnectToken: message.reconnectToken });
   } else if (message.t === 'snapshot') {
     if (!onlineSide) return;
     const entering = !$('screen-battle').classList.contains('active');
-    const shouldRender = entering || message.seq <= onlineSeq;
+    const shouldRender = entering || pieceEls.size === 0 || message.seq <= onlineSeq;
     G = stateForView(message.state, onlineSide);
     if (entering) startOnlineBattle();
     if (shouldRender) { renderAll(); updateHUD(); }
@@ -208,6 +263,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     G.winner = message.winner === 'draw' ? null : (message.winner === onlineSide ? 'p' : 'e');
     onlineEndReason = message.reason;
     onlineReward = message.reward.tickets;
+    clearOnlineMatch();
     showResult();
   }
 }
