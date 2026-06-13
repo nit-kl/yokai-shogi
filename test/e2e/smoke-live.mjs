@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 import { acceptConsentForSolo, dismissLegacyLoginModal, startSoloBattle, waitForTitle } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
-const BASE_URL = process.argv[2] || 'https://yokai-shogi.pages.dev/';
+const BASE_URL = process.argv[2] || 'https://yokai-shogi.nit-games.com/';
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
@@ -19,6 +19,17 @@ await page.goto(BASE_URL);
 await acceptConsentForSolo(page);
 await waitForTitle(page);
 await dismissLegacyLoginModal(page);
+if (await page.locator('#modal-onboarding-boss:not(.hidden)').count()) {
+  await page.evaluate(() => {
+    const { Meta, SETUP } = window.yk;
+    Meta.data.onboardingDone = true;
+    Meta.data.owned = {};
+    for (const row of SETUP.slice(-2)) for (const id of row) if (id) Meta.data.owned[id] = 1;
+    Meta.data.formation = SETUP.slice(-2).map(row => [...row]);
+    Meta.save();
+    document.getElementById('modal-onboarding-boss')?.classList.add('hidden');
+  });
+}
 await page.screenshot({ path: path.join(dir, 'live-1-title.png') });
 
 await startSoloBattle(page);

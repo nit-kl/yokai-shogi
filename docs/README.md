@@ -30,6 +30,7 @@
 | 13 | [GitHub連携デプロイ手順書](13-pages-github-deploy.md) | Pages自動デプロイの設定手順・料金・ロールバック |
 | 14 | [Phase 1 オーナー作業チェックリスト](14-phase1-owner-tasks.md) | 運営者が手で行う必要がある作業(コミット/本番切替/Turnstile/規約 等) |
 | 15 | [Phase 2 オーナー作業チェックリスト](15-phase2-owner-tasks.md) | staging/production反映・公開ブロッカー・監視・β完了条件 |
+| 16 | [独自ドメイン取得・移行手順](16-custom-domain.md) | Route 53で取得する`nit-games.com`のCloudflare委譲・サブドメイン運用・切替 |
 
 ## 読み方
 
@@ -58,5 +59,5 @@ test/e2e/*.mjs          playwright e2e(オフライン4本 + オンライン2台
 prototype/              移植元プロトタイプ(挙動比較リファレンスとして保存)
 ```
 
-- API稼働中: staging `yokai-shogi-api-staging` / production `yokai-shogi-api-production`(ともに *.workers.dev)
+- API稼働中: staging `yokai-shogi-api-staging` (`*.workers.dev`) / production `https://api.yokai-shogi.nit-games.com`
 - 本番クライアントをサーバー権威に切り替えるには `npm run pages:deploy`(オンライン版)。詳細は doc 12 の Phase 1 検証状況

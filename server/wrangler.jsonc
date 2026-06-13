@@ -66,6 +66,12 @@
     // 本番: wrangler deploy --env production
     "production": {
       "name": "yokai-shogi-api-production",
+      "routes": [
+        {
+          "pattern": "api.yokai-shogi.nit-games.com",
+          "custom_domain": true
+        }
+      ],
       "d1_databases": [
         {
           "binding": "DB",
@@ -85,7 +91,7 @@
       ],
       "triggers": { "crons": ["0 19 * * *"] },
       "vars": {
-        "ALLOWED_ORIGINS": "https://yokai-shogi.pages.dev",
+        "ALLOWED_ORIGINS": "https://yokai-shogi.nit-games.com,https://yokai-shogi.pages.dev",
         "MAINTENANCE": "0"
       }
     }

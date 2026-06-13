@@ -24,7 +24,7 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 - [x] 既存テストを vitest へ移植(vm読み込み → import。アサーション内容は維持)
 - [x] CI(GitHub Actions): `tsc --noEmit` + vitest + playwright(`.github/workflows/ci.yml`)
 - [x] wrangler プロジェクト雛形(staging/production 環境定義。`npm run api:dev` で共有エンジンのWorkers動作確認済み)
-- [x] Pagesデプロイ(https://yokai-shogi.pages.dev/ で稼働確認済み。再デプロイは `npm run pages:deploy`)
+- [x] Pagesデプロイ(配信元 `https://yokai-shogi.pages.dev/`、正式URL `https://yokai-shogi.nit-games.com/`。再デプロイは `npm run pages:deploy`)
 - [x] 画像最適化(WebP・サイズ別: 512px + 小160px。約10MB → 1.8MB)
 - 完了条件: 全既存テストgreen ✅+ブラウザでの動作が現状と同一(ui-shotスクリーンショット比較 ✅)+ Pages上で現行ゲームが動く ✅ → **Phase 0 / M0 完了(2026-06-13)**
 
@@ -54,7 +54,7 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 - **デプロイ済み**: API を staging(`yokai-shogi-api-staging`) / production(`yokai-shogi-api-production`) にデプロイ、D1(本番/staging)へリモートマイグレーション適用、`JWT_SECRET` 設定済み。`Turnstile` は秘密鍵未設定のためスキップ中(公開時に有効化)
 - **2台同期を staging で実証済み**(`test/e2e/sync-online.mjs`)
 - ビルド切替: `npm run build`=オフライン版(ローカルメタ・e2e用) / `npm run build:online`=本番API接続版(Pages配信用、CIのdeployジョブが使用)
-- **残タスク(本番公開の最後の一歩)**: 本番Pagesをオンライン版で再デプロイ(`npm run pages:deploy`、またはPRマージでCIの `deploy` ジョブが実行)すると、本番(`yokai-shogi.pages.dev`)がサーバー権威=2台同期対応に切り替わる。**既存localStorageデータはフレッシュスタート(doc 05方針)** となるため、切替タイミングはリリース判断に委ねる
+- **残タスク(本番公開の最後の一歩)**: 独自ドメイン接続後、本番Pagesをオンライン版で再デプロイ(`npm run pages:deploy`、またはPRマージでCIの `deploy` ジョブが実行)すると、正式URL `yokai-shogi.nit-games.com` がサーバー権威=2台同期対応に切り替わる。**既存localStorageデータはフレッシュスタート(doc 05方針)** となるため、切替タイミングはリリース判断に委ねる
 
 ## Phase 2: オンライン対戦MVP
 

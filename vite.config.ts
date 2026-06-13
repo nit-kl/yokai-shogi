@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
    - `vite build --mode online`   → 本番API(Pages配信用。npm run build:online)
    - `VITE_API_URL=... vite build` → 任意のAPI(staging検証など)
    - `vite build`(既定)            → 未設定=オフライン(ローカル版。e2eのオフライン経路はこれ) */
-const PROD_API = 'https://yokai-shogi-api-production.kojileo0178.workers.dev';
+const PROD_API = 'https://api.yokai-shogi.nit-games.com';
 
 const STAGING_API = 'https://yokai-shogi-api-staging.kojileo0178.workers.dev';
 

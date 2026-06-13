@@ -67,7 +67,7 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 
 自動補助（結果）:
 - 本番ソロ: `node test/e2e/smoke-live.mjs` ✅（Turnstile有効後はソロ経路）
-- 本番ランダム2局: `node test/e2e/battle-staging-smoke.mjs https://yokai-shogi.pages.dev/` ✅（Turnstile有効化**前**に実施済み）
+- 本番ランダム2局: `node test/e2e/battle-staging-smoke.mjs https://yokai-shogi.nit-games.com/`（独自ドメイン切替後に再確認）
 - staging Pages: Turnstile有効のためヘッドレス自動テスト不可 → **手動ブラウザ**で確認
 - セキュリティREST/WS: `node test/manual/security-check.mjs` ✅
 
@@ -94,7 +94,7 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 ### B-1. Turnstileを有効化する `要オーナー操作` ⬜ production秘密鍵設定済み・ドメイン登録要確認
 
 - staging / production ともに `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` 設定済み。
-- **残り**: Cloudflare Turnstileダッシュボードで `yokai-shogi.pages.dev` 等をホスト名に追加し、実ブラウザでゲスト作成を確認。
+- **残り**: Cloudflare Turnstileダッシュボードで `yokai-shogi.nit-games.com` と移行期間用の `yokai-shogi.pages.dev` をホスト名に追加し、実ブラウザでゲスト作成を確認。
 
 公開状態で未設定のままにすると、botによるゲスト大量作成でD1無料枠を消費される。
 
@@ -109,6 +109,7 @@ Phase 2 のコード実装後、オンライン対戦をクローズドβ・オ�
 
 **重要**: Turnstileウィジェットの「ホスト名管理」に以下を追加すること。
 - `yokai-shogi.pages.dev`
+- `yokai-shogi.nit-games.com`
 - `yokai-shogi-staging.pages.dev`
 - `localhost`（ローカル開発用）
 
