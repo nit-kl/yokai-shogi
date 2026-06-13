@@ -6,9 +6,8 @@ export const AudioSys = {
   ctx: null as AudioContext | null,
   master: null as GainNode | null,
   bgmGain: null as GainNode | null,
+  bgmAudio: null as HTMLAudioElement | null,
   enabled: true,
-  bgmTimer: null as ReturnType<typeof setInterval> | null,
-  bgmStep: 0,
 
   init() {
     if (this.ctx) return;
@@ -20,6 +19,10 @@ export const AudioSys = {
       this.bgmGain = this.ctx.createGain();
       this.bgmGain.gain.value = 0.16;
       this.bgmGain.connect(this.master);
+      this.bgmAudio = new Audio('/assets/audio/battle-bgm.mp3');
+      this.bgmAudio.loop = true;
+      this.bgmAudio.preload = 'auto';
+      this.bgmAudio.volume = 0.42;
     } catch (e) { /* 音なしでも動作 */ }
   },
 
@@ -30,6 +33,7 @@ export const AudioSys = {
   toggle(): boolean {
     this.enabled = !this.enabled;
     if (this.master) this.master.gain.value = this.enabled ? 0.9 : 0;
+    if (this.bgmAudio) this.bgmAudio.muted = !this.enabled;
     return this.enabled;
   },
 
@@ -141,34 +145,18 @@ export const AudioSys = {
     }
   },
 
-  /* ---------- BGM(都節音階の生成ループ) ---------- */
+  /* ---------- BGM(対戦中ループ) ---------- */
   startBgm() {
-    if (!this.ctx || this.bgmTimer) return;
+    if (!this.bgmAudio) return;
     this.resume();
-    this.bgmStep = 0;
-    const root = 220; // A3
-    const scale = [0, 1, 5, 7, 8, 12, 13]; // 都節(みやこぶし)
-    const beat = 60 / 76 / 2; // 76bpm 8分音符
-    this.bgmTimer = setInterval(() => {
-      if (!this.enabled) { this.bgmStep++; return; }
-      const t = this.ctx!.currentTime + 0.05;
-      const s = this.bgmStep;
-      // 太鼓: 1拍目と5拍目
-      if (s % 8 === 0) { this._osc('sine', 75, t, 0.35, 0.5, this.bgmGain, 38); this._noise(t, 0.05, 0.2, 600, this.bgmGain); }
-      if (s % 8 === 4) { this._osc('sine', 62, t, 0.3, 0.32, this.bgmGain, 34); }
-      // 琴の旋律: まばらに
-      if (s % 2 === 0 && Math.random() < 0.62) {
-        const deg = scale[Math.floor(Math.random() * scale.length)];
-        const oct = Math.random() < 0.22 ? 2 : 1;
-        this._pluck(root * Math.pow(2, deg / 12) * oct, t, 0.5, this.bgmGain);
-      }
-      // 鈴: たまに
-      if (s % 16 === 14 && Math.random() < 0.5) this._osc('sine', 1760, t, 0.6, 0.06, this.bgmGain);
-      this.bgmStep++;
-    }, beat * 1000);
+    if (!this.bgmAudio.paused) return;
+    this.bgmAudio.muted = !this.enabled;
+    void this.bgmAudio.play().catch(() => { /* 自動再生ポリシー等 */ });
   },
 
   stopBgm() {
-    if (this.bgmTimer) { clearInterval(this.bgmTimer); this.bgmTimer = null; }
+    if (!this.bgmAudio) return;
+    this.bgmAudio.pause();
+    this.bgmAudio.currentTime = 0;
   },
 };

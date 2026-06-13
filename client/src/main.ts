@@ -10,6 +10,8 @@ import type { Side } from '../../shared/data';
 import { Game } from '../../shared/game';
 import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { AI } from './ai';
+import type { AIDifficulty } from './ai';
+import { SOLO_DIFFICULTIES, SOLO_STAGES, soloStage } from './solo';
 import { Meta } from './meta';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
@@ -32,6 +34,8 @@ let onlineMatch: { matchId: string; reconnectToken: string; opponentName: string
 let onlineEndReason: string | null = null;
 let onlineReward = 0;
 let onlineSeq = 0;
+let soloStageId = SOLO_STAGES[0].id;
+let soloDifficulty: AIDifficulty = 'normal';
 const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
 const CONSENT_KEY = 'yokaiShogi.consent.2026-06-13';
 type StoredOnlineMatch = {
@@ -176,7 +180,9 @@ function enterTitle() {
 
 /* ---------- ボタン類 ---------- */
 function wireButtons() {
-  $('btn-start').onclick = () => { AudioSys.init(); AudioSys.play('click'); startBattle(); };
+  $('btn-start').onclick = () => { AudioSys.init(); AudioSys.play('click'); openSolo(); };
+  $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
+  $('btn-solo-battle').onclick = () => { AudioSys.play('click'); startBattle(); };
   $('btn-online').onclick = () => openOnline();
   $('btn-online-close').onclick = () => closeOnlineModal();
   $('btn-online-random').onclick = () => { connectMatchmaker(); online?.send({ t: 'join_queue' }); $('online-message').textContent = '対戦相手を探しています…'; };
@@ -222,6 +228,40 @@ function wireButtons() {
     online = null; onlineSide = null; onlineMatch = null;
     enterTitle();
   };
+}
+
+function openSolo() {
+  renderSoloSelect();
+  showScreen('screen-solo');
+  FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(200,120,255,0.4)', 'rgba(88,182,255,0.3)'], 0.04);
+}
+
+function renderSoloSelect() {
+  const stages = $('solo-stages');
+  stages.innerHTML = '';
+  for (const stage of SOLO_STAGES) {
+    const boss = YOKAI[stage.bossId];
+    const card = document.createElement('button');
+    card.className = 'solo-stage-card' + (stage.id === soloStageId ? ' selected' : '');
+    card.innerHTML =
+      `<img src="${boss.imgSm}" alt="${boss.name}">` +
+      `<div class="solo-stage-body"><div class="solo-stage-head"><span>${stage.trait}</span><b>${stage.name}</b></div>` +
+      `<div class="solo-stage-boss">大将 ${boss.name}</div><p>${stage.desc}</p>` +
+      `<div class="solo-stage-pieces">${stage.enemyRows.flat().filter(Boolean).map(id =>
+        `<img src="${YOKAI[id!].imgSm}" alt="${YOKAI[id!].name}" title="${YOKAI[id!].name}">`).join('')}</div></div>`;
+    card.onclick = () => { AudioSys.play('select'); soloStageId = stage.id; renderSoloSelect(); };
+    stages.appendChild(card);
+  }
+
+  const difficulties = $('solo-difficulties');
+  difficulties.innerHTML = '';
+  for (const difficulty of SOLO_DIFFICULTIES) {
+    const button = document.createElement('button');
+    button.className = 'solo-difficulty' + (difficulty.id === soloDifficulty ? ' selected' : '');
+    button.innerHTML = `<b>${difficulty.name}</b><span>${difficulty.desc}</span>`;
+    button.onclick = () => { AudioSys.play('select'); soloDifficulty = difficulty.id; renderSoloSelect(); };
+    difficulties.appendChild(button);
+  }
 }
 
 function openOnline() {
@@ -520,11 +560,12 @@ function onHandClick(id: string) {
 
 /* ============================== 対局進行 ============================== */
 function startBattle() {
+  const stage = soloStage(soloStageId);
   onlineSide = null;
   onlineEndReason = null;
   onlineReward = 0;
   $('online-status').classList.add('hidden');
-  G = Game.newState(Meta.formationRows());
+  G = Game.newState(Meta.formationRows(), stage.enemyRows);
   busy = false;
   sel = null;
   pieceEls.forEach(el => el.remove());
@@ -536,7 +577,8 @@ function startBattle() {
   const boss = YOKAI[Meta.bossId()];
   $<HTMLImageElement>('player-avatar').src = boss.img;
   $('player-name').textContent = boss.name;
-  $<HTMLImageElement>('enemy-avatar').src = YOKAI[ENEMY_BOSS].img;
+  $<HTMLImageElement>('enemy-avatar').src = YOKAI[stage.bossId].img;
+  $('enemy-name').textContent = YOKAI[stage.bossId].name;
   renderAll();
   updateHUD();
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
@@ -569,7 +611,7 @@ async function doAction(action: Action) {
     showBanner('e');
     $('thinking').classList.remove('hidden');
     await sleep(850 + Math.random() * 550);
-    const act = AI.chooseAction(G!);
+    const act = AI.chooseAction(G!, soloDifficulty);
     $('thinking').classList.add('hidden');
     if (act) { doAction(act); return; }
     // 指し手なし(エンジン側で勝敗確定済みのはず)
@@ -722,7 +764,9 @@ function showResult() {
   AudioSys.stopBgm();
   const draw = onlineEndReason === 'draw';
   const win = G!.winner === 'p';
-  $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : ENEMY_BOSS].img;
+  const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS) : soloStage(soloStageId).bossId;
+  const enemyBossName = YOKAI[enemyBoss].name;
+  $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : enemyBoss].img;
   if (win && !onlineSide) {
     /* ソロ勝利報酬はサーバー(またはローカル)が日次上限つきで付与。結果を待って表示を確定 */
     $('result-reward').textContent = '勝利報酬を確認中…';
@@ -744,8 +788,8 @@ function showResult() {
   title.textContent = draw ? '引き分け' : win ? '討伐成功' : '敗北';
   title.className = win ? 'win' : 'lose';
   const reasons: Record<string, string> = {
-    boss: win ? '敵大将・酒呑童子を討ち取った!' : '我が大将が討ち取られた…',
-    hp: win ? '酒呑童子の魂力を打ち砕いた!' : '魂力が尽き果てた…',
+    boss: win ? `敵大将・${enemyBossName}を討ち取った!` : '我が大将が討ち取られた…',
+    hp: win ? `${enemyBossName}の魂力を打ち砕いた!` : '魂力が尽き果てた…',
     explode: win ? '鬼火が敵大将を道連れにした!' : '我が大将が鬼火の道連れに…',
     nomoves: win ? '敵軍は身動きが取れなくなった!' : '我が軍は身動きが取れなくなった…',
     resign: '投了した…',

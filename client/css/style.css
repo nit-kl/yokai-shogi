@@ -176,6 +176,52 @@ html, body {
   color: #6e6590; font-size: 0.78rem; letter-spacing: 0.15em; z-index: 2;
 }
 
+/* ---------- ソロ対戦選択 ---------- */
+#screen-solo { flex-direction: column; }
+.solo-col { width: min(98vw, 780px); }
+.solo-note { color: #9a8fc0; font-size: 0.82rem; }
+#solo-stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.solo-stage-card {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(232,196,106,0.25);
+  background: linear-gradient(160deg, rgba(42,35,66,0.96), rgba(20,16,31,0.96));
+  color: var(--paper);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+}
+.solo-stage-card:hover { transform: translateY(-2px); border-color: rgba(232,196,106,0.65); }
+.solo-stage-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(232,196,106,0.35); }
+.solo-stage-card > img { display: block; width: 86px; height: 86px; object-fit: contain; margin: 0 auto 4px; }
+.solo-stage-head { display: flex; align-items: center; gap: 6px; font-family: "Yu Mincho", serif; }
+.solo-stage-head span {
+  padding: 2px 6px; border-radius: 4px; background: rgba(255,210,74,0.18);
+  color: var(--gold); font-size: 0.65rem; font-family: sans-serif;
+}
+.solo-stage-head b { font-size: 0.88rem; }
+.solo-stage-boss { margin-top: 4px; color: #ff9b6a; font-size: 0.72rem; }
+.solo-stage-card p { min-height: 3.2em; margin: 5px 0; color: #b3a8d6; font-size: 0.7rem; line-height: 1.5; }
+.solo-stage-pieces { display: flex; flex-wrap: wrap; gap: 2px; }
+.solo-stage-pieces img { width: 22px; height: 22px; object-fit: contain; }
+.solo-difficulty-wrap { width: 100%; }
+.solo-difficulty-wrap h3 { margin-bottom: 6px; color: var(--gold); font: 0.9rem "Yu Mincho", serif; letter-spacing: 0.2em; }
+#solo-difficulties { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.solo-difficulty {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 8px; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(88,182,255,0.25); background: rgba(22,17,38,0.9); color: #b3a8d6;
+}
+.solo-difficulty b { color: var(--paper); font-family: "Yu Mincho", serif; }
+.solo-difficulty span { font-size: 0.65rem; }
+.solo-difficulty.selected { border-color: var(--p-blue); box-shadow: 0 0 14px rgba(88,182,255,0.3); }
+
 /* ---------- バトル画面 ---------- */
 #screen-battle {
   flex-direction: column;
@@ -1177,4 +1223,11 @@ html, body {
 /* 横長すぎる端末向け微調整 */
 @media (max-aspect-ratio: 3/5) {
   #board-frame { --bw: min(94vw, 52vh); }
+}
+@media (max-width: 680px) {
+  #solo-stages { grid-template-columns: 1fr; overflow-y: auto; }
+  .solo-stage-card { display: flex; align-items: center; gap: 8px; }
+  .solo-stage-card > img { width: 68px; height: 68px; margin: 0; flex: 0 0 auto; }
+  .solo-stage-card p { min-height: 0; }
+  #solo-difficulties { grid-template-columns: 1fr 1fr 1fr; }
 }

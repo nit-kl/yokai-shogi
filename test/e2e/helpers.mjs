@@ -51,3 +51,10 @@ export async function skipOnboarding(page) {
   await waitForTitle(page);
   await dismissLegacyLoginModal(page);
 }
+
+export async function startSoloBattle(page) {
+  await page.click('#btn-start');
+  await page.waitForSelector('#screen-solo.active');
+  await page.click('#btn-solo-battle');
+  await page.waitForSelector('#screen-battle.active');
+}

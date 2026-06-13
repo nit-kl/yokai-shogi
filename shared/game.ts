@@ -74,14 +74,18 @@ export interface ApplyOptions {
 }
 
 export const Game = {
-  /* playerRows: 自軍2段(手前から2段目, 最奥段)の編成。省略時は既定配置 */
-  newState(playerRows: (string | null)[][] | null = null): GameState {
+  /* playerRows: 自軍2段(手前から2段目, 最奥段)、enemyRows: 敵軍2段(最奥段, 前段) */
+  newState(
+    playerRows: (string | null)[][] | null = null,
+    enemyRows: (string | null)[][] | null = null,
+  ): GameState {
     let uid = 0;
     const board: (Piece | null)[][] = [];
     for (let y = 0; y < ROWS; y++) {
       const row: (Piece | null)[] = [];
       for (let x = 0; x < COLS; x++) {
         let id = SETUP[y][x];
+        if (enemyRows && y < 2) id = enemyRows[y][x];
         if (playerRows && y >= ROWS - 2) id = playerRows[y - (ROWS - 2)][x];
         row.push(id ? { uid: ++uid, id, owner: y < ROWS / 2 ? 'e' : 'p', promoted: false } : null);
       }

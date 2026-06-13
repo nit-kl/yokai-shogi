@@ -3,6 +3,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { startSoloBattle } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
@@ -68,8 +69,7 @@ const bossName = await page.evaluate(() => document.getElementById('title-vs-p')
 if (bossName !== 'ぬらりひょん') errors.push(`タイトルの大将名が「${bossName}」(期待: ぬらりひょん)`);
 
 /* 開戦で盤面に反映されているか */
-await page.click('#btn-start');
-await page.waitForSelector('#screen-battle.active');
+await startSoloBattle(page);
 await page.waitForTimeout(1400);
 await page.screenshot({ path: path.join(dir, 'shot-g7-battle.png') });
 const placed = await page.evaluate(() => window.yk.G.board[5][2].id);

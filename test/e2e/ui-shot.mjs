@@ -31,9 +31,16 @@ if (await page.locator('#pieces-list').getByText('ガチャ限定').count()) err
 await page.click('#btn-pieces-back');
 await page.waitForSelector('#screen-title.active');
 
-// 開戦
+// ソロ対戦
 await page.click('#btn-start');
+await page.waitForSelector('#screen-solo.active');
+if (await page.locator('.solo-stage-card').count() !== 3) errors.push('ソロステージが3件表示されていない');
+if (await page.locator('.solo-difficulty').count() !== 3) errors.push('ソロ難易度が3件表示されていない');
+await page.locator('.solo-stage-card').nth(2).click();
+await page.locator('.solo-difficulty').nth(2).click();
+await page.click('#btn-solo-battle');
 await page.waitForSelector('#screen-battle.active');
+if (await page.locator('#enemy-name').textContent() !== '九尾の狐') errors.push('選択したソロステージの敵大将が反映されていない');
 await page.waitForTimeout(1400);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 

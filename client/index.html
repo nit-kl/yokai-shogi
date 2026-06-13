@@ -49,7 +49,7 @@
       <h1 class="title-logo">妖怪将棋</h1>
       <div class="title-vs"><span id="title-vs-p" class="vs-name">九尾の狐</span> <span class="vs-mark">VS</span> 酒呑童子</div>
       <div class="title-buttons">
-        <button id="btn-start" class="btn btn-gold">開 戦</button>
+        <button id="btn-start" class="btn btn-gold">ソロ対戦</button>
         <button id="btn-rules" class="btn btn-dark">遊び方</button>
       </div>
       <div class="title-buttons title-buttons-sub">
@@ -67,6 +67,24 @@
         <a href="https://x.com/nit_zunda_dev" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
         <button id="btn-link" class="title-link-btn hidden">データ引き継ぎ</button>
       </span>
+    </div>
+  </div>
+
+  <!-- ソロ対戦選択画面 -->
+  <div id="screen-solo" class="screen">
+    <div class="menu-col solo-col">
+      <div class="menu-head">
+        <button id="btn-solo-back" class="tool-btn" title="戻る">←</button>
+        <h2 class="menu-title">ソロ対戦</h2>
+        <div class="menu-head-spacer"></div>
+      </div>
+      <p class="solo-note">挑戦する軍勢と難易度を選んでください。</p>
+      <div id="solo-stages"></div>
+      <div class="solo-difficulty-wrap">
+        <h3>難易度</h3>
+        <div id="solo-difficulties"></div>
+      </div>
+      <button id="btn-solo-battle" class="btn btn-gold">対戦開始</button>
     </div>
   </div>
 
@@ -137,7 +155,7 @@
       <div id="enemy-hud" class="hud hud-enemy">
         <div class="hud-avatar"><img id="enemy-avatar" src="" alt="酒呑童子" draggable="false"></div>
         <div class="hud-mid">
-          <div class="hud-name"><span class="hud-side-tag tag-enemy">敵将</span>酒呑童子</div>
+          <div class="hud-name"><span class="hud-side-tag tag-enemy">敵将</span><span id="enemy-name">酒呑童子</span></div>
           <div class="hp-bar hp-enemy">
             <div class="hp-ghost" id="enemy-hp-ghost"></div>
             <div class="hp-fill" id="enemy-hp-fill"></div>

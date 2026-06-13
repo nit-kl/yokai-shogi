@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { acceptConsentForSolo, dismissLegacyLoginModal, waitForTitle } from './helpers.mjs';
+import { acceptConsentForSolo, dismissLegacyLoginModal, startSoloBattle, waitForTitle } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.argv[2] || 'https://yokai-shogi.pages.dev/';
@@ -21,8 +21,7 @@ await waitForTitle(page);
 await dismissLegacyLoginModal(page);
 await page.screenshot({ path: path.join(dir, 'live-1-title.png') });
 
-await page.click('#btn-start');
-await page.waitForSelector('#screen-battle.active');
+await startSoloBattle(page);
 await page.waitForTimeout(1400);
 await page.screenshot({ path: path.join(dir, 'live-2-battle.png') });
 
