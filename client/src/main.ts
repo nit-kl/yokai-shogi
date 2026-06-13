@@ -20,6 +20,7 @@ import { AudioSys } from './audio';
 import { $, sleep, showScreen } from './util';
 import { initSentry, captureException } from './sentry';
 import { fetchApiStatus } from './status';
+import { renderTitleBosses } from './title';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 
@@ -168,9 +169,7 @@ function enterTitle() {
     void Onboarding.start();
     return;
   }
-  const boss = YOKAI[Meta.bossId()];
-  $<HTMLImageElement>('title-boss-l').src = boss.img;
-  $<HTMLImageElement>('title-boss-r').src = YOKAI[ENEMY_BOSS].img;
+  renderTitleBosses(Meta.bossId());
   showScreen('screen-title');
   FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.05);
   AudioSys.init();

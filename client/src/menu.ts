@@ -2,7 +2,7 @@
    妖怪将棋 - ガチャ・編成・ログインボーナスUI
    ============================================================ */
 
-import { COLS, ROWS, SETUP, YOKAI, TYPE_INFO, RARITY_INFO, formationWithBoss } from '../../shared/data';
+import { COLS, YOKAI, TYPE_INFO, RARITY_INFO } from '../../shared/data';
 import { $, sleep, showScreen } from './util';
 import { AudioSys } from './audio';
 import { FX } from './effects';
@@ -32,17 +32,7 @@ export const MenuUI = {
       AudioSys.play('click');
       $('gacha-result').classList.add('hidden');
     };
-    $('btn-form-back').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
-    $('btn-form-reset').onclick = () => {
-      AudioSys.play('click');
-      if (this.onboardingMode === 'formation') {
-        this.rows = formationWithBoss(Meta.bossId());
-      } else {
-        this.rows = SETUP.slice(ROWS - 2).map(r => [...r]);
-      }
-      this.benchSel = null;
-      this.renderFormation();
-    };
+    $('btn-form-save').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     this.initLinkCode();
     this.initProfile();
   },
@@ -161,7 +151,6 @@ export const MenuUI = {
     this.onboardingMode = mode;
     $('btn-gacha-back').classList.toggle('hidden', mode === 'gacha');
     $('btn-pull1').classList.toggle('hidden', mode === 'gacha');
-    $('btn-form-reset').classList.toggle('hidden', mode === 'formation');
     const hint = $('onboarding-hint');
     hint.classList.toggle('hidden', !mode);
     if (mode === 'gacha') {

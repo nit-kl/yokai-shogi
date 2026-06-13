@@ -7,6 +7,7 @@ import { $, showScreen } from './util';
 import { AudioSys } from './audio';
 import { Meta } from './meta';
 import { MenuUI } from './menu';
+import { renderTitleBosses } from './title';
 
 type Step = 'boss' | 'gacha' | 'formation';
 
@@ -22,6 +23,7 @@ export const Onboarding = {
 
   async start() {
     step = 'boss';
+    renderTitleBosses(Meta.bossId());
     showScreen('screen-title');
     this.showBossPick();
   },
@@ -54,8 +56,7 @@ export const Onboarding = {
     }
     $('onboarding-boss-error').textContent = '';
     $('modal-onboarding-boss').classList.add('hidden');
-    const boss = YOKAI[bossId];
-    $<HTMLImageElement>('title-boss-l').src = boss.img;
+    renderTitleBosses(bossId);
     step = 'gacha';
     MenuUI.setOnboardingMode('gacha');
     AudioSys.init();

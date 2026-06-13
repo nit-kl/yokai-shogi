@@ -36,10 +36,13 @@
   <div id="screen-title" class="screen">
     <div class="fog fog-a"></div>
     <div class="fog fog-b"></div>
-    <div class="title-bosses">
-      <img id="title-boss-l" src="" alt="九尾の狐" draggable="false">
-      <img id="title-boss-r" src="" alt="酒呑童子" draggable="false">
-    </div>
+    <div class="title-moon"></div>
+    <div class="title-board-lines"></div>
+      <div class="title-bosses">
+        <img id="title-boss-l" src="" alt="九尾の狐" draggable="false">
+        <img id="title-boss-c" src="" alt="ぬらりひょん" draggable="false">
+        <img id="title-boss-r" src="" alt="酒呑童子" draggable="false">
+      </div>
     <div class="title-currency">
       <span class="cur-tickets">🎟 ×0</span>
       <span class="cur-yoryoku">妖力 0</span>
@@ -48,21 +51,23 @@
       <span>プレイヤー</span><b id="title-player-name">プレイヤー</b>
     </button>
     <div class="title-center">
-      <div class="title-sub-top">百鬼夜行の盤上決戦</div>
-      <h1 class="title-logo">妖怪将棋</h1>
-      <div class="title-buttons">
-        <button id="btn-start" class="btn btn-gold">ソロ対戦</button>
-        <button id="btn-rules" class="btn btn-dark">遊び方</button>
+      <div class="title-emblem"><span>百</span></div>
+      <div class="title-sub-top"><i></i>百鬼夜行の盤上決戦<i></i></div>
+      <h1 class="title-logo"><span>妖怪</span><span>将棋</span></h1>
+      <div class="title-catch">駒を奪い、魂を削り、大将を討て。</div>
+      <div class="title-main-actions">
+        <button id="btn-start" class="btn title-action-primary"><small>ひとりで挑む</small>ソロ対戦</button>
+        <button id="btn-online" class="btn title-action-online hidden"><small>猛者と競う</small>オンライン対戦</button>
       </div>
-      <div class="title-buttons title-buttons-sub">
-        <button id="btn-online" class="btn btn-gold btn-sub hidden">オンライン対戦</button>
-        <button id="btn-gacha" class="btn btn-dark btn-sub">妖怪ガチャ</button>
-        <button id="btn-formation" class="btn btn-dark btn-sub">編 成</button>
-        <button id="btn-pieces" class="btn btn-dark btn-sub">駒一覧</button>
+      <div class="title-menu-label"><span>支度と資料</span></div>
+      <div class="title-secondary-actions">
+        <button id="btn-gacha" class="title-menu-btn"><b>召</b><span>妖怪ガチャ</span></button>
+        <button id="btn-formation" class="title-menu-btn"><b>陣</b><span>編 成</span></button>
+        <button id="btn-pieces" class="title-menu-btn"><b>録</b><span>駒一覧</span></button>
+        <button id="btn-rules" class="title-menu-btn"><b>指南</b><span>遊び方</span></button>
       </div>
     </div>
     <div class="title-foot">
-      <span>駒を取って相手の魂力を削れ ― 魂力0か大将討伐で勝利</span>
       <span class="title-foot-links">
         <a href="/legal/terms.html" target="_blank" rel="noopener noreferrer">利用規約</a>
         <a href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">プライバシー</a>
@@ -130,9 +135,9 @@
   <div id="screen-formation" class="screen">
     <div class="menu-col">
       <div class="menu-head">
-        <button id="btn-form-back" class="tool-btn" title="保存して戻る">←</button>
+        <div class="menu-head-spacer"></div>
         <h2 class="menu-title">編 成</h2>
-        <button id="btn-form-reset" class="btn btn-dark btn-sub">初期配置</button>
+        <button id="btn-form-save" class="btn btn-gold btn-sub btn-form-save">保 存</button>
       </div>
       <div class="form-zone-label">⬆ 敵陣方向</div>
       <div id="form-grid"></div>

@@ -56,7 +56,7 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 await page.screenshot({ path: path.join(dir, 'shot-g5-form-edited.png') });
-await page.click('#btn-form-back');
+await page.click('#btn-form-save');
 
 /* ④ タイトルへ戻る */
 await page.waitForSelector('#screen-title.active, #modal-login:not(.hidden)', { timeout: 10000 });
