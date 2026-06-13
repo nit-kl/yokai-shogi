@@ -174,6 +174,8 @@ function enterTitle() {
   $('title-vs-p').textContent = boss.name;
   showScreen('screen-title');
   FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.05);
+  AudioSys.init();
+  AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
   $('btn-online').classList.toggle('hidden', !Meta.online);
 }
@@ -368,7 +370,7 @@ function startOnlineBattle() {
   $('online-status').classList.remove('hidden');
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
-  AudioSys.startBgm();
+  AudioSys.startBattleBgm();
 }
 
 /* ============================== 盤の構築 ============================== */
@@ -583,7 +585,7 @@ function startBattle() {
   updateHUD();
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
-  AudioSys.startBgm();
+  AudioSys.startBattleBgm();
   showBanner('p');
 }
 

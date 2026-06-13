@@ -59,6 +59,8 @@ export const Onboarding = {
     $('title-vs-p').textContent = boss.name;
     step = 'gacha';
     MenuUI.setOnboardingMode('gacha');
+    AudioSys.init();
+    AudioSys.startTitleBgm();
     MenuUI.openGacha();
   },
 
