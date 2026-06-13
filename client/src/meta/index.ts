@@ -55,6 +55,7 @@ class MetaFacade {
   recordSoloWin(): Promise<number> { return this.provider.recordSoloWin(); }
   issueLinkCode(): Promise<string> { return this.provider.issueLinkCode(); }
   redeemLinkCode(code: string): Promise<boolean> { return this.provider.redeemLinkCode(code); }
+  battleUrl(): string | null { return this.provider.battleUrl(); }
 
   /* ---------- 同期の読み取りヘルパ(data から導出) ---------- */
   bossId(): string { return bossIdOf(this.provider.data); }

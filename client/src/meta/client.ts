@@ -24,6 +24,15 @@ export class ApiClient {
 
   constructor(private baseUrl: string) {}
 
+  battleUrl(): string | null {
+    if (!this.accessToken) return null;
+    const url = new URL('/v1/battle', this.baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.searchParams.set('token', this.accessToken);
+    url.searchParams.set('v', '1');
+    return url.toString();
+  }
+
   private getRefreshToken(): string | null {
     try { return localStorage.getItem(RT_KEY); } catch { return null; }
   }

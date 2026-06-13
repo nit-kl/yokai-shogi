@@ -7,7 +7,7 @@ Cloudflareプラットフォームに統一し、個人運用で回り続ける�
 | 環境 | 用途 | 実体 |
 |---|---|---|
 | local | 開発 | `wrangler dev`(miniflareがD1/DO/KVをローカル再現)+ `vite dev` |
-| staging | リリース前検証・負荷試験 | wrangler environment `staging`(別Worker・別D1・別DOネームスペース)+ Pagesプレビュー |
+| staging | リリース前検証・接続スモークテスト | wrangler environment `staging`(別Worker・別D1・別DOネームスペース)+ Pagesプレビュー |
 | production | 本番 | wrangler environment `production` |
 
 ```toml
@@ -42,9 +42,10 @@ PR時:
   - playwright UIテスト(ui-shot / ui-gacha / ui-skills / ui-fx)
   - Pagesプレビューデプロイ(PRごとのURLでUI確認)
 main マージ時:
-  - 上記全部 → wrangler deploy --env staging + Pages(staging)
+  - 現行CIは上記全部 → Pagesのみデプロイ
+  - D1マイグレーションとAPI/DOのstagingデプロイは手動実行(doc 15)
 本番リリース:
-  - タグ付与 → 手動承認 → wrangler deploy --env production + Pages(production)
+  - D1マイグレーション → API/DOデプロイ → Pagesデプロイの順で手動実行(doc 15)
 ```
 
 ### デプロイと対局の継続性
@@ -53,7 +54,7 @@ main マージ時:
   1. 局面はDOストレージに毎手永続化済み(doc 05)
   2. クライアントは自動再接続(reconnectトークン)→ DOがストレージから復元した局面を `snapshot` で再送
   - → **メンテウィンドウなしでデプロイ可能**(ユーザー体感は数秒の「再接続中…」表示)
-- それでも告知付きメンテが必要な作業(破壊的マイグレーション等)のために、KVの `MAINTENANCE` フラグ(APIが503+クライアントがバナー表示)を用意
+- 現在のメンテナンスモードは `MAINTENANCE=1` へ設定変更してAPIを再デプロイする方式。APIは503を返すが、KV即時切替とクライアントバナーは未実装
 - D1マイグレーション: 前方互換(カラム追加→コード切替→旧カラム削除の3段階)を原則。`wrangler d1 migrations` で管理し、適用前にstagingで必ずリハーサル
 
 ## 監視・アラート
@@ -71,7 +72,7 @@ main マージ時:
 
 ## バックアップ・障害復旧
 
-- **D1 Time Travel**: 過去30日の任意時点へ復元可能(標準機能)→ RPOは実質ほぼゼロ
+- **D1 Time Travel**: Freeプランは過去7日、Paidプランは過去30日の任意時点へ復元可能(標準機能)
 - 加えて週次 `wrangler d1 export` でSQLダンプをR2へ退避(Time Travel外の保険・ローカル検証用)
 - Runbook(docs/runbooks/ に配置)最低限:
   1. API異常 → `wrangler rollback`(直前バージョンへ即戻し)
@@ -82,7 +83,7 @@ main マージ時:
 ## 告知・コミュニケーション手段
 
 - ゲーム内お知らせ: KVに置いたJSONをクライアントが起動時取得(メンテ予告・障害報告・アップデート情報)
-- メンテモード: KVフラグ → タイトルにバナー
+- メンテモード: 現状はAPI環境変数+再デプロイ。将来はKV即時切替+タイトルバナーを検討
 - 外部: X(Twitter)アカウント等を1つ用意(ゲーム外の告知経路)
 
 ## 定常運用タスク

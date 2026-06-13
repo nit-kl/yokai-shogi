@@ -44,6 +44,8 @@ export interface MetaProvider {
   issueLinkCode(): Promise<string>;
   /** 引き継ぎコードでこの端末のデータを別アカウントに差し替え。成功で true */
   redeemLinkCode(code: string): Promise<boolean>;
+  /** オンライン対戦WebSocket URL。オフライン版は null */
+  battleUrl(): string | null;
 }
 
 /* ---------- data から導出する同期ヘルパ(両実装共通) ---------- */

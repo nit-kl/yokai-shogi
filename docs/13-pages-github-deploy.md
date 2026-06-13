@@ -70,12 +70,12 @@ GitHub Actions(.github/workflows/ci.yml)
 | サービス | 使用状況 | 料金 |
 |---|---|---|
 | Cloudflare Pages | 静的配信のみ(Free プラン) | **0円**(リクエスト・帯域無制限。直アップロードのデプロイ回数も無料枠内) |
-| Cloudflare Workers | **未デプロイ**(ローカル `wrangler dev` のみ) | 0円 |
-| D1 / KV / Durable Objects | 未使用 | 0円 |
+| Cloudflare Workers | staging / production APIをデプロイ済み | Freeプラン枠内を監視 |
+| D1 / Durable Objects / Analytics Engine | Phase 2で使用。DOはPhase 2 APIデプロイ後に有効化 | Freeプラン枠内を監視 |
 | GitHub Actions | publicリポジトリ | **0円**(標準ランナーは無制限) |
 | GitHub Artifacts(e2eスクショ) | 保持14日・数MB | 0円(無料枠500MBの範囲内) |
 
-クレジットカード登録なしで運用可能。Phase 1以降でWorkers/D1を使い始めても、当面はFreeプラン枠(doc 09 のコスト試算参照)に収まる想定。
+クレジットカード登録なしでFreeプラン運用可能。無料枠を超えると対象操作が失敗するため、β期間は使用量を毎日確認する(doc 15)。
 
 ## (参考)代替案: CloudflareダッシュボードのGit連携に切り替える場合
 

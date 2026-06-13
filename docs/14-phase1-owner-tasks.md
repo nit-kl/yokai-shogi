@@ -77,7 +77,7 @@ Phase 1(サーバー権威メタ)を「本番に反映」し「内輪テスト�
 - 月額目安と内訳は doc 09。
 
 ### C-4. D1バックアップ `おおむね自動 / エクスポートはClaude代行可`
-- D1 Time Travel(過去30日復元)は標準で有効。追加の保険として `wrangler d1 export` を R2 等へ退避する運用は任意(doc 09)。
+- D1 Time Travel(Freeは過去7日 / Paidは過去30日復元)は標準で有効。追加の保険として `wrangler d1 export` を退避する運用は任意(doc 09)。
 
 ---
 

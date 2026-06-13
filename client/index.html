@@ -41,6 +41,7 @@
         <button id="btn-rules" class="btn btn-dark">遊び方</button>
       </div>
       <div class="title-buttons title-buttons-sub">
+        <button id="btn-online" class="btn btn-gold btn-sub hidden">オンライン対戦</button>
         <button id="btn-gacha" class="btn btn-dark btn-sub">妖怪ガチャ</button>
         <button id="btn-formation" class="btn btn-dark btn-sub">編 成</button>
       </div>
@@ -146,6 +147,7 @@
       </div>
 
       <div class="battle-tools">
+        <span id="online-status" class="hidden"></span>
         <button id="btn-mute" class="tool-btn" title="サウンド">🔊</button>
         <button id="btn-resign" class="tool-btn" title="投了">🏳</button>
         <button id="btn-rules2" class="tool-btn" title="遊び方">❔</button>
@@ -202,6 +204,22 @@
       <button id="btn-link-redeem" class="btn btn-dark">コードで引き継ぐ</button>
       <div id="link-msg" class="link-msg"></div>
       <button id="btn-link-close" class="btn btn-dark btn-sub">閉じる</button>
+    </div>
+  </div>
+
+  <!-- オンライン対戦モーダル -->
+  <div id="modal-online" class="modal hidden">
+    <div class="modal-box online-box">
+      <h2>オンライン対戦</h2>
+      <div id="online-message">対戦方法を選んでください</div>
+      <button id="btn-online-random" class="btn btn-gold">ランダムマッチ</button>
+      <button id="btn-online-create" class="btn btn-dark">フレンドルーム作成</button>
+      <div class="online-code-row">
+        <input id="online-code-input" type="text" maxlength="6" placeholder="6桁コード" autocomplete="off">
+        <button id="btn-online-join" class="btn btn-dark btn-sub">参加</button>
+      </div>
+      <div id="online-room-code" class="link-code hidden"></div>
+      <button id="btn-online-close" class="btn btn-dark btn-sub">閉じる</button>
     </div>
   </div>
 

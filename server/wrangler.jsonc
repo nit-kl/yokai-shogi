@@ -17,11 +17,24 @@
       "migrations_dir": "migrations"
     }
   ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "BATTLE", "class_name": "BattleRoom" },
+      { "name": "MATCHMAKER", "class_name": "Matchmaker" }
+    ]
+  },
+  "analytics_engine_datasets": [
+    { "binding": "METRICS", "dataset": "yokai_shogi_metrics_local" }
+  ],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["BattleRoom", "Matchmaker"] }
+  ],
   "triggers": {
     "crons": ["0 19 * * *"] // JST 04:00(日次リセットに合わせる: doc 08)
   },
   "vars": {
-    "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173"
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173",
+    "MAINTENANCE": "0"
   },
   "env": {
     // ステージング: wrangler deploy --env staging
@@ -35,9 +48,19 @@
           "migrations_dir": "migrations"
         }
       ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "BATTLE", "class_name": "BattleRoom" },
+          { "name": "MATCHMAKER", "class_name": "Matchmaker" }
+        ]
+      },
+      "analytics_engine_datasets": [
+        { "binding": "METRICS", "dataset": "yokai_shogi_metrics_staging" }
+      ],
       "triggers": { "crons": ["0 19 * * *"] },
       "vars": {
-        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173"
+        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173",
+        "MAINTENANCE": "0"
       }
     },
     // 本番: wrangler deploy --env production
@@ -51,9 +74,19 @@
           "migrations_dir": "migrations"
         }
       ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "BATTLE", "class_name": "BattleRoom" },
+          { "name": "MATCHMAKER", "class_name": "Matchmaker" }
+        ]
+      },
+      "analytics_engine_datasets": [
+        { "binding": "METRICS", "dataset": "yokai_shogi_metrics_production" }
+      ],
       "triggers": { "crons": ["0 19 * * *"] },
       "vars": {
-        "ALLOWED_ORIGINS": "https://yokai-shogi.pages.dev"
+        "ALLOWED_ORIGINS": "https://yokai-shogi.pages.dev",
+        "MAINTENANCE": "0"
       }
     }
   }
