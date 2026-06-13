@@ -46,7 +46,7 @@ window.addEventListener('DOMContentLoaded', () => {
   void initSentry();
   FX.init();
   buildBoardCells();
-  buildRulesPieces();
+  buildPieceCatalog();
   wireButtons();
   MenuUI.init({ enterTitle });
   Onboarding.init({ enterTitle });
@@ -191,6 +191,12 @@ function wireButtons() {
   $('btn-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-rules2').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-close-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.add('hidden'); };
+  $('btn-pieces').onclick = () => {
+    AudioSys.play('click');
+    showScreen('screen-pieces');
+    FX.setAmbient(['rgba(88,182,255,0.4)', 'rgba(200,120,255,0.4)', 'rgba(232,196,106,0.35)'], 0.04);
+  };
+  $('btn-pieces-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-mute').onclick = () => {
     AudioSys.init();
     $('btn-mute').textContent = AudioSys.toggle() ? '🔊' : '🔇';
@@ -423,7 +429,10 @@ function renderHand(side: Side) {
     if (sel && sel.kind === 'hand' && sel.id === id && side === 'p') chip.classList.add('chip-selected');
     chip.innerHTML = `<img src="${YOKAI[id].imgSm}" alt="${YOKAI[id].name}" draggable="false">` +
       (n > 1 ? `<span class="chip-n">×${n}</span>` : '');
-    if (side === 'p') chip.addEventListener('click', () => onHandClick(id));
+    chip.addEventListener('click', () => {
+      if (side === 'p') onHandClick(id);
+      else showInfo(id, false);
+    });
     tray.appendChild(chip);
   }
 }
@@ -449,6 +458,7 @@ function showInfo(id: string, promoted: boolean) {
   $('info-type').className = `type-chip ${ti.cls}`;
   $('info-name').textContent = def.name + (promoted ? '【成】' : '');
   $('info-atk').textContent = `ATK ${promoted ? Math.round(def.atk * 1.5) : def.atk}`;
+  $('info-move').textContent = def.moveText;
   $('info-skill-name').textContent = `【${def.skill.name}】`;
   $('info-skill-desc').textContent = def.skill.desc;
 }
@@ -463,7 +473,11 @@ function clearSel() {
 }
 
 function onCellClick(x: number, y: number) {
-  if (!G || G.winner || busy || G.turn !== 'p') return;
+  if (!G) return;
+
+  const pc = G.board[y][x];
+  if (pc) showInfo(pc.id, pc.promoted);
+  if (G.winner || busy || G.turn !== 'p') return;
 
   /* 移動先 / 打ち先として有効か */
   if (sel) {
@@ -479,9 +493,7 @@ function onCellClick(x: number, y: number) {
   }
 
   clearSel();
-  const pc = G.board[y][x];
   if (!pc) { hideInfo(); return; }
-  showInfo(pc.id, pc.promoted);
   if (pc.owner !== 'p') return; // 敵駒は情報表示のみ
 
   const moves = Game.getMoves(G, x, y);
@@ -493,10 +505,11 @@ function onCellClick(x: number, y: number) {
 }
 
 function onHandClick(id: string) {
-  if (!G || G.winner || busy || G.turn !== 'p') return;
+  if (!G) return;
+  showInfo(id, false);
+  if (G.winner || busy || G.turn !== 'p') return;
   if (sel && sel.kind === 'hand' && sel.id === id) { clearSel(); hideInfo(); return; }
   clearSel();
-  showInfo(id, false);
   const drops = Game.getDrops(G, 'p', id);
   if (drops.length === 0) return;
   sel = { kind: 'hand', id, drops };
@@ -752,9 +765,9 @@ function showResult() {
   }
 }
 
-/* ============================== ルール画面の駒一覧 ============================== */
-function buildRulesPieces() {
-  const wrap = $('rules-pieces');
+/* ============================== 駒一覧 ============================== */
+function buildPieceCatalog() {
+  const wrap = $('pieces-list');
   const order = [
     'kyubi', 'shuten', 'kooni', 'nekomata', 'ittan', 'nue', 'kappa', 'nurikabe', 'tengu', 'rokuro',
     'tamamo', 'nurarihyon', 'ibaraki', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
@@ -765,13 +778,12 @@ function buildRulesPieces() {
     const ti = TYPE_INFO[def.type];
     const ri = RARITY_INFO[def.rarity];
     const row = document.createElement('div');
-    row.className = 'rule-piece';
+    row.className = `piece-card ${ri.cls}`;
     row.innerHTML =
       `<img src="${def.imgSm}" alt="${def.name}">` +
       `<div class="rp-body">` +
       `<div class="rp-name"><span class="type-chip ${ti.cls}">${ti.label}</span>` +
       `<span class="rarity-chip ${ri.cls}">${ri.label}</span> ${def.name} <b>ATK ${def.atk}</b>` +
-      (def.gachaOnly ? ' <span class="rp-gacha">ガチャ限定</span>' : '') +
       `</div>` +
       `<div class="rp-move">${def.moveText}</div>` +
       `<div class="rp-move">【${def.skill.name}】${def.skill.desc}</div>` +

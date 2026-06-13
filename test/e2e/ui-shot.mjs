@@ -21,6 +21,16 @@ await skipOnboarding(page);
 await page.waitForTimeout(800);
 await page.screenshot({ path: path.join(dir, 'shot-1-title.png') });
 
+// 駒一覧
+await page.click('#btn-pieces');
+await page.waitForSelector('#screen-pieces.active');
+const pieceCount = await page.locator('#pieces-list .piece-card').count();
+const expectedPieceCount = await page.evaluate(() => Object.keys(window.yk.YOKAI).length);
+if (pieceCount !== expectedPieceCount) errors.push(`駒一覧の件数が不正: ${pieceCount}/${expectedPieceCount}`);
+if (await page.locator('#pieces-list').getByText('ガチャ限定').count()) errors.push('駒一覧に不要なガチャ限定表記がある');
+await page.click('#btn-pieces-back');
+await page.waitForSelector('#screen-title.active');
+
 // 開戦
 await page.click('#btn-start');
 await page.waitForSelector('#screen-battle.active');
@@ -30,6 +40,7 @@ await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 // 小鬼(x=1,y=4)を選択 → 移動ハイライト確認
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
 await cell(1, 4).click();
+if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
 await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-3-select.png') });
 

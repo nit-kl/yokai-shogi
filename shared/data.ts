@@ -319,10 +319,8 @@ export const YOKAI: Record<string, YokaiDef> = {
   },
 };
 
-/* ガチャ排出対象(酒呑童子は敵専用のため除外、九尾の狐は初期所持) */
-export const GACHA_POOL: string[] = Object.values(YOKAI)
-  .filter(y => y.id !== 'shuten' && y.id !== 'kyubi')
-  .map(y => y.id);
+/* ガチャ排出対象(全妖怪) */
+export const GACHA_POOL: string[] = Object.keys(YOKAI);
 
 /* 初回オンボーディングで選べる大将(ぬらりひょんはガチャでも排出) */
 export const BOSS_CHOICES = ['kyubi', 'shuten', 'nurarihyon'] as const;

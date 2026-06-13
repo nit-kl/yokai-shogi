@@ -302,7 +302,7 @@ html, body {
   box-shadow: 0 0 18px rgba(232,196,106,1);
   border-color: var(--gold);
 }
-.hud-enemy .hand-chip { cursor: default; }
+.hud-enemy .hand-chip { cursor: pointer; }
 
 /* コンボバッジ */
 .combo-badge {
@@ -500,6 +500,8 @@ html, body {
 .info-body { flex: 1; min-width: 0; }
 .info-line1 { display: flex; align-items: center; gap: 8px; font-family: "Yu Mincho", serif; letter-spacing: 0.1em; }
 #info-atk { color: #ff9b6a; font-weight: bold; font-family: sans-serif; }
+.info-move { color: #b3a8d6; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+.info-move > span:first-child { color: var(--p-blue); font-weight: bold; }
 .info-skill { color: #b3a8d6; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
 #info-skill-name { color: var(--gold); font-weight: bold; }
 
@@ -759,6 +761,49 @@ html, body {
 .rule-piece .rp-name { font-family: "Yu Mincho", serif; letter-spacing: 0.1em; }
 .rule-piece .rp-move { color: #b3a8d6; }
 
+/* ---------- 駒一覧 ---------- */
+#screen-pieces { flex-direction: column; }
+.pieces-col { width: min(98vw, 920px); }
+.menu-head-spacer { width: 44px; }
+.pieces-note {
+  margin: 0;
+  color: #b3a8d6;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  text-align: center;
+}
+#pieces-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  padding: 4px 8px 18px;
+}
+.piece-card {
+  --rc: #9aa0b5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(35,27,58,0.96), rgba(19,15,34,0.96));
+  border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--rc) 8%, transparent);
+}
+.piece-card.r-r { --rc: #58b6ff; }
+.piece-card.r-sr { --rc: #c88aff; }
+.piece-card.r-ssr { --rc: #ffd24a; }
+.piece-card > img { width: 64px; height: 64px; object-fit: contain; flex: 0 0 auto; }
+.piece-card .rp-body { min-width: 0; font-size: 0.78rem; line-height: 1.55; }
+.piece-card .rp-name { color: var(--paper); font-family: "Yu Mincho", serif; letter-spacing: 0.06em; }
+.piece-card .rp-name b { color: #ff9b6a; }
+.piece-card .rp-move { color: #b3a8d6; }
+.piece-card .rp-move:last-child { color: #d4c8f4; }
+
 /* ---------- FXキャンバス ---------- */
 #fx-canvas {
   position: fixed; inset: 0;
@@ -781,8 +826,6 @@ html, body {
 .rarity-chip.r-r { background: var(--p-blue); }
 .rarity-chip.r-sr { background: #c88aff; }
 .rarity-chip.r-ssr { background: linear-gradient(120deg, #ffe9a0, #ffd24a 50%, #ff9a3c); }
-.rp-gacha { font-size: 0.7em; color: #c88aff; border: 1px solid rgba(200,138,255,0.5); border-radius: 3px; padding: 1px 6px; }
-
 /* ---------- タイトル追加要素 ---------- */
 .title-currency {
   position: absolute; top: 12px; right: 14px;

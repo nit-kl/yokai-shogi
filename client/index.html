@@ -56,6 +56,7 @@
         <button id="btn-online" class="btn btn-gold btn-sub hidden">オンライン対戦</button>
         <button id="btn-gacha" class="btn btn-dark btn-sub">妖怪ガチャ</button>
         <button id="btn-formation" class="btn btn-dark btn-sub">編 成</button>
+        <button id="btn-pieces" class="btn btn-dark btn-sub">駒一覧</button>
       </div>
     </div>
     <div class="title-foot">
@@ -114,6 +115,19 @@
     </div>
   </div>
 
+  <!-- 駒一覧画面 -->
+  <div id="screen-pieces" class="screen">
+    <div class="menu-col pieces-col">
+      <div class="menu-head">
+        <button id="btn-pieces-back" class="tool-btn" title="戻る">←</button>
+        <h2 class="menu-title">駒一覧</h2>
+        <div class="menu-head-spacer"></div>
+      </div>
+      <p class="pieces-note">駒の動きと能力を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
+      <div id="pieces-list"></div>
+    </div>
+  </div>
+
   <div id="onboarding-hint" class="onboarding-hint hidden"></div>
 
   <!-- バトル画面 -->
@@ -147,6 +161,7 @@
         <img id="info-img" src="" alt="">
         <div class="info-body">
           <div class="info-line1"><span id="info-type" class="type-chip"></span><span id="info-name"></span><span id="info-atk"></span></div>
+          <div class="info-move"><span>動き</span><span id="info-move"></span></div>
           <div class="info-skill"><span id="info-skill-name"></span><span id="info-skill-desc"></span></div>
         </div>
       </div>
@@ -285,8 +300,6 @@
         <p><span class="type-chip t-transform">化</span> <b>取られた時</b>に化かす。ダメージ半減&amp;相手の持ち駒にならない。</p>
         <p><span class="type-chip t-trap">爆</span> <b>取られた時</b>、取った駒を道連れに消滅。大将で取ると即敗北!</p>
         <p><span class="type-chip t-boss">大将</span> 王将。取られたら即敗北。会心スキル持ち。</p>
-        <h3>駒の動き</h3>
-        <div id="rules-pieces"></div>
       </div>
       <button id="btn-close-rules" class="btn btn-gold">閉じる</button>
     </div>

@@ -28,7 +28,7 @@
 - 排出率: **N 40% / R 40% / SR 16% / SSR 4%**
 - 10連: SR以上1枠確定(全枠N/Rの場合、最終枠をSR 80% / SSR 20%で引き直し)
 - 被り: 妖力に自動変換(N20 / R50 / SR150 / SSR400)
-- プール: shared/data.js の `GACHA_POOL`(現25種: N3 / R10 / SR9 / SSR3)
+- プール: `shared/data.ts` の `GACHA_POOL`(全27種: N3 / R10 / SR9 / SSR5)
 
 ### 天井(Pity)の導入検討 — Phase 3
 

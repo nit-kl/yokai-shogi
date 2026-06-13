@@ -48,6 +48,10 @@ test('shared/gacha: 排出はプール内・レアリティ一致・被りは妖
   expect(new Set(draw.newIds).size).toBe(draw.newIds.length);
 });
 
+test('shared/gacha: 全妖怪が排出対象', () => {
+  expect(new Set(GACHA_POOL)).toEqual(new Set(Object.keys(YOKAI)));
+});
+
 test('shared/gacha: 排出率公開の重みと個別確率', () => {
   const rates = gachaRates();
   expect(rates.rates.map(r => r.weight)).toEqual([40, 40, 16, 4]);
