@@ -29,6 +29,7 @@ class MetaFacade {
 
   get data(): MetaState { return this.provider.data; }
   get online(): boolean { return this.provider.data.online; }
+  isOnboardingDone(): boolean { return this.provider.data.onboardingDone; }
   useLocal(): void { this.forceLocal = true; this.provider = new LocalMeta(); }
 
   /* 起動: API優先・オフラインはローカルへフォールバック */
@@ -61,10 +62,13 @@ class MetaFacade {
   pull(count: 1 | 10): Promise<GachaResult[] | null> { return this.provider.pull(count); }
   exchange(): Promise<boolean> { return this.provider.exchange(); }
   setFormation(rows: (string | null)[][]): Promise<string | null> { return this.provider.setFormation(rows); }
+  setName(name: string): Promise<string | null> { return this.provider.setName(name); }
   recordSoloWin(): Promise<number> { return this.provider.recordSoloWin(); }
   issueLinkCode(): Promise<string> { return this.provider.issueLinkCode(); }
   redeemLinkCode(code: string): Promise<boolean> { return this.provider.redeemLinkCode(code); }
   battleUrl(): string | null { return this.provider.battleUrl(); }
+  pickBoss(bossId: string): Promise<string | null> { return this.provider.pickBoss(bossId); }
+  completeOnboarding(): Promise<LoginBonus | null> { return this.provider.completeOnboarding(); }
   addTickets(n: number): void { if (n > 0) this.provider.data.tickets += n; }
 
   /* ---------- 同期の読み取りヘルパ(data から導出) ---------- */

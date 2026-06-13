@@ -21,6 +21,7 @@ export interface MetaState {
   wins: number;
   isGuest: boolean;
   online: boolean;                 // true=サーバー権威 / false=ローカル(オフライン)
+  onboardingDone: boolean;
 }
 
 export interface LoginBonus { day: number; tickets: number; }
@@ -38,6 +39,8 @@ export interface MetaProvider {
   exchange(): Promise<boolean>;
   /** 編成保存。正常なら null、問題があればエラーメッセージ */
   setFormation(rows: (string | null)[][]): Promise<string | null>;
+  /** プレイヤー表示名を変更。正常なら null、問題があればエラーメッセージ */
+  setName(name: string): Promise<string | null>;
   /** ソロ(AI)勝利報酬。付与されたチケット数を返す(0=上限到達) */
   recordSoloWin(): Promise<number>;
   /** 引き継ぎコードを発行(別端末への持ち出し用)。オフラインは非対応で例外 */
@@ -46,6 +49,10 @@ export interface MetaProvider {
   redeemLinkCode(code: string): Promise<boolean>;
   /** オンライン対戦WebSocket URL。オフライン版は null */
   battleUrl(): string | null;
+  /** 初回オンボーディング: 大将を選ぶ */
+  pickBoss(bossId: string): Promise<string | null>;
+  /** 初回オンボーディング完了。ログインボーナスがあれば返す */
+  completeOnboarding(): Promise<LoginBonus | null>;
 }
 
 /* ---------- data から導出する同期ヘルパ(両実装共通) ---------- */

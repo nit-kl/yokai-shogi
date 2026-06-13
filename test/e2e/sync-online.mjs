@@ -31,8 +31,25 @@ if (!up) { console.error('preview server が起動しませんでした'); serve
 const errors = [];
 const browser = await chromium.launch();
 
-async function gotoTitle(page) {
+async function setupAccount(page) {
   await page.goto(BASE);
+  await page.waitForSelector('#modal-onboarding-boss:not(.hidden), #screen-title.active', { timeout: 30000 });
+  if (await page.locator('#modal-onboarding-boss:not(.hidden)').count()) {
+    await page.evaluate(async () => {
+      const { Meta, YOKAI } = window.yk;
+      await Meta.pickBoss('kyubi');
+      await Meta.pull(10);
+      const ids = Object.keys(Meta.data.owned).filter(id => YOKAI[id].type !== 'boss');
+      const rows = [
+        [ids[0] || null, ids[1] || null, ids[2] || null, ids[3] || null, ids[4] || null],
+        [ids[5] || null, ids[6] || null, 'kyubi', ids[7] || null, ids[8] || null],
+      ];
+      await Meta.setFormation(rows);
+      const bonus = await Meta.completeOnboarding();
+      if (bonus) Meta.pendingLoginBonus = bonus;
+    });
+    await page.reload();
+  }
   await page.waitForSelector('#screen-title.active', { timeout: 30000 });
   if (await page.locator('#modal-login:not(.hidden)').count()) {
     await page.click('#btn-login-ok');
@@ -48,17 +65,17 @@ try {
   const ctxA = await browser.newContext();
   const pageA = await ctxA.newPage();
   pageA.on('pageerror', e => errors.push('A pageerror: ' + e.message));
-  await gotoTitle(pageA);
+  await setupAccount(pageA);
 
   if (!(await online(pageA))) errors.push('端末Aがオンライン(サーバー権威)で起動していない');
   const aStart = await tickets(pageA);
-  if (aStart !== 11) errors.push(`端末Aの初期チケットが${aStart}(期待11=初期10+ログボ1)`);
+  if (aStart !== 1) errors.push(`端末Aの初期チケットが${aStart}(期待1=10連後+ログボ1)`);
 
-  // 10連ガチャでチケットを11→1に、所持を増やす(サーバー権威)
-  await pageA.evaluate(() => window.yk.Meta.pull(10));
+  // 1連ガチャでチケットを1→0に
+  await pageA.evaluate(() => window.yk.Meta.pull(1));
   const aTickets = await tickets(pageA);
   const aOwned = await ownedCount(pageA);
-  if (aTickets !== 1) errors.push(`端末Aのガチャ後チケットが${aTickets}(期待1)`);
+  if (aTickets !== 0) errors.push(`端末Aのガチャ後チケットが${aTickets}(期待0)`);
 
   // 引き継ぎコードをUIから発行
   await pageA.click('#btn-link');
@@ -71,10 +88,10 @@ try {
   const ctxB = await browser.newContext(); // 別コンテキスト = 別localStorage = 別端末相当
   const pageB = await ctxB.newPage();
   pageB.on('pageerror', e => errors.push('B pageerror: ' + e.message));
-  await gotoTitle(pageB);
+  await setupAccount(pageB);
 
   const bStart = await tickets(pageB);
-  if (bStart !== 11) errors.push(`端末Bの初期チケットが${bStart}(別アカウントなので期待11)`);
+  if (bStart !== 1) errors.push(`端末Bの初期チケットが${bStart}(別アカウントなので期待1)`);
 
   await pageB.click('#btn-link');
   await pageB.fill('#link-code-input', code);

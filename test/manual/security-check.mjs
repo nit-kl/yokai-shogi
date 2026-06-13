@@ -1,7 +1,8 @@
 /* Phase 2 セキュリティ手動検証の補助スクリプト (B-9)
    実行: node test/manual/security-check.mjs [API_BASE]
-   例: node test/manual/security-check.mjs https://yokai-shogi-api-production.kojileo0178.workers.dev */
-const BASE = (process.argv[2] || 'https://yokai-shogi-api-production.kojileo0178.workers.dev').replace(/\/$/, '');
+   例: node test/manual/security-check.mjs https://api.yokai-shogi.nit-games.com */
+const BASE = (process.argv[2] || 'https://api.yokai-shogi.nit-games.com').replace(/\/$/, '');
+const PROD_ORIGIN = 'https://yokai-shogi.nit-games.com';
 
 const results = [];
 
@@ -45,9 +46,9 @@ async function guestToken() {
 
 // 4. CORS: 本番Originは許可（本番APIのみ）
 {
-  const res = await fetch(`${BASE}/v1/gacha/rates`, { headers: { Origin: 'https://yokai-shogi.pages.dev' } });
+  const res = await fetch(`${BASE}/v1/gacha/rates`, { headers: { Origin: PROD_ORIGIN } });
   const allow = res.headers.get('access-control-allow-origin');
-  if (allow === 'https://yokai-shogi.pages.dev') pass('CORS: 本番Originは許可');
+  if (allow === PROD_ORIGIN) pass('CORS: 本番Originは許可');
   else if (BASE.includes('staging')) results.push({ name: 'CORS: 本番Originは許可', ok: true, detail: 'stagingはスキップ' });
   else fail('CORS: 本番Originは許可', `allow-origin=${allow}`);
 }

@@ -7,7 +7,7 @@ import type { AppEnv, Env } from '../env';
 import { apiError } from '../lib/errors';
 import { signJwt } from '../lib/jwt';
 import { genLinkCode, normalizeLinkCode, randomToken, sha256b64url } from '../lib/crypto';
-import { currencyLogStmt, DEFAULT_FORMATION, FIRST_BONUS, INITIAL_YOKAI } from '../db';
+import { currencyLogStmt, DEFAULT_FORMATION, FIRST_BONUS } from '../db';
 import { authRequired } from '../middleware';
 
 const ACCESS_TTL_SEC = 15 * 60;          // 15分(doc 06)
@@ -82,10 +82,8 @@ authRoutes.post('/auth/guest', async c => {
   const db = c.env.DB;
   const stmts = [
     db.prepare('INSERT INTO users (id, is_guest) VALUES (?1, 1)').bind(userId),
-    db.prepare('INSERT INTO user_profiles (user_id, tickets, formation) VALUES (?1, ?2, ?3)')
+    db.prepare('INSERT INTO user_profiles (user_id, tickets, formation, onboarding_done) VALUES (?1, ?2, ?3, 0)')
       .bind(userId, FIRST_BONUS, JSON.stringify(DEFAULT_FORMATION)),
-    ...INITIAL_YOKAI.map(id =>
-      db.prepare('INSERT INTO user_yokai (user_id, yokai_id) VALUES (?1, ?2)').bind(userId, id)),
     currencyLogStmt(db, userId, 'tickets', FIRST_BONUS, FIRST_BONUS, 'initial'),
   ];
   await db.batch(stmts);

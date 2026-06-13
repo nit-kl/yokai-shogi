@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
+import { skipOnboarding, startSoloBattle } from './helpers.mjs';
+
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
 
@@ -14,13 +16,9 @@ page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 
 await page.goto(BASE_URL);
-await page.waitForSelector('#screen-title.active', { timeout: 30000 });
-if (await page.locator('#modal-login:not(.hidden)').count()) {
-  await page.click('#btn-login-ok');
-  await page.waitForTimeout(300);
-}
-await page.click('#btn-start');
-await page.waitForSelector('#screen-battle.active');
+await page.waitForSelector('#screen-title.active, #modal-onboarding-boss:not(.hidden)', { timeout: 30000 });
+await skipOnboarding(page);
+await startSoloBattle(page);
 await page.waitForTimeout(1200);
 
 /* 座敷童子の回復演出 */

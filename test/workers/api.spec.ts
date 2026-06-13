@@ -36,28 +36,50 @@ describe('認証', () => {
     expect(config.body).toEqual({ turnstileRequired: false });
   });
 
-  it('ゲスト作成: 初期チケット10・基本9種・初期編成', async () => {
+  it('ゲスト作成: 初期チケット10・所持なし・オンボーディング未完了', async () => {
     const g = await createGuest();
     expect(g.userId).toBeTruthy();
     expect(g.accessToken).toBeTruthy();
 
     const me = await api('/v1/me', { token: g.accessToken });
     expect(me.status).toBe(200);
-    // 初回 /me でログインボーナス(1日目+1枚)が付与される
-    expect(me.body.loginBonus).toEqual({ day: 1, tickets: 1 });
-    expect(me.body.tickets).toBe(11);
+    expect(me.body.loginBonus).toBeUndefined();
+    expect(me.body.tickets).toBe(10);
+    expect(me.body.onboardingDone).toBe(false);
     expect(me.body.isGuest).toBe(true);
 
     const col = await api('/v1/me/collection', { token: g.accessToken });
-    expect(col.body.owned).toHaveLength(9);
-    expect(col.body.owned).toContain('kyubi');
+    expect(col.body.owned).toHaveLength(0);
 
     const f = await api('/v1/me/formation', { token: g.accessToken });
-    expect(f.body.rows[1][2]).toBe('kyubi');
+    expect(f.body.rows.flat().every((id: unknown) => !id)).toBe(true);
+  });
+
+  it('オンボーディング: 大将選択→完了でログボ付与', async () => {
+    const g = await createGuest();
+    const boss = await api('/v1/onboarding/boss', {
+      method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }),
+    });
+    expect(boss.status).toBe(200);
+    expect(boss.body.rows[1][2]).toBe('kyubi');
+
+    const col = await api('/v1/me/collection', { token: g.accessToken });
+    expect(col.body.owned).toEqual(['kyubi']);
+
+    const done = await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
+    expect(done.status).toBe(200);
+    expect(done.body.onboardingDone).toBe(true);
+
+    const me = await api('/v1/me', { token: g.accessToken });
+    expect(me.body.onboardingDone).toBe(true);
+    expect(me.body.loginBonus).toEqual({ day: 1, tickets: 1 });
+    expect(me.body.tickets).toBe(11);
   });
 
   it('ログインボーナス: 初日付与と同日2回目なし', async () => {
     const g = await createGuest();
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
+    await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
     const first = await api('/v1/me', { token: g.accessToken });
     expect(first.body.loginBonus).toEqual({ day: 1, tickets: 1 });
     expect(first.body.tickets).toBe(11);
@@ -67,19 +89,28 @@ describe('認証', () => {
     expect(second.body.tickets).toBe(11);
   });
 
+  it('ログインボーナス: オンボーディング中は付与しない', async () => {
+    const g = await createGuest();
+    const me = await api('/v1/me', { token: g.accessToken });
+    expect(me.body.loginBonus).toBeUndefined();
+    expect(me.body.tickets).toBe(10);
+  });
+
   it('ログインボーナス: 6日連続の翌日(7日目)は3枚', async () => {
     const g = await createGuest();
+    await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
     const today = gameDate();
     // 昨日ログイン済み・6日連続の状態を作る(当日の付与履歴はまだない)→ 今日で7日目=3枚
     await env.DB.prepare('UPDATE user_profiles SET last_login_date = ?2, login_streak = 6 WHERE user_id = ?1')
       .bind(g.userId, prevGameDate(today)).run();
     const seventh = await api('/v1/me', { token: g.accessToken });
     expect(seventh.body.loginBonus).toEqual({ day: 7, tickets: 3 });
-    expect(seventh.body.tickets).toBe(13); // 初期10 + 3
+    expect(seventh.body.tickets).toBe(13); // 初期10 + 7日目3
   });
 
   it('ログインボーナス: 連続が途切れたら1日目に戻る', async () => {
     const g = await createGuest();
+    await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
     // 最終ログインが大昔・streak値は残っている状態(当日の付与履歴なし)
     await env.DB.prepare("UPDATE user_profiles SET last_login_date = '2000-01-01', login_streak = 7 WHERE user_id = ?1")
       .bind(g.userId).run();
@@ -138,9 +169,15 @@ describe('認証', () => {
 });
 
 describe('ガチャ', () => {
-  it('1連: チケット減・結果保存・冪等キーで再返却', async () => {
+  async function readyGuest() {
     const g = await createGuest();
-    await api('/v1/me', { token: g.accessToken }); // tickets 11
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
+    return g;
+  }
+
+  it('1連: チケット減・結果保存・冪等キーで再返却', async () => {
+    const g = await readyGuest();
+    await api('/v1/me', { token: g.accessToken }); // tickets 10(ログボなし)
 
     const key = 'test-key-00000001';
     const r1 = await api('/v1/gacha/pull', {
@@ -149,7 +186,7 @@ describe('ガチャ', () => {
     });
     expect(r1.status).toBe(200);
     expect(r1.body.results).toHaveLength(1);
-    expect(r1.body.tickets).toBe(10);
+    expect(r1.body.tickets).toBe(9);
 
     // 同一キー再送 → 保存済み結果・残高は減らない(二重引き防止: doc 05)
     const r2 = await api('/v1/gacha/pull', {
@@ -157,12 +194,12 @@ describe('ガチャ', () => {
       body: JSON.stringify({ count: 1, idempotencyKey: key }),
     });
     expect(r2.body.results).toEqual(r1.body.results);
-    expect(r2.body.tickets).toBe(10);
+    expect(r2.body.tickets).toBe(9);
   });
 
   it('10連: 10件・チケット-10・新規はコレクション追加・被りは妖力化', async () => {
-    const g = await createGuest();
-    await api('/v1/me', { token: g.accessToken }); // 11枚
+    const g = await readyGuest();
+    await api('/v1/me', { token: g.accessToken }); // 10枚
 
     const r = await api('/v1/gacha/pull', {
       method: 'POST', token: g.accessToken,
@@ -170,7 +207,7 @@ describe('ガチャ', () => {
     });
     expect(r.status).toBe(200);
     expect(r.body.results).toHaveLength(10);
-    expect(r.body.tickets).toBe(1);
+    expect(r.body.tickets).toBe(0);
 
     const dupes = r.body.results.filter((x: any) => !x.isNew);
     const expectedYoryoku = dupes.reduce((a: number, x: any) => a + x.yoryoku, 0);
@@ -182,14 +219,14 @@ describe('ガチャ', () => {
   });
 
   it('チケット不足・不正リクエストは拒否(改ざん検証)', async () => {
-    const g = await createGuest();
-    await api('/v1/me', { token: g.accessToken }); // 11枚
+    const g = await readyGuest();
+    await api('/v1/me', { token: g.accessToken }); // 10枚
 
     const over = await api('/v1/gacha/pull', {
       method: 'POST', token: g.accessToken,
       body: JSON.stringify({ count: 10, idempotencyKey: 'test-key-00000003' }),
     });
-    expect(over.status).toBe(200); // 11枚あるので成功
+    expect(over.status).toBe(200); // 10枚あるので成功
     const insufficient = await api('/v1/gacha/pull', {
       method: 'POST', token: g.accessToken,
       body: JSON.stringify({ count: 10, idempotencyKey: 'test-key-00000004' }),
@@ -218,6 +255,8 @@ describe('ガチャ', () => {
 describe('妖力交換', () => {
   it('300妖力→チケット1枚・不足時は拒否', async () => {
     const g = await createGuest();
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
+    await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
     await api('/v1/me', { token: g.accessToken });
 
     const ng = await api('/v1/exchange', { method: 'POST', token: g.accessToken, body: '{}' });
@@ -239,6 +278,7 @@ describe('妖力交換', () => {
 describe('編成', () => {
   it('未所持・大将なし・重複はサーバーで拒否(改ざん検証)', async () => {
     const g = await createGuest();
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
     const put = (rows: unknown) => api('/v1/me/formation', {
       method: 'PUT', token: g.accessToken, body: JSON.stringify({ rows }),
     });
@@ -255,7 +295,12 @@ describe('編成', () => {
     // 構造不正
     expect((await put([['kyubi']])).status).toBe(400);
 
-    // 正常
+    // 正常(tenguを所持させる)
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO user_yokai (user_id, yokai_id) VALUES (?1, ?2)').bind(g.userId, 'tengu'),
+      env.DB.prepare(`INSERT INTO gacha_logs (user_id, idempotency_key, count, new_count, results)
+        VALUES (?1, 'test-grant-tengu', 0, 1, '[]')`).bind(g.userId),
+    ]);
     const ok = await put([[null, 'tengu', null, null, null], [null, null, 'kyubi', null, null]]);
     expect(ok.status).toBe(200);
     const f = await api('/v1/me/formation', { token: g.accessToken });
@@ -266,6 +311,8 @@ describe('編成', () => {
 describe('ソロ勝利報酬', () => {
   it('日次上限2枚・上限後は付与0(勝利数は加算)', async () => {
     const g = await createGuest();
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
+    await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
     await api('/v1/me', { token: g.accessToken }); // 11枚
 
     const w1 = await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });
@@ -296,6 +343,7 @@ describe('表示名', () => {
 describe('日次バッチ(Cron)', () => {
   it('一連の操作後も経済の不変条件が成立する(doc 08)', async () => {
     const g = await createGuest();
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
     await api('/v1/me', { token: g.accessToken });
     await api('/v1/gacha/pull', { method: 'POST', token: g.accessToken, body: JSON.stringify({ count: 10, idempotencyKey: 'test-key-inv-00001' }) });
     await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });

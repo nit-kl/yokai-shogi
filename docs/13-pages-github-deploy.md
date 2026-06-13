@@ -1,6 +1,6 @@
 # 13. GitHub連携デプロイ手順書(Cloudflare Pages)
 
-mainへのpushで本番(https://yokai-shogi.pages.dev/)へ、PRごとにプレビューURLへ自動デプロイする設定手順。
+mainへのpushで本番(`https://yokai-shogi.nit-games.com/`)へ、PRごとにPagesプレビューURLへ自動デプロイする設定手順。
 
 ## 仕組み(採用方式: GitHub Actions経由)
 
@@ -11,7 +11,7 @@ git push / PR
 GitHub Actions(.github/workflows/ci.yml)
    ├ test ジョブ: tsc + vitest + build + e2e   ← これが通らないとデプロイされない
    └ deploy ジョブ: wrangler pages deploy
-        ├ main への push → 本番 (yokai-shogi.pages.dev)
+        ├ main への push → 本番 (yokai-shogi.nit-games.com / Pages: yokai-shogi.pages.dev)
         └ PR            → プレビュー (<ブランチ名>.yokai-shogi.pages.dev)
 ```
 
@@ -55,8 +55,8 @@ GitHub Actions(.github/workflows/ci.yml)
 ### 4. 動作確認
 
 1. 適当なPRを作る(または既存PRに push する)→ Actions の `deploy` ジョブが走り、ログ末尾にプレビューURLが出る
-2. mainへマージ → `deploy` ジョブが本番(yokai-shogi.pages.dev)へ反映する
-3. 確認コマンド(ローカル): `node test/e2e/smoke-live.mjs https://yokai-shogi.pages.dev/`
+2. mainへマージ → `deploy` ジョブがPagesへ反映され、`yokai-shogi.nit-games.com` から配信される
+3. 確認コマンド(ローカル): `node test/e2e/smoke-live.mjs https://yokai-shogi.nit-games.com/`
 
 ## 運用メモ
 

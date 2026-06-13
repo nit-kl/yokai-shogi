@@ -3,7 +3,7 @@
    - shared/validate: 編成検証・表示名検証
    - client LocalMeta: ログインボーナス・日次上限・永続化(オフライン/ソロ用) */
 import { beforeEach, test, expect } from 'vitest';
-import { GACHA_POOL, RARITY_INFO, YOKAI, SETUP, ROWS } from '../shared/data';
+import { GACHA_POOL, RARITY_INFO, YOKAI, SETUP, ROWS, EMPTY_FORMATION } from '../shared/data';
 import { drawGacha, rollRarity, gachaRates } from '../shared/gacha';
 import { validateFormation, validateDisplayName } from '../shared/validate';
 import { Game } from '../shared/game';
@@ -20,7 +20,7 @@ const lsStore = new Map<string, string>();
   length: 0,
 };
 
-const initialOwned = new Set(SETUP.slice(ROWS - 2).flat().filter((id): id is string => !!id));
+const initialOwned = new Set<string>();
 
 /* ---------------------------------------------------------------- */
 test('shared/gacha: レアリティ抽選の重み境界', () => {
@@ -48,6 +48,10 @@ test('shared/gacha: 排出はプール内・レアリティ一致・被りは妖
   expect(new Set(draw.newIds).size).toBe(draw.newIds.length);
 });
 
+test('shared/gacha: 全妖怪が排出対象', () => {
+  expect(new Set(GACHA_POOL)).toEqual(new Set(Object.keys(YOKAI)));
+});
+
 test('shared/gacha: 排出率公開の重みと個別確率', () => {
   const rates = gachaRates();
   expect(rates.rates.map(r => r.weight)).toEqual([40, 40, 16, 4]);
@@ -65,12 +69,12 @@ test('shared/gacha: レアリティ分布の健全性(10万回)', () => {
 
 /* ---------------------------------------------------------------- */
 test('shared/validate: 編成検証', () => {
-  const owned = new Set([...initialOwned, 'tamamo']);
+  const owned = new Set([...initialOwned, 'kyubi', 'tamamo', 'nurarihyon', 'kooni', 'tengu']);
   expect(validateFormation([['kyubi', null, null, null, null], [null, null, null, null, null]], owned)).toBeNull();
   expect(validateFormation([[null, null, null, null, null], [null, null, null, null, null]], owned), '大将なし').not.toBeNull();
-  expect(validateFormation([['kyubi', null, null, null, null], ['tamamo', null, null, null, null]], owned), '大将2体').not.toBeNull();
+  expect(validateFormation([['kyubi', null, null, null, null], ['nurarihyon', null, null, null, null]], owned), '大将2体').not.toBeNull();
   expect(validateFormation([['kooni', 'kooni', null, null, null], [null, null, 'kyubi', null, null]], owned), '重複').not.toBeNull();
-  expect(validateFormation([['tamamo', null, null, null, null], [null, null, 'kyubi', null, null]], initialOwned), '未所持(tamamoはガチャ限定で初期未所持)').not.toBeNull();
+  expect(validateFormation([['onibi', null, null, null, null], [null, null, 'kyubi', null, null]], owned), '未所持').not.toBeNull();
   expect(validateFormation([['kyubi']], owned), '構造不正').not.toBeNull();
 });
 
@@ -90,12 +94,25 @@ beforeEach(async () => {
   ({ LocalMeta } = await import('../client/src/meta/local'));
 });
 
-test('LocalMeta: 初期状態(チケット10・基本9種・大将九尾)', () => {
+test('LocalMeta: 初期状態(チケット10・所持なし・オンボーディング未完了)', () => {
   const m = new LocalMeta();
   expect(m.data.tickets).toBe(10);
-  expect(Object.keys(m.data.owned)).toHaveLength(9);
-  expect(m.data.owned.kyubi).toBe(1);
+  expect(Object.keys(m.data.owned)).toHaveLength(0);
+  expect(m.data.onboardingDone).toBe(false);
+  expect(m.data.formation).toEqual(EMPTY_FORMATION);
   expect(m.data.online).toBe(false);
+});
+
+test('LocalMeta: オンボーディング(大将選択→完了でログボ)', async () => {
+  const m = new LocalMeta();
+  expect(await m.init(), '未完了時はログボなし').toBeNull();
+  expect(await m.pickBoss('nurarihyon')).toBeNull();
+  expect(m.data.owned.nurarihyon).toBe(1);
+  expect(m.data.formation[1][2]).toBe('nurarihyon');
+  const bonus = await m.completeOnboarding();
+  expect(bonus).toEqual({ day: 1, tickets: 1 });
+  expect(m.data.onboardingDone).toBe(true);
+  expect(m.data.tickets).toBe(11);
 });
 
 test('LocalMeta: ログインボーナス(初日・同日・7日連続・途切れ)', () => {
@@ -112,8 +129,9 @@ test('LocalMeta: ログインボーナス(初日・同日・7日連続・途切�
   expect(b, '連続途切れで1日目に戻る').toEqual({ day: 1, tickets: 1 });
 });
 
-test('LocalMeta: ガチャ(チケット消費・不足・所持反映)', () => {
+test('LocalMeta: ガチャ(チケット消費・不足・所持反映)', async () => {
   const m = new LocalMeta();
+  await m.pickBoss('kyubi');
   expect(m.pullSync(10), '初期10枚で10連は可').not.toBeNull();
   expect(m.data.tickets).toBe(0);
   expect(m.pullSync(1), 'チケット0で引けない').toBeNull();
@@ -152,6 +170,8 @@ test('LocalMeta: ソロ勝利報酬は日次上限2枚', async () => {
 
 test('LocalMeta: 編成保存・所持外/大将なしは拒否', async () => {
   const m = new LocalMeta();
+  await m.pickBoss('kyubi');
+  m.data.owned.tengu = 1;
   expect(await m.setFormation([[null, null, null, null, null], [null, null, 'tamamo', null, null]]), '未所持').not.toBeNull();
   expect(await m.setFormation([[null, 'tengu', null, null, null], [null, null, 'kyubi', null, null]]), '正常').toBeNull();
   expect(m.data.formation[0][1]).toBe('tengu');
@@ -166,10 +186,19 @@ test('LocalMeta: セーブ・ロード往復(localStorage経由)', () => {
   expect(m2.data.tickets).toBe(42);
 });
 
+test('LocalMeta: プレイヤーネーム変更を保存する', async () => {
+  const m = new LocalMeta();
+  expect(await m.setName('九尾使い')).toBeNull();
+  expect(m.data.name).toBe('九尾使い');
+  expect(await m.setName('')).not.toBeNull();
+  expect(new LocalMeta().data.name).toBe('九尾使い');
+});
+
 /* ---------------------------------------------------------------- */
 test('ガチャ妖怪入りの編成で対局が回る(エンジン統合)', () => {
   const m = new LocalMeta();
   for (const id of GACHA_POOL) m.data.owned[id] = 1;
+  m.data.owned.nurarihyon = 1;
   const rows = [
     ['onibi', 'yukionna', 'tanuki', 'zashiki', 'ibaraki'],
     ['tsuchigumo', 'sunakake', 'nurarihyon', 'oonyudo', 'raiju'],

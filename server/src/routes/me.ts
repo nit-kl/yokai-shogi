@@ -26,7 +26,9 @@ meRoutes.get('/me', async c => {
   const today = gameDate();
   let loginBonus: { day: number; tickets: number } | null = null;
 
-  if (p.last_login_date !== today) {
+  const onboardingDone = !!p.onboarding_done;
+
+  if (onboardingDone && p.last_login_date !== today) {
     const streak = p.last_login_date === prevGameDate(today) ? p.login_streak + 1 : 1;
     const bonus = streak % 7 === 0 ? STREAK_BONUS_TICKETS : 1;
     const newBalance = Math.min(p.tickets + bonus, TICKETS_CAP);
@@ -57,6 +59,7 @@ meRoutes.get('/me', async c => {
     isGuest: c.get('isGuest'),
     tickets: p.tickets,
     yoryoku: p.yoryoku,
+    onboardingDone,
     ...(loginBonus ? { loginBonus } : {}),
     loginStreak: p.login_streak,
     rating: p.rating,

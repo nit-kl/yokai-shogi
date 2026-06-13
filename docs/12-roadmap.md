@@ -24,7 +24,7 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 - [x] 既存テストを vitest へ移植(vm読み込み → import。アサーション内容は維持)
 - [x] CI(GitHub Actions): `tsc --noEmit` + vitest + playwright(`.github/workflows/ci.yml`)
 - [x] wrangler プロジェクト雛形(staging/production 環境定義。`npm run api:dev` で共有エンジンのWorkers動作確認済み)
-- [x] Pagesデプロイ(https://yokai-shogi.pages.dev/ で稼働確認済み。再デプロイは `npm run pages:deploy`)
+- [x] Pagesデプロイ(配信元 `https://yokai-shogi.pages.dev/`、正式URL `https://yokai-shogi.nit-games.com/`。再デプロイは `npm run pages:deploy`)
 - [x] 画像最適化(WebP・サイズ別: 512px + 小160px。約10MB → 1.8MB)
 - 完了条件: 全既存テストgreen ✅+ブラウザでの動作が現状と同一(ui-shotスクリーンショット比較 ✅)+ Pages上で現行ゲームが動く ✅ → **Phase 0 / M0 完了(2026-06-13)**
 
@@ -54,7 +54,7 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 - **デプロイ済み**: API を staging(`yokai-shogi-api-staging`) / production(`yokai-shogi-api-production`) にデプロイ、D1(本番/staging)へリモートマイグレーション適用、`JWT_SECRET` 設定済み。`Turnstile` は秘密鍵未設定のためスキップ中(公開時に有効化)
 - **2台同期を staging で実証済み**(`test/e2e/sync-online.mjs`)
 - ビルド切替: `npm run build`=オフライン版(ローカルメタ・e2e用) / `npm run build:online`=本番API接続版(Pages配信用、CIのdeployジョブが使用)
-- **残タスク(本番公開の最後の一歩)**: 本番Pagesをオンライン版で再デプロイ(`npm run pages:deploy`、またはPRマージでCIの `deploy` ジョブが実行)すると、本番(`yokai-shogi.pages.dev`)がサーバー権威=2台同期対応に切り替わる。**既存localStorageデータはフレッシュスタート(doc 05方針)** となるため、切替タイミングはリリース判断に委ねる
+- **残タスク(本番公開の最後の一歩)**: 独自ドメイン接続後、本番Pagesをオンライン版で再デプロイ(`npm run pages:deploy`、またはPRマージでCIの `deploy` ジョブが実行)すると、正式URL `yokai-shogi.nit-games.com` がサーバー権威=2台同期対応に切り替わる。**既存localStorageデータはフレッシュスタート(doc 05方針)** となるため、切替タイミングはリリース判断に委ねる
 
 ## Phase 2: オンライン対戦MVP
 
@@ -72,9 +72,6 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 - [x] Turnstileクライアント組み込み・本番有効化(doc 15) ※クライアント実装済み。秘密鍵設定はオーナー操作
 - [x] 利用規約/プライバシーポリシー公開・初回同意UI・問い合わせ導線(doc 11, 15)
 - [x] Sentryクライアント組み込み・メンテナンス表示(doc 09, 15) ※DSN未設定時は無効
-- [ ] 監視設定(Sentry通知 / UptimeRobot / Analytics Engine確認クエリ)(doc 15) `要オーナー操作`
-- [ ] チート手動検証・ロールバック訓練・実機ブラウザ確認(doc 15) `要オーナー操作`
-- [ ] β限定公開後2週間の完走率観測(doc 15) `要オーナー操作`
 - 完了条件: doc 01 のGo/No-Go基準。βとして限定公開し、対局完走率・クラッシュを2週間観測
 - リスク: 再接続まわりはエッジケースの沼 → β中は「切断=負け(猶予なし)」の簡易版から始める選択肢を持つ(DOストレージ復元だけは最初から入れる。デプロイで対局が壊れるとβ運用が回らないため)
 
@@ -90,20 +87,13 @@ Phase 4  運用拡張(継続)        : リプレイ・観戦・新妖怪配信
 
 ゴール: 毎日遊ぶ理由と、長期目標を作る。正式リリース。
 
-- [ ] Glicko-2レーティング+ランダムマッチのレート考慮(doc 03)
-- [ ] シーズン制・ランキング表示・シーズン報酬(doc 08)
-- [ ] ガチャ天井(Pity)・未所持SSR優先(doc 08)
-- [ ] 戦績画面・対局履歴
 - [ ] Google OAuth連携追加・PWA対応
-- [ ] win-trading検知ログの実装(doc 07)
 - 完了条件: 正式リリース告知。KPI計測開始(doc 01)
 
 ## Phase 4: 運用拡張(継続)
 
 優先度はβ/正式リリースのユーザー反応で決める。候補:
 
-- リプレイ閲覧(match_actionsの順再生。データはPhase 2から貯まっている)
-- 観戦(BattleRoom DOへのread-only WS購読)・フレンドリスト・定型スタンプ
 - 新妖怪のシーズン配信(2〜3ヶ月ごと)・限定スキン(妖力の出口)・マスタのKV配信化(デプロイなし調整)
 - バランス調整サイクルの確立(採用率・勝率の週次集計 → doc 08)
 - ソロモードの拡張(段位制CPU・チャレンジステージ)

@@ -7,6 +7,8 @@ import { YOKAI, COLS, ROWS } from '../../shared/data';
 import { Game } from '../../shared/game';
 import type { Action, GameState, Piece } from '../../shared/game';
 
+export type AIDifficulty = 'easy' | 'normal' | 'hard';
+
 export const AI = {
   /* 駒の素材価値 */
   pieceValue(pc: Piece): number {
@@ -21,11 +23,16 @@ export const AI = {
     return v;
   },
 
-  chooseAction(state: GameState): Action | null {
+  chooseAction(state: GameState, difficulty: AIDifficulty = 'normal'): Action | null {
     const acts = Game.getAllActions(state, 'e');
     if (acts.length === 0) return null;
+    if (difficulty === 'easy' && Math.random() < 0.35) {
+      return acts[Math.floor(Math.random() * acts.length)];
+    }
 
     let best: Action | null = null, bestScore = -Infinity;
+    const threatWeight = difficulty === 'hard' ? 1.1 : difficulty === 'easy' ? 0.55 : 0.85;
+    const noise = difficulty === 'hard' ? 4 : difficulty === 'easy' ? 55 : 22;
     for (const act of acts) {
       const sim = Game.clone(state);
       const hpBefore = { p: sim.hp.p, e: sim.hp.e };
@@ -53,13 +60,13 @@ export const AI = {
       }
 
       /* 相手(プレイヤー)の最善応手の脅威を差し引く */
-      score -= this.bestThreat(sim, 'p') * 0.85;
+      score -= this.bestThreat(sim, 'p') * threatWeight;
 
       /* 位置評価 */
       score += this.positionBonus(state, sim, act);
 
       /* 揺らぎ(毎回同じ手にならないように) */
-      score += Math.random() * 22;
+      score += Math.random() * noise;
 
       if (score > bestScore) { bestScore = score; best = act; }
     }

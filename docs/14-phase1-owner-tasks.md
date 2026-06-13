@@ -31,7 +31,7 @@ Phase 1(サーバー権威メタ)を「本番に反映」し「内輪テスト�
 - Claude: トークンの発行・GitHubへの登録はWeb UI操作のため代行不可。
 
 ### A-4. 本番切替後の動作確認 `要オーナー操作(実機確認)`
-- スマホ/PCの2つのブラウザで `yokai-shogi.pages.dev` を開く。
+- スマホ/PCの2つのブラウザで `yokai-shogi.nit-games.com` を開く。
 - 1台目: タイトル「データ引き継ぎ」→ コード発行 → ガチャ等でデータを変化させる。
 - 2台目: 「データ引き継ぎ」→ コード入力 → 1台目と同じチケット・所持になることを確認。
 - Claude: staging相手の自動実証(`test/e2e/sync-online.mjs`)は済み。本番URLでの目視確認はあなたが実施。
@@ -64,12 +64,12 @@ Phase 1(サーバー権威メタ)を「本番に反映」し「内輪テスト�
 ## C. 推奨(運用・セキュリティ)
 
 ### C-1. 監視 `要オーナー操作(アカウント作成)`
-- [UptimeRobot](https://uptimerobot.com/) で `https://yokai-shogi-api-production.kojileo0178.workers.dev/healthz` を死活監視(2回連続失敗で通知)。
+- [UptimeRobot](https://uptimerobot.com/) で `https://api.yokai-shogi.nit-games.com/healthz` を死活監視(2回連続失敗で通知)。
 - 公開を広げる段階で Sentry(クライアントエラー)も検討(doc 09)。
 
 ### C-2. workers.dev / Preview URL の扱い `Claude代行可`
 - 現在 API は `*.workers.dev` で公開され、Preview URL も有効(デプロイ時に警告が出た状態)。
-- API は CORS(本番は `yokai-shogi.pages.dev` のみ許可)で保護しているが、より絞るなら `server/wrangler.jsonc` に `"workers_dev": false` / `"preview_urls": false` を設定し、独自ドメイン+ルートに寄せる。
+- API は CORS(本番は `yokai-shogi.nit-games.com` と移行元の `yokai-shogi.pages.dev` を許可)で保護している。移行完了後はPages URLを許可対象から外し、必要なら `server/wrangler.jsonc` に `"workers_dev": false` / `"preview_urls": false` を設定する。
 - Claude: wrangler.jsonc の設定変更は依頼可。独自ドメインのDNS設定は要オーナー操作。
 
 ### C-3. コスト確認 `要オーナー操作`

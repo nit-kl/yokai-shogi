@@ -3,6 +3,26 @@ import { test, expect } from 'vitest';
 import { COLS, ROWS, YOKAI } from '../shared/data';
 import { Game } from '../shared/game';
 import { AI } from '../client/src/ai';
+import { SOLO_STAGES } from '../client/src/solo';
+
+test('ソロステージの敵編成が対局状態へ反映される', () => {
+  for (const stage of SOLO_STAGES) {
+    const s = Game.newState(null, stage.enemyRows);
+    expect(s.board.slice(0, 2).map(row => row.map(pc => pc?.id || null))).toEqual(stage.enemyRows);
+    expect(s.board[0].some(pc => pc?.id === stage.bossId)).toBe(true);
+    expect(YOKAI[stage.bossId].type).toBe('boss');
+  }
+});
+
+test('AIは全難易度で合法手を返す', () => {
+  for (const difficulty of ['easy', 'normal', 'hard'] as const) {
+    const s = Game.newState();
+    s.turn = 'e';
+    const action = AI.chooseAction(s, difficulty);
+    expect(action).toBeTruthy();
+    expect(Game.getAllActions(s, 'e')).toContainEqual(action);
+  }
+});
 
 test('200局の自動対局がルール破綻なく完走する', () => {
   let bossWins = 0, hpWins = 0, other = 0;

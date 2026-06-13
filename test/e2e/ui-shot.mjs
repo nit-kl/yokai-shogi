@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
+import { skipOnboarding } from './helpers.mjs';
+
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
 
@@ -14,26 +16,45 @@ page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 
 await page.goto(BASE_URL);
-
-// タイトル画面が出るまで待機(プリロード完了)
-await page.waitForSelector('#screen-title.active', { timeout: 30000 });
+await page.waitForSelector('#screen-title.active, #modal-onboarding-boss:not(.hidden)', { timeout: 30000 });
+await skipOnboarding(page);
 await page.waitForTimeout(800);
-// 初回起動時はログインボーナスモーダルを閉じる
-if (await page.locator('#modal-login:not(.hidden)').count()) {
-  await page.click('#btn-login-ok');
-  await page.waitForTimeout(300);
-}
 await page.screenshot({ path: path.join(dir, 'shot-1-title.png') });
 
-// 開戦
+// プレイヤーネーム変更
+await page.click('#btn-profile');
+await page.fill('#profile-name-input', '九尾使い');
+await page.click('#btn-profile-save');
+await page.locator('#modal-profile').waitFor({ state: 'hidden' });
+if (await page.locator('#title-player-name').textContent() !== '九尾使い') errors.push('タイトルにプレイヤーネームが反映されていない');
+
+// 駒一覧
+await page.click('#btn-pieces');
+await page.waitForSelector('#screen-pieces.active');
+const pieceCount = await page.locator('#pieces-list .piece-card').count();
+const expectedPieceCount = await page.evaluate(() => Object.keys(window.yk.YOKAI).length);
+if (pieceCount !== expectedPieceCount) errors.push(`駒一覧の件数が不正: ${pieceCount}/${expectedPieceCount}`);
+if (await page.locator('#pieces-list').getByText('ガチャ限定').count()) errors.push('駒一覧に不要なガチャ限定表記がある');
+await page.click('#btn-pieces-back');
+await page.waitForSelector('#screen-title.active');
+
+// ソロ対戦
 await page.click('#btn-start');
+await page.waitForSelector('#screen-solo.active');
+if (await page.locator('.solo-stage-card').count() !== 3) errors.push('ソロステージが3件表示されていない');
+if (await page.locator('.solo-difficulty').count() !== 3) errors.push('ソロ難易度が3件表示されていない');
+await page.locator('.solo-stage-card').nth(2).click();
+await page.locator('.solo-difficulty').nth(2).click();
+await page.click('#btn-solo-battle');
 await page.waitForSelector('#screen-battle.active');
+if (await page.locator('#enemy-name').textContent() !== '九尾の狐') errors.push('選択したソロステージの敵大将が反映されていない');
 await page.waitForTimeout(1400);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 
 // 小鬼(x=1,y=4)を選択 → 移動ハイライト確認
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
 await cell(1, 4).click();
+if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
 await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-3-select.png') });
 
