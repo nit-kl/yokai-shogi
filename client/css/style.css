@@ -1547,6 +1547,31 @@ html, body {
   #board-frame { --bw: min(94vw, 52vh); }
 }
 @media (max-width: 680px) {
+  .battle-col {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .battle-tools {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: min(96vw, 560px);
+    min-height: 46px;
+    padding: 4px 8px;
+    border-top: 1px solid rgba(232,196,106,0.2);
+  }
+  .battle-tools .online-status {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin-right: 2px;
+  }
+  .battle-tools .tool-btn {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+  }
   .title-center {
     width: min(94vw, 520px);
     padding: 16px 11px 13px;
