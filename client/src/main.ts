@@ -183,6 +183,10 @@ function wireButtons() {
   $('btn-start').onclick = () => { AudioSys.init(); AudioSys.play('click'); openSolo(); };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-solo-battle').onclick = () => { AudioSys.play('click'); startBattle(); };
+  $('btn-videos').onclick = () => openVideos();
+  $('btn-videos-close').onclick = () => closeVideos();
+  $('btn-video-trailer').onclick = () => playVideo('EjzXcCEKYSI', 'btn-video-trailer');
+  $('btn-video-short').onclick = () => playVideo('LClFmrqygTQ', 'btn-video-short');
   $('btn-online').onclick = () => { void openOnline(); };
   $('btn-online-close').onclick = () => closeOnlineModal();
   $('btn-online-random').onclick = () => { connectMatchmaker(); online?.send({ t: 'join_queue' }); $('online-message').textContent = '対戦相手を探しています…'; };
@@ -282,6 +286,30 @@ async function openOnline() {
     }
   }
   $('online-message').textContent = '対戦方法を選んでください';
+}
+
+function openVideos() {
+  AudioSys.play('click');
+  $('modal-videos').classList.remove('hidden');
+}
+
+function playVideo(videoId: string, activeButtonId: string) {
+  AudioSys.stopBgm();
+  for (const id of ['btn-video-trailer', 'btn-video-short']) {
+    $(id).classList.toggle('active', id === activeButtonId);
+  }
+  const player = $<HTMLIFrameElement>('video-player');
+  player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1`;
+  $('video-player-wrap').classList.remove('hidden');
+}
+
+function closeVideos() {
+  $<HTMLIFrameElement>('video-player').src = '';
+  $('video-player-wrap').classList.add('hidden');
+  $('btn-video-trailer').classList.remove('active');
+  $('btn-video-short').classList.remove('active');
+  $('modal-videos').classList.add('hidden');
+  AudioSys.startTitleBgm();
 }
 
 function closeOnlineModal() {
