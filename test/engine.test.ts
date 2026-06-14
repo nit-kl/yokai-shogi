@@ -3,7 +3,7 @@ import { test, expect } from 'vitest';
 import { COLS, ROWS, YOKAI } from '../shared/data';
 import { Game } from '../shared/game';
 import { AI } from '../client/src/ai';
-import { SOLO_STAGES } from '../client/src/solo';
+import { recordSoloClear, soloBattleStage, soloClearCount, SOLO_STAGES } from '../client/src/solo';
 
 test('ソロステージの敵編成が対局状態へ反映される', () => {
   for (const stage of SOLO_STAGES) {
@@ -11,6 +11,39 @@ test('ソロステージの敵編成が対局状態へ反映される', () => {
     expect(s.board.slice(0, 2).map(row => row.map(pc => pc?.id || null))).toEqual(stage.enemyRows);
     expect(s.board[0].some(pc => pc?.id === stage.bossId)).toBe(true);
     expect(YOKAI[stage.bossId].type).toBe('boss');
+  }
+});
+
+test('百鬼夜行は有効なランダム敵編成を生成する', () => {
+  const stage = soloBattleStage('hyakki', () => 0.42);
+  const ids = stage.enemyRows.flat().filter((id): id is string => !!id);
+  expect(ids).toHaveLength(10);
+  expect(new Set(ids).size).toBe(10);
+  expect(stage.enemyRows[0][2]).toBe(stage.bossId);
+  expect(YOKAI[stage.bossId].type).toBe('boss');
+  expect(ids.filter(id => YOKAI[id].type === 'boss')).toEqual([stage.bossId]);
+  expect(() => Game.newState(null, stage.enemyRows)).not.toThrow();
+});
+
+test('ソロ攻略記録はステージと難易度ごとに加算される', () => {
+  const values = new Map<string, string>();
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    },
+  });
+  try {
+    expect(soloClearCount('shuten', 'hard')).toBe(0);
+    expect(recordSoloClear('shuten', 'hard')).toBe(1);
+    expect(recordSoloClear('shuten', 'hard')).toBe(2);
+    expect(soloClearCount('shuten', 'hard')).toBe(2);
+    expect(soloClearCount('shuten', 'easy')).toBe(0);
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    else delete (globalThis as { localStorage?: Storage }).localStorage;
   }
 });
 
