@@ -41,8 +41,9 @@ await page.waitForSelector('#screen-title.active');
 // ソロ対戦
 await page.click('#btn-start');
 await page.waitForSelector('#screen-solo.active');
-if (await page.locator('.solo-stage-card').count() !== 3) errors.push('ソロステージが3件表示されていない');
+if (await page.locator('.solo-stage-card').count() !== 4) errors.push('ソロステージが4件表示されていない');
 if (await page.locator('.solo-difficulty').count() !== 3) errors.push('ソロ難易度が3件表示されていない');
+if (await page.locator('.solo-mode').count() !== 2) errors.push('通常戦・連戦の切替が表示されていない');
 await page.locator('.solo-stage-card').nth(2).click();
 await page.locator('.solo-difficulty').nth(2).click();
 await page.click('#btn-solo-battle');

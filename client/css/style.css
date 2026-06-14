@@ -324,9 +324,28 @@ html, body {
 #screen-solo { flex-direction: column; }
 .solo-col { width: min(98vw, 780px); }
 .solo-note { color: #9a8fc0; font-size: 0.82rem; }
+.solo-mode-select { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(100%, 500px); }
+.solo-mode {
+  display: flex; flex-direction: column; gap: 2px; padding: 7px 12px;
+  color: #988dac; border: 1px solid rgba(200,138,255,0.2); border-radius: 9px;
+  background: rgba(20,16,31,0.8); cursor: pointer;
+}
+.solo-mode b { color: var(--paper); font: 0.82rem "Yu Mincho", serif; letter-spacing: 0.15em; }
+.solo-mode span { font-size: 0.6rem; }
+.solo-mode.active { border-color: rgba(232,196,106,0.7); background: rgba(58,41,72,0.88); box-shadow: 0 0 14px rgba(232,196,106,0.18); }
+#solo-progress {
+  align-self: flex-end;
+  padding: 4px 10px;
+  color: #ffe9a0;
+  border: 1px solid rgba(232,196,106,0.3);
+  border-radius: 999px;
+  background: rgba(20,16,31,0.75);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
 #solo-stages {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   width: 100%;
 }
@@ -354,6 +373,19 @@ html, body {
 .solo-stage-card p { min-height: 3.2em; margin: 5px 0; color: #b3a8d6; font-size: 0.7rem; line-height: 1.5; }
 .solo-stage-pieces { display: flex; flex-wrap: wrap; gap: 2px; }
 .solo-stage-pieces img { width: 22px; height: 22px; object-fit: contain; }
+.solo-stage-clears { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 7px; }
+.solo-stage-clears span {
+  padding: 2px 5px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px;
+  color: #756b8c;
+  font-size: 0.56rem;
+}
+.solo-stage-clears span.cleared {
+  color: #fff0ad;
+  border-color: rgba(232,196,106,0.45);
+  background: rgba(232,196,106,0.12);
+}
 .solo-difficulty-wrap { width: 100%; }
 .solo-difficulty-wrap h3 { margin-bottom: 6px; color: var(--gold); font: 0.9rem "Yu Mincho", serif; letter-spacing: 0.2em; }
 #solo-difficulties { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -364,6 +396,7 @@ html, body {
 }
 .solo-difficulty b { color: var(--paper); font-family: "Yu Mincho", serif; }
 .solo-difficulty span { font-size: 0.65rem; }
+.solo-difficulty small { color: #756b8c; font-size: 0.58rem; }
 .solo-difficulty.selected { border-color: var(--p-blue); box-shadow: 0 0 14px rgba(88,182,255,0.3); }
 
 /* ---------- バトル画面 ---------- */
@@ -888,8 +921,12 @@ html, body {
 }
 
 /* ---------- リザルト ---------- */
-#screen-result { flex-direction: column; z-index: 100; }
-.result-inner { text-align: center; position: relative; z-index: 2; animation: resultIn 0.8s cubic-bezier(0.2, 0.9, 0.3, 1); }
+#screen-result { flex-direction: column; z-index: 100; overflow-y: auto; }
+.result-inner {
+  text-align: center; position: relative; z-index: 2;
+  margin: auto; padding: 18px 0 max(18px, env(safe-area-inset-bottom));
+  animation: resultIn 0.8s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
 @keyframes resultIn { from { opacity: 0; transform: translateY(40px) scale(0.92); } to { opacity: 1; transform: none; } }
 #result-boss {
   height: min(38vh, 340px);
@@ -916,6 +953,19 @@ html, body {
   filter: drop-shadow(0 4px 4px rgba(0,0,0,0.9));
 }
 #result-sub { color: #9a8fc0; letter-spacing: 0.3em; margin: 0.6em 0 1.6em; font-size: clamp(0.8rem, 2.6vw, 1.05rem); }
+#result-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(90px, 1fr)); gap: 6px;
+  width: min(92vw, 460px); margin: -0.7em auto 1.2em;
+}
+.result-stat {
+  padding: 7px 5px; border: 1px solid rgba(232,196,106,0.2); border-radius: 8px;
+  background: rgba(20,16,31,0.75); color: #8f84a8; font-size: 0.62rem;
+}
+.result-stat b { display: block; margin-top: 2px; color: #fff0ad; font-size: 0.88rem; }
+.result-streak {
+  grid-column: 1 / -1; color: #ffd76a; border-color: rgba(232,196,106,0.45);
+  font: 0.9rem "Yu Mincho", serif; letter-spacing: 0.14em;
+}
 
 /* ---------- モーダル ---------- */
 .modal {
@@ -1547,6 +1597,36 @@ html, body {
   #board-frame { --bw: min(94vw, 52vh); }
 }
 @media (max-width: 680px) {
+  .solo-mode-select { width: 100%; }
+  #result-stats { grid-template-columns: repeat(2, minmax(90px, 1fr)); }
+  #result-boss { height: min(29vh, 240px); }
+  #result-title { font-size: clamp(2.8rem, 15vw, 4.3rem); }
+  #result-sub { margin-bottom: 1.35em; font-size: 0.72rem; }
+  .battle-col {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .battle-tools {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: min(96vw, 560px);
+    min-height: 46px;
+    padding: 4px 8px;
+    border-top: 1px solid rgba(232,196,106,0.2);
+  }
+  .battle-tools .online-status {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin-right: 2px;
+  }
+  .battle-tools .tool-btn {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+  }
   .title-center {
     width: min(94vw, 520px);
     padding: 16px 11px 13px;

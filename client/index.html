@@ -87,6 +87,11 @@
         <div class="menu-head-spacer"></div>
       </div>
       <p class="solo-note">挑戦する軍勢と難易度を選んでください。</p>
+      <div class="solo-mode-select">
+        <button id="btn-solo-single" class="solo-mode active"><b>通常戦</b><span>選んだ軍勢と一局勝負</span></button>
+        <button id="btn-solo-streak" class="solo-mode"><b>連戦</b><span>百鬼夜行を相手に連勝へ挑む</span></button>
+      </div>
+      <div id="solo-progress"></div>
       <div id="solo-stages"></div>
       <div class="solo-difficulty-wrap">
         <h3>難易度</h3>
@@ -247,6 +252,7 @@
       <img id="result-boss" src="" alt="" draggable="false">
       <div id="result-title"></div>
       <div id="result-sub"></div>
+      <div id="result-stats" class="hidden"></div>
       <div id="result-reward" class="hidden"></div>
       <div class="title-buttons">
         <button id="btn-retry" class="btn btn-gold">再 戦</button>

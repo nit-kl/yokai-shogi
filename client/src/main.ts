@@ -11,7 +11,10 @@ import { Game } from '../../shared/game';
 import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { AI } from './ai';
 import type { AIDifficulty } from './ai';
-import { SOLO_DIFFICULTIES, SOLO_STAGES, soloStage } from './solo';
+import {
+  SOLO_DIFFICULTIES, SOLO_STAGES, recordSoloClear, soloBattleStage, soloClearCount, soloStage,
+} from './solo';
+import type { SoloStage } from './solo';
 import { Meta } from './meta';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
@@ -42,6 +45,17 @@ let onlineDisconnectDeadline = 0;
 let onlineTimerId: ReturnType<typeof setInterval> | null = null;
 let soloStageId = SOLO_STAGES[0].id;
 let soloDifficulty: AIDifficulty = 'normal';
+let activeSoloStage: SoloStage = soloStage(soloStageId);
+let soloClearRecorded = false;
+let soloMode: 'single' | 'streak' = 'single';
+let soloStreak = 0;
+type BattleStats = {
+  turns: number;
+  captures: Record<Side, number>;
+  damage: Record<Side, number>;
+  maxCombo: Record<Side, number>;
+};
+let battleStats: BattleStats = newBattleStats();
 const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
 const CONSENT_KEY = 'yokaiShogi.consent.2026-06-13';
 type StoredOnlineMatch = {
@@ -188,7 +202,9 @@ function enterTitle() {
 function wireButtons() {
   $('btn-start').onclick = () => { AudioSys.init(); AudioSys.play('click'); openSolo(); };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
-  $('btn-solo-battle').onclick = () => { AudioSys.play('click'); startBattle(); };
+  $('btn-solo-battle').onclick = () => { AudioSys.play('click'); soloStreak = 0; startBattle(); };
+  $('btn-solo-single').onclick = () => { AudioSys.play('select'); soloMode = 'single'; renderSoloSelect(); };
+  $('btn-solo-streak').onclick = () => { AudioSys.play('select'); soloMode = 'streak'; soloStageId = 'hyakki'; renderSoloSelect(); };
   $('btn-videos').onclick = () => openVideos();
   $('btn-videos-close').onclick = () => closeVideos();
   $('btn-video-trailer').onclick = () => playVideo('EjzXcCEKYSI', 'btn-video-trailer');
@@ -228,7 +244,10 @@ function wireButtons() {
   $('btn-retry').onclick = () => {
     AudioSys.play('click');
     if (onlineSide) { online?.close(); clearOnlineMatch(); onlineSide = null; onlineMatch = null; enterTitle(); }
-    else startBattle();
+    else {
+      if (soloMode === 'streak' && G?.winner !== 'p') soloStreak = 0;
+      startBattle();
+    }
   };
   $('btn-title').onclick = () => {
     AudioSys.play('click');
@@ -247,6 +266,11 @@ function openSolo() {
 }
 
 function renderSoloSelect() {
+  $('btn-solo-single').classList.toggle('active', soloMode === 'single');
+  $('btn-solo-streak').classList.toggle('active', soloMode === 'streak');
+  const completed = SOLO_STAGES.reduce((sum, stage) =>
+    sum + SOLO_DIFFICULTIES.filter(difficulty => soloClearCount(stage.id, difficulty.id) > 0).length, 0);
+  $('solo-progress').textContent = `攻略記録 ${completed} / ${SOLO_STAGES.length * SOLO_DIFFICULTIES.length}`;
   const stages = $('solo-stages');
   stages.innerHTML = '';
   for (const stage of SOLO_STAGES) {
@@ -258,8 +282,17 @@ function renderSoloSelect() {
       `<div class="solo-stage-body"><div class="solo-stage-head"><span>${stage.trait}</span><b>${stage.name}</b></div>` +
       `<div class="solo-stage-boss">大将 ${boss.name}</div><p>${stage.desc}</p>` +
       `<div class="solo-stage-pieces">${stage.enemyRows.flat().filter(Boolean).map(id =>
-        `<img src="${YOKAI[id!].imgSm}" alt="${YOKAI[id!].name}" title="${YOKAI[id!].name}">`).join('')}</div></div>`;
-    card.onclick = () => { AudioSys.play('select'); soloStageId = stage.id; renderSoloSelect(); };
+        `<img src="${YOKAI[id!].imgSm}" alt="${YOKAI[id!].name}" title="${YOKAI[id!].name}">`).join('')}</div>` +
+      `<div class="solo-stage-clears">${SOLO_DIFFICULTIES.map(difficulty => {
+        const count = soloClearCount(stage.id, difficulty.id);
+        return `<span class="${count ? 'cleared' : ''}">${difficulty.name}${count ? ` ${count}` : ''}</span>`;
+      }).join('')}</div></div>`;
+    card.onclick = () => {
+      AudioSys.play('select');
+      soloStageId = stage.id;
+      if (stage.id !== 'hyakki') soloMode = 'single';
+      renderSoloSelect();
+    };
     stages.appendChild(card);
   }
 
@@ -268,7 +301,9 @@ function renderSoloSelect() {
   for (const difficulty of SOLO_DIFFICULTIES) {
     const button = document.createElement('button');
     button.className = 'solo-difficulty' + (difficulty.id === soloDifficulty ? ' selected' : '');
-    button.innerHTML = `<b>${difficulty.name}</b><span>${difficulty.desc}</span>`;
+    const count = soloClearCount(soloStageId, difficulty.id);
+    button.innerHTML = `<b>${difficulty.name}${count ? ' ✓' : ''}</b><span>${difficulty.desc}</span>` +
+      `<small>${count ? `勝利 ${count}回` : '未攻略'}</small>`;
     button.onclick = () => { AudioSys.play('select'); soloDifficulty = difficulty.id; renderSoloSelect(); };
     difficulties.appendChild(button);
   }
@@ -669,7 +704,10 @@ function onHandClick(id: string) {
 
 /* ============================== 対局進行 ============================== */
 function startBattle() {
-  const stage = soloStage(soloStageId);
+  const stage = soloBattleStage(soloMode === 'streak' ? 'hyakki' : soloStageId);
+  activeSoloStage = stage;
+  soloClearRecorded = false;
+  battleStats = newBattleStats();
   onlineSide = null;
   onlineEndReason = null;
   onlineReward = 0;
@@ -709,6 +747,7 @@ async function doAction(action: Action) {
   }
 
   const events = Game.applyAction(G!, action);
+  recordBattleStats(events);
   for (const ev of events) await animEvent(ev);
 
   renderAll();
@@ -846,6 +885,28 @@ async function animCapture(ev: CaptureEvent) {
   }
 }
 
+function newBattleStats(): BattleStats {
+  return {
+    turns: 0,
+    captures: { p: 0, e: 0 },
+    damage: { p: 0, e: 0 },
+    maxCombo: { p: 0, e: 0 },
+  };
+}
+
+function recordBattleStats(events: GameEvent[]) {
+  battleStats.turns++;
+  for (const event of events) {
+    if (event.t !== 'capture') continue;
+    const side = event.attacker.owner;
+    const foe: Side = side === 'p' ? 'e' : 'p';
+    battleStats.captures[side]++;
+    battleStats.damage[side] += event.damage;
+    battleStats.maxCombo[side] = Math.max(battleStats.maxCombo[side], event.combo);
+    if (event.counter) battleStats.damage[foe] += event.counter.dmg;
+  }
+}
+
 function updateHP(hp: Record<Side, number>) {
   for (const side of ['p', 'e'] as const) {
     const pct = Math.max(0, hp[side] / MAX_HP * 100) + '%';
@@ -874,10 +935,15 @@ function showResult() {
   AudioSys.stopBgm();
   const draw = onlineEndReason === 'draw';
   const win = G!.winner === 'p';
-  const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS) : soloStage(soloStageId).bossId;
+  const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS) : activeSoloStage.bossId;
   const enemyBossName = YOKAI[enemyBoss].name;
   $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : enemyBoss].img;
   if (win && !onlineSide) {
+    if (!soloClearRecorded) {
+      recordSoloClear(soloStageId, soloDifficulty);
+      soloClearRecorded = true;
+      if (soloMode === 'streak') soloStreak++;
+    }
     /* ソロ勝利報酬はサーバー(またはローカル)が日次上限つきで付与。結果を待って表示を確定 */
     $('result-reward').textContent = '勝利報酬を確認中…';
     $('result-reward').classList.remove('hidden');
@@ -908,6 +974,9 @@ function showResult() {
     draw: '300手に達したため引き分け',
   };
   $('result-sub').textContent = reasons[onlineEndReason || G!.reason || ''] || '';
+  renderResultStats();
+  const retry = $('btn-retry');
+  retry.textContent = soloMode === 'streak' && !onlineSide && win ? '次の軍勢へ' : '再戦';
   showScreen('screen-result');
   AudioSys.play(win ? 'win' : 'lose');
   if (win) {
@@ -917,6 +986,27 @@ function showResult() {
   } else {
     FX.setAmbient(['rgba(110,90,160,0.4)'], 0.03);
   }
+}
+
+function renderResultStats() {
+  const stats = $('result-stats');
+  if (onlineSide) {
+    stats.classList.add('hidden');
+    return;
+  }
+  const hp = G?.hp.p || 0;
+  const hpPct = Math.round(hp / MAX_HP * 100);
+  const streak = soloMode === 'streak'
+    ? `<div class="result-stat result-streak">百鬼夜行 ${soloStreak}連勝</div>`
+    : '';
+  stats.innerHTML = streak +
+    `<div class="result-stat">手数<b>${battleStats.turns}</b></div>` +
+    `<div class="result-stat">撃破数<b>${battleStats.captures.p}</b></div>` +
+    `<div class="result-stat">与ダメージ<b>${battleStats.damage.p}</b></div>` +
+    `<div class="result-stat">被ダメージ<b>${battleStats.damage.e}</b></div>` +
+    `<div class="result-stat">最大コンボ<b>${battleStats.maxCombo.p}</b></div>` +
+    `<div class="result-stat">残り魂力<b>${hpPct}%</b></div>`;
+  stats.classList.remove('hidden');
 }
 
 /* ============================== 駒一覧 ============================== */
