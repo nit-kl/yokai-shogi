@@ -43,14 +43,31 @@ npm run pages:deploy:staging
 | `CLOUDFLARE_API_TOKEN` | Cloudflareデプロイ用APIトークン |
 | `CLOUDFLARE_ACCOUNT_ID` | 対象CloudflareアカウントID |
 
-APIトークンには、対象アカウントへ限定して少なくとも以下の編集権限が必要。
+APIトークンには、以下の権限とリソース範囲が必要。
 
-- Cloudflare Pages
-- Workers Scripts
-- D1
-- Workerのカスタムドメイン・ルート更新に必要な権限
+| 種別 | 権限 | リソース |
+|---|---|---|
+| Account | Cloudflare Pages: Edit | 対象アカウント `nit` |
+| Account | Workers Scripts: Edit | 対象アカウント `nit` |
+| Account | D1: Edit | 対象アカウント `nit` |
+| Zone | Workers Routes: Edit | 対象Zone `nit-games.com` |
+
+`server/wrangler.jsonc` のproduction環境は `api.yokai-shogi.nit-games.com` をCustom Domainとして管理するため、Worker本体のアップロード権限とは別に、Zoneの `Workers Routes: Edit` が必要になる。
+
+`wrangler whoami` のメールアドレス表示に関する警告を消す場合は `User > User Details > Read` を追加できるが、デプロイには不要。
 
 Secretsが未設定の場合、本番デプロイは失敗する。意図せず本番更新がスキップされる状態を避けるためである。
+
+### Workers Routesの認証エラー
+
+Workerアップロード後に次のエラーが出た場合、トークンのZone権限が不足している。
+
+```text
+A request to the Cloudflare API (/zones/.../workers/routes) failed.
+Authentication error [code: 10000]
+```
+
+Cloudflare DashboardのAPI Tokens画面でトークンを更新または再作成し、`Zone > Workers Routes > Edit` と対象Zone `nit-games.com` を追加する。その後、GitHub Secret `CLOUDFLARE_API_TOKEN` を新しいトークンへ差し替え、失敗したGitHub Actionsジョブを再実行する。
 
 ## マイグレーション方針
 

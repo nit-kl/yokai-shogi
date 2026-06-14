@@ -35,6 +35,11 @@ let onlineMatch: { matchId: string; reconnectToken: string; opponentName: string
 let onlineEndReason: string | null = null;
 let onlineReward = 0;
 let onlineSeq = 0;
+const ONLINE_TURN_MS = 60_000;
+const ONLINE_DISCONNECT_MS = 60_000;
+let onlineTurnDeadline = 0;
+let onlineDisconnectDeadline = 0;
+let onlineTimerId: ReturnType<typeof setInterval> | null = null;
 let soloStageId = SOLO_STAGES[0].id;
 let soloDifficulty: AIDifficulty = 'normal';
 const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
@@ -165,6 +170,7 @@ function preloadImages(): Promise<void> {
 }
 
 function enterTitle() {
+  stopOnlineTimer();
   if (!Meta.isOnboardingDone()) {
     void Onboarding.start();
     return;
@@ -326,9 +332,9 @@ function connectMatchmaker(extra: Record<string, string> = {}) {
   online.onMessage = message => { void onOnlineMessage(message); };
   online.onState = state => {
     if (state === 'connected' && onlineMatch) {
-      $('online-status').textContent = '接続済み';
+      setOnlineConnection('接続済み');
     } else if (state === 'disconnected' && onlineMatch) {
-      $('online-status').textContent = '再接続中…';
+      setOnlineConnection('再接続中…', true);
       setTimeout(() => online?.connect({
         matchId: onlineMatch!.matchId, reconnectToken: onlineMatch!.reconnectToken,
       }), 1000);
@@ -368,7 +374,8 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     if (shouldRender) { renderAll(); updateHUD(); }
     onlineSeq = message.seq;
     busy = G.turn !== 'p';
-    $('online-status').textContent = `残り ${Math.ceil(message.remainMs / 1000)}秒`;
+    setOnlineConnection('接続済み');
+    setOnlineTurnTimer(message.remainMs);
   } else if (message.t === 'events') {
     if (!onlineSide) return;
     busy = true;
@@ -377,11 +384,14 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     updateHUD();
     onlineSeq = message.seq;
     if (G && !G.winner) busy = G.turn !== 'p';
+    renderOnlineTimers();
   } else if (message.t === 'your_turn') {
-    $('online-status').textContent = `あなたの手番・残り ${Math.ceil(message.remainMs / 1000)}秒`;
+    setOnlineTurnTimer(message.remainMs);
     if (G?.turn === 'p') { busy = false; showBanner('p'); }
   } else if (message.t === 'opponent_disconnected') {
-    $('online-status').textContent = `相手が切断中・猶予 ${Math.ceil(message.graceMs / 1000)}秒`;
+    setOpponentDisconnectTimer(message.graceMs);
+  } else if (message.t === 'opponent_reconnected') {
+    clearOpponentDisconnectTimer();
   } else if (message.t === 'game_end') {
     if (!G || !onlineSide) return;
     G.winner = message.winner === 'draw' ? null : (message.winner === onlineSide ? 'p' : 'e');
@@ -389,7 +399,63 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     onlineReward = message.reward.tickets;
     if (message.reward.tickets > 0) Meta.addTickets(message.reward.tickets);
     clearOnlineMatch();
+    stopOnlineTimer();
     showResult();
+  }
+}
+
+function formatCountdown(ms: number): string {
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+function ensureOnlineTimer(): void {
+  if (onlineTimerId === null) onlineTimerId = setInterval(renderOnlineTimers, 250);
+  renderOnlineTimers();
+}
+
+function stopOnlineTimer(): void {
+  if (onlineTimerId !== null) clearInterval(onlineTimerId);
+  onlineTimerId = null;
+  onlineTurnDeadline = 0;
+  clearOpponentDisconnectTimer();
+}
+
+function setOnlineTurnTimer(remainMs: number): void {
+  onlineTurnDeadline = Date.now() + Math.max(0, remainMs);
+  ensureOnlineTimer();
+}
+
+function setOpponentDisconnectTimer(graceMs: number): void {
+  onlineDisconnectDeadline = Date.now() + Math.max(0, graceMs);
+  $('online-disconnect-block').classList.remove('hidden');
+  ensureOnlineTimer();
+}
+
+function clearOpponentDisconnectTimer(): void {
+  onlineDisconnectDeadline = 0;
+  $('online-disconnect-block').classList.add('hidden');
+}
+
+function setOnlineConnection(label: string, reconnecting = false): void {
+  $('online-connection-label').textContent = label;
+  $('online-status').classList.toggle('reconnecting', reconnecting);
+}
+
+function renderOnlineTimers(): void {
+  const now = Date.now();
+  const turnRemain = Math.max(0, onlineTurnDeadline - now);
+  const ownTurn = G?.turn === 'p';
+  $('online-turn-label').textContent = ownTurn ? 'あなたの手番' : '相手の手番';
+  $('online-turn-time').textContent = formatCountdown(turnRemain);
+  $('online-turn-fill').style.width = `${Math.min(100, turnRemain / ONLINE_TURN_MS * 100)}%`;
+  $('online-status').classList.toggle('opponent-turn', !ownTurn);
+  $('online-status').classList.toggle('timer-low', turnRemain > 0 && turnRemain <= 10_000);
+
+  if (onlineDisconnectDeadline > 0) {
+    const graceRemain = Math.max(0, onlineDisconnectDeadline - now);
+    $('online-disconnect-time').textContent = formatCountdown(graceRemain);
+    $('online-disconnect-fill').style.width = `${Math.min(100, graceRemain / ONLINE_DISCONNECT_MS * 100)}%`;
   }
 }
 
@@ -407,6 +473,8 @@ function startOnlineBattle() {
   $<HTMLImageElement>('enemy-avatar').src = YOKAI[onlineMatch?.opponentBossId || ENEMY_BOSS].img;
   $('enemy-hud').querySelector('.hud-name')!.lastChild!.textContent = onlineMatch?.opponentName || '対戦相手';
   $('online-status').classList.remove('hidden');
+  setOnlineConnection('接続済み');
+  ensureOnlineTimer();
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
   AudioSys.startBattleBgm();
@@ -605,6 +673,7 @@ function startBattle() {
   onlineSide = null;
   onlineEndReason = null;
   onlineReward = 0;
+  stopOnlineTimer();
   $('online-status').classList.add('hidden');
   G = Game.newState(Meta.formationRows(), stage.enemyRows);
   busy = false;

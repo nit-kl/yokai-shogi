@@ -1427,7 +1427,31 @@ html, body {
 .video-player-wrap iframe { display: block; width: 100%; height: 100%; border: 0; }
 .online-code-row { display: flex; gap: 0.6rem; justify-content: center; }
 .online-code-row input { width: 10rem; text-align: center; letter-spacing: 0.18em; text-transform: uppercase; }
-#online-status { color: #fff2a8; font-size: 0.78rem; padding: 0.35rem 0.6rem; background: rgba(0,0,0,0.55); border-radius: 999px; }
+.online-status {
+  width: min(45vw, 210px);
+  padding: 8px 10px;
+  color: #e8e2f2;
+  border: 1px solid rgba(88,182,255,0.32);
+  border-radius: 10px;
+  background: rgba(10,8,18,0.88);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.38);
+  font-size: 0.68rem;
+}
+.online-status-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: #aebbd0; }
+#online-connection-dot { width: 7px; height: 7px; border-radius: 50%; background: #6fe39a; box-shadow: 0 0 8px rgba(111,227,154,0.75); }
+.online-status.reconnecting #online-connection-dot { background: #ffd24a; box-shadow: 0 0 8px rgba(255,210,74,0.75); animation: thinkBlink 0.8s infinite; }
+.online-timer-block { display: flex; flex-direction: column; gap: 4px; }
+.online-timer-line { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.online-timer-line span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c8bddb; }
+.online-timer-line b { color: #fff2a8; font: 700 0.8rem ui-monospace, "Courier New", monospace; }
+.online-timer-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,0.1); }
+#online-turn-fill, #online-disconnect-fill { width: 100%; height: 100%; transform-origin: left center; transition: width 0.25s linear, background 0.2s; }
+#online-turn-fill { background: linear-gradient(90deg, #58b6ff, #9ad7ff); }
+.online-status.opponent-turn #online-turn-fill { background: linear-gradient(90deg, #ff7373, #ffad8a); }
+.online-status.timer-low #online-turn-fill { background: linear-gradient(90deg, #ff4f4f, #ffd24a); animation: timerPulse 0.7s ease-in-out infinite; }
+.online-disconnect-block { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,0.1); }
+#online-disconnect-fill { background: linear-gradient(90deg, #ff5d5d, #ffb35d); }
+@keyframes timerPulse { 50% { filter: brightness(1.65); } }
 #turnstile-wrap { width: min(300px, 90vw); margin-top: 1rem; }
 .maintenance-banner {
   width: min(360px, 90vw);

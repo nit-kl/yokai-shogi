@@ -55,8 +55,14 @@ export class BattleRoom {
     server.serializeAttachment({ side, userId: userId! } satisfies Attachment);
     this.state.acceptWebSocket(server, [side]);
     if (this.timers) {
+      const wasDisconnected = this.timers.disconnected[side] !== undefined;
       delete this.timers.disconnected[side];
       await this.persistTimers();
+      if (wasDisconnected) {
+        for (const socket of this.state.getWebSockets(other(side))) {
+          send(socket, { t: 'opponent_reconnected' });
+        }
+      }
     }
     send(server, { t: 'snapshot', state: this.game!, remainMs: this.remainMs(), seq: this.seq });
     this.sendTurn();

@@ -36,10 +36,10 @@ export type ServerBattleMessage =
   | { t: 'events'; seq: number; events: GameEvent[] }
   | { t: 'your_turn'; remainMs: number }
   | { t: 'opponent_disconnected'; graceMs: number }
+  | { t: 'opponent_reconnected' }
   | { t: 'snapshot'; state: GameState; remainMs: number; seq: number }
   | {
       t: 'game_end'; winner: Side | 'draw'; reason: BattleEndReason;
       reward: { tickets: number }; rating: { before: number; after: number };
     }
   | { t: 'error'; code: string; message: string };
-
