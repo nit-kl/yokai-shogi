@@ -42,10 +42,10 @@ PR時:
   - playwright UIテスト(ui-shot / ui-gacha / ui-skills / ui-fx)
   - Pagesプレビューデプロイ(PRごとのURLでUI確認)
 main マージ時:
-  - 現行CIは上記全部 → Pagesのみデプロイ
-  - D1マイグレーションとAPI/DOのstagingデプロイは手動実行(doc 15)
+  - 上記テスト全部
+  - 本番D1マイグレーション → API/DOデプロイ → healthz確認 → Pagesデプロイを自動実行
 本番リリース:
-  - D1マイグレーション → API/DOデプロイ → Pagesデプロイの順で手動実行(doc 15)
+  - mainへのマージで自動実行。stagingは必要なタイミングで手動実行(doc 13 / 15)
 ```
 
 ### デプロイと対局の継続性
