@@ -111,6 +111,28 @@ describe('BattleRoom DO', () => {
       .first<{ count: number }>();
     expect(logs?.count).toBe(1);
   });
+
+  it('切断した対戦相手が復帰したことを通知する', async () => {
+    const p = await createPlayer('先手');
+    const e = await createPlayer('後手');
+    const matchId = crypto.randomUUID();
+    const stub = env.BATTLE.get(env.BATTLE.idFromName(matchId));
+    await stub.fetch('https://battle/init', {
+      method: 'POST',
+      body: JSON.stringify({ matchId, mode: 'friend', players: { p, e } }),
+    });
+
+    const pws = await connect(stub, p, matchId);
+    const ews = await connect(stub, e, matchId);
+    await pws.nextType('snapshot');
+    await ews.nextType('snapshot');
+
+    ews.ws.close(1000, 'test disconnect');
+    expect(await pws.nextType('opponent_disconnected')).toMatchObject({ t: 'opponent_disconnected' });
+
+    await connect(stub, e, matchId);
+    expect(await pws.nextType('opponent_reconnected')).toEqual({ t: 'opponent_reconnected' });
+  });
 });
 
 describe('Matchmaker DO', () => {

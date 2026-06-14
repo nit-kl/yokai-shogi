@@ -214,7 +214,26 @@
       </div>
 
       <div class="battle-tools">
-        <span id="online-status" class="hidden"></span>
+        <div id="online-status" class="online-status hidden">
+          <div class="online-status-head">
+            <span id="online-connection-dot"></span>
+            <span id="online-connection-label">接続済み</span>
+          </div>
+          <div class="online-timer-block">
+            <div class="online-timer-line">
+              <span id="online-turn-label">持ち時間</span>
+              <b id="online-turn-time">1:00</b>
+            </div>
+            <div class="online-timer-track"><div id="online-turn-fill"></div></div>
+          </div>
+          <div id="online-disconnect-block" class="online-timer-block online-disconnect-block hidden">
+            <div class="online-timer-line">
+              <span>相手の再接続待ち</span>
+              <b id="online-disconnect-time">1:00</b>
+            </div>
+            <div class="online-timer-track"><div id="online-disconnect-fill"></div></div>
+          </div>
+        </div>
         <button id="btn-mute" class="tool-btn" title="サウンド">🔊</button>
         <button id="btn-resign" class="tool-btn" title="投了">🏳</button>
         <button id="btn-rules2" class="tool-btn" title="遊び方">❔</button>
