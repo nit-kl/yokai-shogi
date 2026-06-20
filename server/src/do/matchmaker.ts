@@ -3,14 +3,24 @@ import type { Env } from '../env';
 import { loadPlayer, randomCode, send } from './common';
 
 interface Attachment { userId: string }
+interface QueueEntry { userId: string; joinedAt: number }
+
+type MatchCreationResult =
+  | { status: 'created' }
+  | { status: 'invalid'; userIds: string[] }
+  | { status: 'failed' };
 
 export class Matchmaker {
-  private queue: string[] = [];
+  private queue: QueueEntry[] = [];
   private sockets = new Map<string, WebSocket>();
 
   constructor(private state: DurableObjectState, private env: Env) {
     state.blockConcurrencyWhile(async () => {
-      this.queue = (await state.storage.get<string[]>('queue')) ?? [];
+      const stored = (await state.storage.get<(string | QueueEntry)[]>('queue')) ?? [];
+      const now = Date.now();
+      this.queue = stored.map(entry => typeof entry === 'string'
+        ? { userId: entry, joinedAt: now }
+        : entry);
     });
   }
 
@@ -37,14 +47,17 @@ export class Matchmaker {
     catch { send(ws, { t: 'error', code: 'VALIDATION', message: 'JSONが不正です' }); return; }
 
     if (msg.t === 'join_queue') {
-      if (!this.queue.includes(userId)) this.queue.push(userId);
+      if (!this.queue.some(entry => entry.userId === userId)) {
+        this.queue.push({ userId, joinedAt: Date.now() });
+        this.writeQueueMetric('queue_join', userId, 0, this.queue.length);
+      }
       await this.persistQueue();
-      send(ws, { t: 'queued', position: this.queue.indexOf(userId) + 1 });
+      send(ws, { t: 'queued', position: this.queue.findIndex(entry => entry.userId === userId) + 1 });
       await this.pairQueue();
       return;
     }
     if (msg.t === 'leave_queue') {
-      this.queue = this.queue.filter(id => id !== userId);
+      this.removeFromQueue(userId, msg.reason === 'timeout' ? 'timeout' : 'cancel');
       await this.persistQueue();
       return;
     }
@@ -70,28 +83,49 @@ export class Matchmaker {
 
   webSocketClose(ws: WebSocket): void {
     const { userId } = ws.deserializeAttachment() as Attachment;
-    if (this.sockets.get(userId) === ws) this.sockets.delete(userId);
-    this.queue = this.queue.filter(id => id !== userId);
+    const current = this.sockets.get(userId);
+    // 同一アカウントの新接続が既にある場合、古い接続のcloseで新接続をキューから消さない。
+    if (current && current !== ws) return;
+    if (current === ws) this.sockets.delete(userId);
+    this.removeFromQueue(userId, 'disconnect');
     this.state.waitUntil(this.persistQueue());
   }
 
   webSocketError(ws: WebSocket): void { this.webSocketClose(ws); }
 
   private async pairQueue(): Promise<void> {
+    this.pruneDisconnected();
     while (this.queue.length >= 2) {
-      const p = this.queue.shift()!;
-      const e = this.queue.shift()!;
-      if (!this.socketFor(p) || !this.socketFor(e) || p === e) continue;
-      await this.createMatch(p, e, 'random');
+      const [p, e] = this.queue;
+      const result = await this.createMatch(p.userId, e.userId, 'random');
+      if (result.status === 'created') {
+        this.removeFromQueue(p.userId, 'matched');
+        this.removeFromQueue(e.userId, 'matched');
+        this.pruneDisconnected();
+        continue;
+      }
+      if (result.status === 'invalid') {
+        for (const id of result.userIds) this.removeFromQueue(id, 'invalid');
+        this.pruneDisconnected();
+        continue;
+      }
+      // BattleRoomの一時障害では正常な待機者を失わせない。
+      break;
     }
     await this.persistQueue();
   }
 
-  private async createMatch(pId: string, eId: string, mode: MatchMode): Promise<void> {
+  private async createMatch(pId: string, eId: string, mode: MatchMode): Promise<MatchCreationResult> {
     const [p, e] = await Promise.all([loadPlayer(this.env.DB, pId), loadPlayer(this.env.DB, eId)]);
     const pSocket = this.socketFor(pId);
     const eSocket = this.socketFor(eId);
-    if (!p || !e || !pSocket || !eSocket) return;
+    if (!p || !e) return {
+      status: 'invalid',
+      userIds: [...(!p ? [pId] : []), ...(!e ? [eId] : [])],
+    };
+    if (!pSocket || !eSocket) return { status: 'invalid', userIds: [
+      ...(!pSocket ? [pId] : []), ...(!eSocket ? [eId] : []),
+    ] };
     const matchId = crypto.randomUUID();
     const stub = this.env.BATTLE.get(this.env.BATTLE.idFromName(matchId));
     const response = await stub.fetch('https://battle/init', {
@@ -101,7 +135,8 @@ export class Matchmaker {
     if (!response.ok) {
       const error: ServerBattleMessage = { t: 'error', code: 'MATCH_FAILED', message: '対局を開始できませんでした' };
       send(pSocket, error); send(eSocket, error);
-      return;
+      this.env.METRICS?.writeDataPoint({ blobs: ['match_failed', mode], doubles: [1] });
+      return { status: 'failed' };
     }
     this.env.METRICS?.writeDataPoint({
       blobs: ['match_found', mode],
@@ -118,6 +153,7 @@ export class Matchmaker {
       opponent: { name: p.name, rating: p.rating, bossId: p.bossId },
       formations: { p: p.formation, e: e.formation },
     });
+    return { status: 'created' };
   }
 
   private async uniqueRoomCode(): Promise<string> {
@@ -138,5 +174,33 @@ export class Matchmaker {
 
   private persistQueue(): Promise<void> {
     return this.state.storage.put('queue', this.queue);
+  }
+
+  private pruneDisconnected(): void {
+    const seen = new Set<string>();
+    for (const entry of [...this.queue]) {
+      if (seen.has(entry.userId) || !this.socketFor(entry.userId)) {
+        this.removeFromQueue(entry.userId, 'disconnect');
+      } else {
+        seen.add(entry.userId);
+      }
+    }
+  }
+
+  private removeFromQueue(userId: string, reason: string): void {
+    const entry = this.queue.find(item => item.userId === userId);
+    if (!entry) return;
+    this.queue = this.queue.filter(item => item.userId !== userId);
+    this.writeQueueMetric('queue_exit', userId, Math.max(0, Date.now() - entry.joinedAt), this.queue.length, reason);
+  }
+
+  private writeQueueMetric(
+    event: 'queue_join' | 'queue_exit', userId: string, waitMs: number, queueSize: number, reason = '',
+  ): void {
+    this.env.METRICS?.writeDataPoint({
+      blobs: [event, reason],
+      doubles: [waitMs, queueSize],
+      indexes: [userId],
+    });
   }
 }

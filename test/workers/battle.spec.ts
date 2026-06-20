@@ -171,6 +171,25 @@ describe('Matchmaker DO', () => {
     expect(pFound.matchId).toBe(eFound.matchId);
     expect(new Set([pFound.side, eFound.side])).toEqual(new Set(['p', 'e']));
   });
+
+  it('無効な待機者だけを除外し、正常な待機者同士を成立させる', async () => {
+    const missing = { ...(await createPlayer('削除済み')), userId: crypto.randomUUID() };
+    const a = await createPlayer('正常A');
+    const b = await createPlayer('正常B');
+    const missingSocket = await connectMatchmaker(missing);
+    const aSocket = await connectMatchmaker(a);
+    const bSocket = await connectMatchmaker(b);
+
+    missingSocket.ws.send(JSON.stringify({ t: 'join_queue' }));
+    aSocket.ws.send(JSON.stringify({ t: 'join_queue' }));
+    bSocket.ws.send(JSON.stringify({ t: 'join_queue' }));
+
+    const [aFound, bFound] = await Promise.all([
+      aSocket.nextType('match_found'),
+      bSocket.nextType('match_found'),
+    ]);
+    expect(aFound.matchId).toBe(bFound.matchId);
+  });
 });
 
 describe('オンライン報酬', () => {

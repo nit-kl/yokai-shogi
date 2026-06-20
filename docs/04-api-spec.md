@@ -93,7 +93,7 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 | t | payload | 説明 |
 |---|---|---|
 | join_queue | `{}` | ランダムマッチ待機 |
-| leave_queue | `{}` | 待機解除 |
+| leave_queue | `{ reason?: "cancel" | "timeout" }` | 待機解除。timeoutは20秒後のAI戦切替 |
 | create_room | `{}` | フレンドマッチ用ルーム作成 → `room_created {code}` |
 | join_room | `{ code }` | コードで参加 |
 | action | `{ kind:'move', from:{x,y}, to:{x,y} }` または `{ kind:'drop', id, to:{x,y} }` | 現エンジンのaction形式そのまま |
