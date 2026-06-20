@@ -107,7 +107,9 @@ function readProgress(): SoloProgress {
 }
 
 export function soloClearCount(stageId: string, difficulty: AIDifficulty): number {
-  return readProgress()[progressKey(stageId, difficulty)] || 0;
+  const raw = readProgress()[progressKey(stageId, difficulty)];
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
 export function recordSoloClear(stageId: string, difficulty: AIDifficulty): number {

@@ -31,6 +31,7 @@
 | 14 | [Phase 1 オーナー作業チェックリスト](14-phase1-owner-tasks.md) | 運営者が手で行う必要がある作業(コミット/本番切替/Turnstile/規約 等) |
 | 15 | [Phase 2 オーナー作業チェックリスト](15-phase2-owner-tasks.md) | staging/production反映・公開ブロッカー・監視・β完了条件 |
 | 16 | [独自ドメイン取得・移行手順](16-custom-domain.md) | Route 53で取得する`nit-games.com`のCloudflare委譲・サブドメイン運用・切替 |
+| 17 | [X広告 作成手順・運用ガイド](17-x-ads-guide.md) | 集客用X Adsの入稿設定・UTM・審査回避・運用・トラブルシュート |
 
 ## 読み方
 
