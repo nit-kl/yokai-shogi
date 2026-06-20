@@ -272,21 +272,58 @@ function renderSoloSelect() {
     sum + SOLO_DIFFICULTIES.filter(difficulty => soloClearCount(stage.id, difficulty.id) > 0).length, 0);
   $('solo-progress').textContent = `攻略記録 ${completed} / ${SOLO_STAGES.length * SOLO_DIFFICULTIES.length}`;
   const stages = $('solo-stages');
-  stages.innerHTML = '';
+  stages.replaceChildren();
   for (const stage of SOLO_STAGES) {
     const boss = YOKAI[stage.bossId];
     const card = document.createElement('button');
     card.className = 'solo-stage-card' + (stage.id === soloStageId ? ' selected' : '');
-    card.innerHTML =
-      `<img src="${boss.imgSm}" alt="${boss.name}">` +
-      `<div class="solo-stage-body"><div class="solo-stage-head"><span>${stage.trait}</span><b>${stage.name}</b></div>` +
-      `<div class="solo-stage-boss">大将 ${boss.name}</div><p>${stage.desc}</p>` +
-      `<div class="solo-stage-pieces">${stage.enemyRows.flat().filter(Boolean).map(id =>
-        `<img src="${YOKAI[id!].imgSm}" alt="${YOKAI[id!].name}" title="${YOKAI[id!].name}">`).join('')}</div>` +
-      `<div class="solo-stage-clears">${SOLO_DIFFICULTIES.map(difficulty => {
-        const count = soloClearCount(stage.id, difficulty.id);
-        return `<span class="${count ? 'cleared' : ''}">${difficulty.name}${count ? ` ${count}` : ''}</span>`;
-      }).join('')}</div></div>`;
+
+    const bossImg = document.createElement('img');
+    bossImg.src = boss.imgSm;
+    bossImg.alt = boss.name;
+    card.appendChild(bossImg);
+
+    const body = document.createElement('div');
+    body.className = 'solo-stage-body';
+
+    const head = document.createElement('div');
+    head.className = 'solo-stage-head';
+    const trait = document.createElement('span');
+    trait.textContent = stage.trait;
+    const title = document.createElement('b');
+    title.textContent = stage.name;
+    head.append(trait, title);
+
+    const bossLine = document.createElement('div');
+    bossLine.className = 'solo-stage-boss';
+    bossLine.textContent = `大将 ${boss.name}`;
+
+    const desc = document.createElement('p');
+    desc.textContent = stage.desc;
+
+    const pieces = document.createElement('div');
+    pieces.className = 'solo-stage-pieces';
+    for (const id of stage.enemyRows.flat().filter(Boolean)) {
+      const yokai = YOKAI[id!];
+      const pieceImg = document.createElement('img');
+      pieceImg.src = yokai.imgSm;
+      pieceImg.alt = yokai.name;
+      pieceImg.title = yokai.name;
+      pieces.appendChild(pieceImg);
+    }
+
+    const clears = document.createElement('div');
+    clears.className = 'solo-stage-clears';
+    for (const difficulty of SOLO_DIFFICULTIES) {
+      const count = soloClearCount(stage.id, difficulty.id);
+      const badge = document.createElement('span');
+      if (count) badge.classList.add('cleared');
+      badge.textContent = count ? `${difficulty.name} ${count}` : difficulty.name;
+      clears.appendChild(badge);
+    }
+
+    body.append(head, bossLine, desc, pieces, clears);
+    card.appendChild(body);
     card.onclick = () => {
       AudioSys.play('select');
       soloStageId = stage.id;
@@ -297,13 +334,18 @@ function renderSoloSelect() {
   }
 
   const difficulties = $('solo-difficulties');
-  difficulties.innerHTML = '';
+  difficulties.replaceChildren();
   for (const difficulty of SOLO_DIFFICULTIES) {
     const button = document.createElement('button');
     button.className = 'solo-difficulty' + (difficulty.id === soloDifficulty ? ' selected' : '');
     const count = soloClearCount(soloStageId, difficulty.id);
-    button.innerHTML = `<b>${difficulty.name}${count ? ' ✓' : ''}</b><span>${difficulty.desc}</span>` +
-      `<small>${count ? `勝利 ${count}回` : '未攻略'}</small>`;
+    const name = document.createElement('b');
+    name.textContent = count ? `${difficulty.name} ✓` : difficulty.name;
+    const info = document.createElement('span');
+    info.textContent = difficulty.desc;
+    const status = document.createElement('small');
+    status.textContent = count ? `勝利 ${count}回` : '未攻略';
+    button.append(name, info, status);
     button.onclick = () => { AudioSys.play('select'); soloDifficulty = difficulty.id; renderSoloSelect(); };
     difficulties.appendChild(button);
   }
