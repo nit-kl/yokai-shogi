@@ -632,7 +632,14 @@ function positionPiece(el: HTMLElement, x: number, y: number) {
 
 function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement {
   const el = document.createElement('div');
-  el.className = `piece owner-${pc.owner}` + (YOKAI[pc.id].type === 'boss' ? ' boss-piece' : '');
+  el.className = `piece owner-${pc.owner}`
+    + (YOKAI[pc.id].type === 'boss' ? ' boss-piece' : '')
+    + (YOKAI[pc.id].variantOf ? ' special-piece' : '');
+  const specialColors = YOKAI[pc.id].summonColors;
+  if (specialColors) {
+    el.style.setProperty('--special-light', specialColors[0]);
+    el.style.setProperty('--special-primary', specialColors[1]);
+  }
   el.dataset.uid = String(pc.uid);
   el.innerHTML = `<div class="piece-base"></div><img src="${YOKAI[pc.id].img}" alt="${YOKAI[pc.id].name}" draggable="false">`;
   $('board-pieces').appendChild(el);

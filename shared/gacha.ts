@@ -20,6 +20,9 @@ export interface GachaDraw {
   yoryokuGained: number; // 被り変換の合計
 }
 
+/** SSR 4%の内数。異装全体で0.5%。 */
+export const SPECIAL_VARIANT_WEIGHT = 0.5;
+
 /* レアリティ抽選(重み: N40 / R40 / SR16 / SSR4) */
 export function rollRarity(rand: () => number = Math.random): Rarity {
   const total = Object.values(RARITY_INFO).reduce((a, r) => a + r.weight, 0);
@@ -45,7 +48,12 @@ export function drawGacha(count: number, owned: ReadonlySet<string>, rand: () =>
   let yoryokuGained = 0;
   const results = rarities.map((rarity): GachaResult => {
     const ids = GACHA_POOL.filter(id => YOKAI[id].rarity === rarity);
-    const id = ids[Math.floor(rand() * ids.length)];
+    const variants = ids.filter(id => YOKAI[id].variantOf);
+    const regular = ids.filter(id => !YOKAI[id].variantOf);
+    const useVariant = rarity === 'SSR' && variants.length > 0
+      && rand() < SPECIAL_VARIANT_WEIGHT / RARITY_INFO.SSR.weight;
+    const candidates = useVariant ? variants : regular;
+    const id = candidates[Math.floor(rand() * candidates.length)];
     const isNew = !have.has(id);
     let yoryoku = 0;
     if (isNew) {
@@ -68,8 +76,11 @@ export function gachaRates() {
     yokai: GACHA_POOL.filter(id => YOKAI[id].rarity === r).map(id => ({
       id,
       name: YOKAI[id].name,
-      // レアリティ内は均等抽選
-      rate: RARITY_INFO[r].weight / 100 / GACHA_POOL.filter(x => YOKAI[x].rarity === r).length,
+      // SSR異装0.5%を先に確保し、残りは各レアリティ内で均等抽選
+      rate: YOKAI[id].variantOf
+        ? SPECIAL_VARIANT_WEIGHT / 100 / GACHA_POOL.filter(x => YOKAI[x].rarity === r && YOKAI[x].variantOf).length
+        : (RARITY_INFO[r].weight - (r === 'SSR' ? SPECIAL_VARIANT_WEIGHT : 0)) / 100
+          / GACHA_POOL.filter(x => YOKAI[x].rarity === r && !YOKAI[x].variantOf).length,
     })),
   }));
   return {

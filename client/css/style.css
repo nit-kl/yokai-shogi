@@ -633,6 +633,12 @@ html, body {
 }
 .piece.owner-p .piece-base { background: radial-gradient(ellipse, rgba(88, 182, 255, 0.65) 0%, rgba(88,182,255,0.18) 55%, transparent 72%); }
 .piece.owner-e .piece-base { background: radial-gradient(ellipse, rgba(255, 80, 80, 0.6) 0%, rgba(255,80,80,0.16) 55%, transparent 72%); }
+.piece.special-piece .piece-base {
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--special-light, #fff2cd) 80%, transparent) 0%, color-mix(in srgb, var(--special-primary, #e32f3f) 42%, transparent) 48%, transparent 74%);
+  animation: specialPieceAura 1.4s ease-in-out infinite alternate;
+}
+.piece.special-piece > img { filter: drop-shadow(0 0 7px var(--special-primary, #e32f3f)) drop-shadow(0 0 3px var(--special-light, #fff2cd)); }
+@keyframes specialPieceAura { to { transform: scale(1.14); filter: brightness(1.45); } }
 .piece img {
   position: absolute; inset: 3%;
   width: 94%; height: 94%;
@@ -1229,9 +1235,10 @@ html, body {
   text-shadow: 0 0 18px #c88aff;
   animation: summonTextPulse 0.7s ease-in-out infinite alternate;
 }
-#gacha-summon.finish-r, #gacha-summon.finish-sr, #gacha-summon.finish-ssr { animation: summonFinish 0.45s ease-out forwards; }
+#gacha-summon.finish-r, #gacha-summon.finish-sr, #gacha-summon.finish-ssr, #gacha-summon.finish-special { animation: summonFinish 0.45s ease-out forwards; }
 #gacha-summon.finish-sr { background: #c88aff; }
 #gacha-summon.finish-ssr { background: #fff6d8; }
+#gacha-summon.finish-special { background: #e32f3f; }
 @keyframes summonFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes summonRays { to { transform: rotate(360deg); } }
 @keyframes summonCircle {
@@ -1263,8 +1270,12 @@ html, body {
 #gacha-result.result-ssr {
   background: radial-gradient(circle at 50% 45%, rgba(180,120,20,0.72), rgba(5,3,12,0.94) 64%);
 }
+.result-special {
+  background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--special-primary, #e32f3f) 58%, #12040a), rgba(3,2,8,0.97) 66%) !important;
+}
 .gacha-result-rays { opacity: 0.12; animation-duration: 28s; pointer-events: none; }
 .result-ssr .gacha-result-rays { opacity: 0.28; background: repeating-conic-gradient(from 0deg, rgba(255,210,74,0.5) 0 3deg, transparent 3deg 12deg); }
+.result-special .gacha-result-rays { opacity: 0.38; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--special-primary, #e32f3f) 62%, transparent) 0 2deg, transparent 2deg 9deg); animation-duration: 18s; }
 #gacha-result-title {
   position: relative;
   color: #ffe9a0;
@@ -1277,6 +1288,11 @@ html, body {
   color: #fff6d8;
   text-shadow: 0 0 12px #ffd24a, 0 0 34px #ff9a3c;
   animation: resultTitleIn 0.65s cubic-bezier(0.2,1.4,0.4,1), ssrTitleGlow 1s ease-in-out infinite alternate;
+}
+.result-special #gacha-result-title {
+  color: var(--special-light, #fff8df);
+  text-shadow: 0 0 10px #fff, 0 0 28px var(--special-primary, #e32f3f), 0 0 52px var(--special-accent, #d9b75c);
+  animation: resultTitleIn 0.65s cubic-bezier(0.2,1.4,0.4,1), ssrTitleGlow 0.75s ease-in-out infinite alternate;
 }
 @keyframes resultTitleIn { from { opacity: 0; transform: scale(2.5); } to { opacity: 1; transform: scale(1); } }
 @keyframes ssrTitleGlow { to { filter: brightness(1.6); transform: scale(1.04); } }
@@ -1319,6 +1335,15 @@ html, body {
   background: repeating-conic-gradient(from 0deg, rgba(255,210,74,0.8) 0 4deg, transparent 4deg 18deg);
   filter: blur(5px);
   animation: summonSpin 4s linear infinite;
+}
+.gacha-card-special {
+  --rc: var(--special-light, #fff8df) !important;
+  background: radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--special-primary, #e32f3f) 46%, #1b0c12), #10090d 70%);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--special-primary, #e32f3f) 90%, transparent), 0 0 45px color-mix(in srgb, var(--special-accent, #d9b75c) 50%, transparent);
+}
+.gacha-card-special::before {
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--special-primary, #e32f3f) 92%, transparent) 0 3deg, transparent 3deg 13deg);
+  animation-duration: 2.8s;
 }
 @keyframes ssrGlow {
   0%, 100% { box-shadow: 0 0 16px rgba(255,210,74,0.5), 0 6px 18px rgba(0,0,0,0.6); }
