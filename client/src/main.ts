@@ -40,9 +40,11 @@ let onlineReward = 0;
 let onlineSeq = 0;
 const ONLINE_TURN_MS = 60_000;
 const ONLINE_DISCONNECT_MS = 60_000;
+const ONLINE_AI_OFFER_MS = 20_000;
 let onlineTurnDeadline = 0;
 let onlineDisconnectDeadline = 0;
 let onlineTimerId: ReturnType<typeof setInterval> | null = null;
+let onlineQueueTimerId: ReturnType<typeof setTimeout> | null = null;
 let soloStageId = SOLO_STAGES[0].id;
 let soloDifficulty: AIDifficulty = 'normal';
 let activeSoloStage: SoloStage = soloStage(soloStageId);
@@ -211,7 +213,13 @@ function wireButtons() {
   $('btn-video-short').onclick = () => playVideo('LClFmrqygTQ', 'btn-video-short');
   $('btn-online').onclick = () => { void openOnline(); };
   $('btn-online-close').onclick = () => closeOnlineModal();
-  $('btn-online-random').onclick = () => { connectMatchmaker(); online?.send({ t: 'join_queue' }); $('online-message').textContent = '対戦相手を探しています…'; };
+  $('btn-online-random').onclick = () => {
+    connectMatchmaker();
+    online?.send({ t: 'join_queue' });
+    $('online-message').textContent = '対戦相手を探しています…';
+    startOnlineQueueTimer();
+  };
+  $('btn-online-ai').onclick = () => switchQueueToAi();
   $('btn-online-create').onclick = () => { connectMatchmaker(); online?.send({ t: 'create_room' }); };
   $('btn-online-join').onclick = () => {
     const code = $<HTMLInputElement>('online-code-input').value.trim().toUpperCase();
@@ -354,6 +362,7 @@ function renderSoloSelect() {
 async function openOnline() {
   AudioSys.play('click');
   $('online-room-code').classList.add('hidden');
+  clearOnlineQueueTimer();
   $('modal-online').classList.remove('hidden');
   if (!Meta.online) {
     $('online-message').textContent = 'オンラインへ接続しています…';
@@ -396,6 +405,8 @@ function closeVideos() {
 }
 
 function closeOnlineModal() {
+  online?.send({ t: 'leave_queue', reason: 'cancel' });
+  clearOnlineQueueTimer();
   online?.close();
   online = null;
   $('modal-online').classList.add('hidden');
@@ -433,6 +444,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     $('online-message').textContent = message.message;
     busy = false;
   } else if (message.t === 'match_found') {
+    clearOnlineQueueTimer();
     onlineSide = message.side;
     onlineSeq = 0;
     onlineMatch = {
@@ -479,6 +491,32 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     stopOnlineTimer();
     showResult();
   }
+}
+
+function startOnlineQueueTimer(): void {
+  clearOnlineQueueTimer();
+  onlineQueueTimerId = setTimeout(() => {
+    onlineQueueTimerId = null;
+    $('online-message').textContent = 'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。';
+    $('btn-online-ai').classList.remove('hidden');
+  }, ONLINE_AI_OFFER_MS);
+}
+
+function clearOnlineQueueTimer(): void {
+  if (onlineQueueTimerId !== null) clearTimeout(onlineQueueTimerId);
+  onlineQueueTimerId = null;
+  $('btn-online-ai').classList.add('hidden');
+}
+
+function switchQueueToAi(): void {
+  online?.send({ t: 'leave_queue', reason: 'timeout' });
+  clearOnlineQueueTimer();
+  online?.close();
+  online = null;
+  $('modal-online').classList.add('hidden');
+  soloMode = 'single';
+  soloDifficulty = 'normal';
+  startBattle();
 }
 
 function formatCountdown(ms: number): string {

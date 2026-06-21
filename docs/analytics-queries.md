@@ -8,8 +8,48 @@
 |---|---|---|---|---|
 | `match_found` | マッチ成立 | mode (`random` / `friend`) | `[1]` | matchId |
 | `match_end` | 対局終了 | mode, reason, winner | `[durationMs, actionCount]` | matchId |
+| `match_failed` | 対局ルーム初期化失敗 | mode | `[1]` | なし |
+| `queue_join` | ランダム待機開始 | なし | `[0, queueSize]` | userId |
+| `queue_exit` | ランダム待機終了 | reason | `[waitMs, queueSize]` | userId |
 
 Cloudflareダッシュボード → Analytics Engine → SQL で実行する。
+
+`queue_exit` の reason は `matched`（成立）、`cancel`（手動取消）、`timeout`（AI切替）、
+`disconnect`（切断）、`invalid`（ユーザーデータ不正）のいずれか。
+
+## キュー参加・成立率・待機時間
+
+```sql
+SELECT
+  toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
+  COUNT_IF(blob1 = 'queue_join') AS joins,
+  COUNT_IF(blob1 = 'queue_exit' AND blob2 = 'matched') AS matched_users,
+  ROUND(100.0 * matched_users / NULLIF(joins, 0), 1) AS match_rate_pct,
+  COUNT_IF(blob1 = 'queue_exit' AND blob2 = 'matched' AND double1 <= 30000) AS matched_within_30s,
+  ROUND(100.0 * matched_within_30s / NULLIF(matched_users, 0), 1) AS matched_within_30s_pct,
+  ROUND(quantile(0.5)(double1) FILTER (WHERE blob1 = 'queue_exit' AND blob2 = 'matched') / 1000.0, 1)
+    AS matched_wait_p50_sec,
+  ROUND(quantile(0.9)(double1) FILTER (WHERE blob1 = 'queue_exit' AND blob2 = 'matched') / 1000.0, 1)
+    AS matched_wait_p90_sec
+FROM yokai_shogi_metrics_production
+WHERE blob1 IN ('queue_join', 'queue_exit')
+GROUP BY day
+ORDER BY day DESC;
+```
+
+## キュー退出理由
+
+```sql
+SELECT
+  toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
+  blob2 AS reason,
+  COUNT(*) AS users,
+  ROUND(AVG(double1) / 1000.0, 1) AS avg_wait_sec
+FROM yokai_shogi_metrics_production
+WHERE blob1 = 'queue_exit'
+GROUP BY day, reason
+ORDER BY day DESC, users DESC;
+```
 
 ## 日別マッチ成立数
 

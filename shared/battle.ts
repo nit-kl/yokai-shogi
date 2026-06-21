@@ -17,7 +17,7 @@ export interface BattlePlayer {
 
 export type ClientBattleMessage =
   | { t: 'join_queue' }
-  | { t: 'leave_queue' }
+  | { t: 'leave_queue'; reason?: 'cancel' | 'timeout' }
   | { t: 'create_room' }
   | { t: 'join_room'; code: string }
   | { t: 'action'; action: Action }
