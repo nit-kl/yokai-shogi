@@ -1100,8 +1100,9 @@ function renderResultStats() {
 function buildPieceCatalog() {
   const wrap = $('pieces-list');
   const order = [
-    'kyubi', 'shuten', 'kooni', 'nekomata', 'ittan', 'nue', 'kappa', 'nurikabe', 'tengu', 'rokuro',
-    'tamamo', 'nurarihyon', 'ibaraki', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
+    'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
+    'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
+    'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
     'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'zashiki', 'tanuki', 'onibi',
   ];
   for (const id of order) {
@@ -1109,12 +1110,16 @@ function buildPieceCatalog() {
     const ti = TYPE_INFO[def.type];
     const ri = RARITY_INFO[def.rarity];
     const row = document.createElement('div');
-    row.className = `piece-card ${ri.cls}`;
+    row.className = `piece-card ${ri.cls}${def.variantOf ? ' special-catalog-card' : ''}`;
+    if (def.summonColors) {
+      row.style.setProperty('--special-light', def.summonColors[0]);
+      row.style.setProperty('--special-primary', def.summonColors[1]);
+    }
     row.innerHTML =
       `<img src="${def.imgSm}" alt="${def.name}">` +
       `<div class="rp-body">` +
       `<div class="rp-name"><span class="type-chip ${ti.cls}">${ti.label}</span>` +
-      `<span class="rarity-chip ${ri.cls}">${ri.label}</span> ${def.name} <b>ATK ${def.atk}</b>` +
+      `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span> ${def.name} <b>ATK ${def.atk}</b>` +
       `</div>` +
       `<div class="rp-move">${def.moveText}</div>` +
       `<div class="rp-move">【${def.skill.name}】${def.skill.desc}</div>` +

@@ -1059,6 +1059,14 @@ html, body {
 .piece-card.r-r { --rc: #58b6ff; }
 .piece-card.r-sr { --rc: #c88aff; }
 .piece-card.r-ssr { --rc: #ffd24a; }
+.piece-card.special-catalog-card {
+  border-color: var(--special-light, #fff8df);
+  background: linear-gradient(110deg, color-mix(in srgb, var(--special-primary, #e32f3f) 24%, #181023), #100c18 72%);
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--special-primary, #e32f3f) 18%, transparent), 0 0 12px color-mix(in srgb, var(--special-primary, #e32f3f) 28%, transparent);
+}
+.piece-card.special-catalog-card > img {
+  filter: drop-shadow(0 0 5px var(--special-primary, #e32f3f));
+}
 .piece-card > img { width: 64px; height: 64px; object-fit: contain; flex: 0 0 auto; }
 .piece-card .rp-body { min-width: 0; font-size: 0.78rem; line-height: 1.55; }
 .piece-card .rp-name { color: var(--paper); font-family: "Yu Mincho", serif; letter-spacing: 0.06em; }
