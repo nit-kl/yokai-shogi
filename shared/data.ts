@@ -45,6 +45,9 @@ export interface YokaiDef {
   moves: MoveSet;
   promoted?: MoveSet;
   dropLimit?: number; // 相手陣最奥 n 段には打てない
+  variantOf?: string;
+  summonTitle?: string;
+  summonColors?: readonly [string, string, string];
 }
 
 export const COLS = 5;
@@ -320,6 +323,60 @@ export const YOKAI: Record<string, YokaiDef> = {
 };
 
 /* ガチャ排出対象(全妖怪) */
+/* ---------- SSR異装（性能は通常版と同一） ---------- */
+YOKAI.kyubi_eclipse = {
+  ...YOKAI.kyubi,
+  id: 'kyubi_eclipse',
+  name: '月蝕・九尾の狐',
+  gachaOnly: true,
+  img: img('kyubi-eclipse'),
+  imgSm: imgSm('kyubi-eclipse'),
+  variantOf: 'kyubi',
+  summonTitle: '神妖 顕現',
+  summonColors: ['#fff8df', '#e32f3f', '#d9b75c'],
+};
+YOKAI.shuten_kishin = {
+  ...YOKAI.shuten,
+  id: 'shuten_kishin',
+  name: '鬼神・酒呑童子',
+  gachaOnly: true,
+  img: img('shuten-kishin'),
+  imgSm: imgSm('shuten-kishin'),
+  variantOf: 'shuten',
+  summonTitle: '鬼神 覚醒',
+  summonColors: ['#ffdbc2', '#c51c2b', '#8d47d6'],
+};
+YOKAI.ibaraki_rashomon = {
+  ...YOKAI.ibaraki,
+  id: 'ibaraki_rashomon',
+  name: '羅生門・茨木童子',
+  img: img('ibaraki-rashomon'),
+  imgSm: imgSm('ibaraki-rashomon'),
+  variantOf: 'ibaraki',
+  summonTitle: '羅生門 顕現',
+  summonColors: ['#ff555f', '#8d47d6', '#211326'],
+};
+YOKAI.tamamo_keikoku = {
+  ...YOKAI.tamamo,
+  id: 'tamamo_keikoku',
+  name: '傾国・玉藻前',
+  img: img('tamamo-keikoku'),
+  imgSm: imgSm('tamamo-keikoku'),
+  variantOf: 'tamamo',
+  summonTitle: '傾国 降臨',
+  summonColors: ['#fff8df', '#d9b75c', '#b21f32'],
+};
+YOKAI.nurarihyon_hyakki = {
+  ...YOKAI.nurarihyon,
+  id: 'nurarihyon_hyakki',
+  name: '百鬼夜行・ぬらりひょん',
+  img: img('nurarihyon-hyakki'),
+  imgSm: imgSm('nurarihyon-hyakki'),
+  variantOf: 'nurarihyon',
+  summonTitle: '百鬼夜行 開幕',
+  summonColors: ['#dbe7ff', '#6157a8', '#d98945'],
+};
+
 export const GACHA_POOL: string[] = Object.keys(YOKAI);
 
 /* 初回オンボーディングで選べる大将(ぬらりひょんはガチャでも排出) */

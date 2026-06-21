@@ -227,16 +227,22 @@ export const MenuUI = {
 
   finishSummon(results: GachaResult[]) {
     const summon = $('gacha-summon');
-    const rarity = results.some(r => r.rarity === 'SSR') ? 'ssr'
+    const specialDef = results.map(r => YOKAI[r.id]).find(def => def.variantOf);
+    const hasSpecial = !!specialDef;
+    const specialColors = specialDef?.summonColors ? [...specialDef.summonColors] : ['#fff8df', '#e32f3f', '#d9b75c'];
+    const rarity = hasSpecial ? 'special'
+      : results.some(r => r.rarity === 'SSR') ? 'ssr'
       : results.some(r => r.rarity === 'SR') ? 'sr'
       : results.some(r => r.rarity === 'R') ? 'r' : 'n';
     summon.classList.add(`finish-${rarity}`);
-    const colors = rarity === 'ssr' ? ['#ffd24a', '#fff6d8', '#ff9a3c']
+    const colors = rarity === 'special' ? specialColors
+      : rarity === 'ssr' ? ['#ffd24a', '#fff6d8', '#ff9a3c']
       : rarity === 'sr' ? ['#c88aff', '#e8d0ff', '#6bd6ff']
       : ['#58b6ff', '#d8f0ff', '#9aa0b5'];
-    FX.burst(innerWidth / 2, innerHeight / 2, colors, rarity === 'ssr' ? 100 : 64, rarity === 'ssr' ? 9 : 7);
+    FX.burst(innerWidth / 2, innerHeight / 2, colors, hasSpecial ? 150 : rarity === 'ssr' ? 100 : 64, hasSpecial ? 12 : rarity === 'ssr' ? 9 : 7);
     FX.ring(innerWidth / 2, innerHeight / 2, colors[0], 36, 160);
-    AudioSys.play(rarity === 'ssr' ? 'win' : 'promote');
+    if (hasSpecial) setTimeout(() => FX.ring(innerWidth / 2, innerHeight / 2, colors[1], 70, 260), 120);
+    AudioSys.play(rarity === 'ssr' || hasSpecial ? 'win' : 'promote');
     setTimeout(() => summon.classList.add('hidden'), 420);
   },
 
@@ -245,18 +251,31 @@ export const MenuUI = {
     wrap.innerHTML = '';
     wrap.classList.toggle('many', results.length > 1);
     const result = $('gacha-result');
-    result.className = results.some(r => r.rarity === 'SSR') ? 'result-ssr'
+    const special = results.find(r => YOKAI[r.id].variantOf);
+    const specialColors = special && YOKAI[special.id].summonColors
+      ? [...YOKAI[special.id].summonColors!] : ['#fff8df', '#e32f3f', '#d9b75c'];
+    result.style.setProperty('--special-light', specialColors[0]);
+    result.style.setProperty('--special-primary', specialColors[1]);
+    result.style.setProperty('--special-accent', specialColors[2]);
+    result.className = special ? 'result-special'
+      : results.some(r => r.rarity === 'SSR') ? 'result-ssr'
       : results.some(r => r.rarity === 'SR') ? 'result-sr' : 'result-normal';
-    $('gacha-result-title').textContent = results.some(r => r.rarity === 'SSR')
+    $('gacha-result-title').textContent = special ? (YOKAI[special.id].summonTitle || '神妖 顕現')
+      : results.some(r => r.rarity === 'SSR')
       ? '大妖怪 降臨' : results.some(r => r.rarity === 'SR') ? '希少妖怪 出現' : '召喚結果';
     results.forEach((r, i) => {
       const def = YOKAI[r.id];
       const ri = RARITY_INFO[r.rarity];
       const card = document.createElement('div');
-      card.className = `gacha-card ${ri.cls}`;
+      card.className = `gacha-card ${ri.cls}${def.variantOf ? ' gacha-card-special' : ''}`;
+      if (def.summonColors) {
+        card.style.setProperty('--special-light', def.summonColors[0]);
+        card.style.setProperty('--special-primary', def.summonColors[1]);
+        card.style.setProperty('--special-accent', def.summonColors[2]);
+      }
       card.style.animationDelay = `${i * 0.13}s`;
       card.innerHTML =
-        `<div class="gc-rarity">${ri.label}</div>` +
+        `<div class="gc-rarity">${def.variantOf ? `${ri.label} 異装` : ri.label}</div>` +
         `<img src="${def.img}" alt="${def.name}" draggable="false">` +
         `<div class="gc-name">${def.name}</div>` +
         (r.isNew ? `<div class="gc-tag gc-new">NEW!</div>`
@@ -264,9 +283,10 @@ export const MenuUI = {
       wrap.appendChild(card);
       setTimeout(() => {
         const rect = card.getBoundingClientRect();
-        const colors = r.rarity === 'SSR' ? ['#ffd24a', '#fff6d8', '#ff9a3c']
+        const colors = def.summonColors ? [...def.summonColors]
+          : r.rarity === 'SSR' ? ['#ffd24a', '#fff6d8', '#ff9a3c']
           : r.rarity === 'SR' ? ['#c88aff', '#e8d0ff'] : ['#58b6ff', '#9aa0b5'];
-        FX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, colors, r.rarity === 'SSR' ? 34 : 14, 3.5);
+        FX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, colors, def.variantOf ? 64 : r.rarity === 'SSR' ? 34 : 14, def.variantOf ? 5 : 3.5);
       }, i * 130 + 180);
     });
     result.classList.remove('hidden');

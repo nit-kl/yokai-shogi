@@ -28,6 +28,18 @@ test('shared/gacha: レアリティ抽選の重み境界', () => {
   expect(rollRarity(() => 0.999), '上限はSSR').toBe('SSR');
 });
 
+test('shared/gacha: SSR異装はSSR内の0.5%枠から抽選される', () => {
+  const values = [0.999, 0, 0];
+  const draw = drawGacha(1, initialOwned, () => values.shift() ?? 0);
+  expect(draw.results[0]).toMatchObject({ id: 'kyubi_eclipse', rarity: 'SSR', isNew: true });
+  const specialRates = gachaRates().rates
+    .flatMap(r => r.yokai)
+    .filter(y => YOKAI[y.id].variantOf)
+    .map(y => y.rate);
+  expect(specialRates).toHaveLength(5);
+  expect(specialRates.reduce((sum, rate) => sum + rate, 0)).toBeCloseTo(0.005);
+});
+
 test('shared/gacha: 10連はSR以上1枠確定(全N乱数でも)', () => {
   const draw = drawGacha(10, initialOwned, () => 0.0001);
   expect(draw.results).toHaveLength(10);
