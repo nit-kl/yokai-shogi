@@ -26,6 +26,7 @@ import { fetchApiStatus } from './status';
 import { renderTitleBosses } from './title';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
+import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 
@@ -71,6 +72,7 @@ const COLORS_E = ['#ff5d5d', '#c84aff', '#ffd0d0', '#ff9a8a'];
 
 /* ============================== 起動 ============================== */
 window.addEventListener('DOMContentLoaded', () => {
+  trackLandingEventOnce('app_loaded', 'app_loaded');
   void initSentry();
   FX.init();
   buildBoardCells();
@@ -190,11 +192,13 @@ function preloadImages(): Promise<void> {
 function enterTitle() {
   stopOnlineTimer();
   if (!Meta.isOnboardingDone()) {
+    trackLandingEventOnce('onboarding_start', 'onboarding_start', { online: Meta.online });
     void Onboarding.start();
     return;
   }
   renderTitleBosses(Meta.bossId());
   showScreen('screen-title');
+  trackLandingEvent('title_view', { online: Meta.online, onlineAvailable: Meta.onlineAvailable });
   FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.05);
   AudioSys.init();
   AudioSys.startTitleBgm();
@@ -206,16 +210,27 @@ function enterTitle() {
 
 /* ---------- ボタン類 ---------- */
 function wireButtons() {
-  $('btn-start').onclick = () => { AudioSys.init(); AudioSys.play('click'); openSolo(); };
+  $('btn-start').onclick = () => {
+    trackLandingEvent('solo_cta_click', { source: 'title' });
+    AudioSys.init();
+    AudioSys.play('click');
+    openSolo();
+  };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-solo-battle').onclick = () => { AudioSys.play('click'); soloStreak = 0; startBattle(); };
   $('btn-solo-single').onclick = () => { AudioSys.play('select'); soloMode = 'single'; renderSoloSelect(); };
   $('btn-solo-streak').onclick = () => { AudioSys.play('select'); soloMode = 'streak'; soloStageId = 'hyakki'; renderSoloSelect(); };
-  $('btn-videos').onclick = () => openVideos();
+  $('btn-videos').onclick = () => {
+    trackLandingEvent('video_cta_click', { source: 'title' });
+    openVideos();
+  };
   $('btn-videos-close').onclick = () => closeVideos();
   $('btn-video-trailer').onclick = () => playVideo('EjzXcCEKYSI', 'btn-video-trailer');
   $('btn-video-short').onclick = () => playVideo('LClFmrqygTQ', 'btn-video-short');
-  $('btn-online').onclick = () => { void openOnline(); };
+  $('btn-online').onclick = () => {
+    trackLandingEvent('online_cta_click', { source: 'title' });
+    void openOnline();
+  };
   $('btn-online-close').onclick = () => closeOnlineModal();
   $('btn-online-random').onclick = () => {
     connectMatchmaker();
@@ -582,6 +597,7 @@ function renderOnlineTimers(): void {
 }
 
 function startOnlineBattle() {
+  trackLandingEvent('online_battle_start');
   busy = true;
   sel = null;
   pieceEls.forEach(el => el.remove());
@@ -798,6 +814,11 @@ function onHandClick(id: string) {
 
 /* ============================== 対局進行 ============================== */
 function startBattle() {
+  trackLandingEvent('solo_battle_start', {
+    mode: soloMode,
+    stage: soloMode === 'streak' ? 'hyakki' : soloStageId,
+    difficulty: soloDifficulty,
+  });
   const stage = soloBattleStage(soloMode === 'streak' ? 'hyakki' : soloStageId);
   activeSoloStage = stage;
   soloClearRecorded = false;
@@ -1029,6 +1050,11 @@ function showResult() {
   AudioSys.stopBgm();
   const draw = onlineEndReason === 'draw';
   const win = G!.winner === 'p';
+  trackLandingEvent('result_view', {
+    online: !!onlineSide,
+    result: draw ? 'draw' : win ? 'win' : 'lose',
+    reason: onlineEndReason || G!.reason || null,
+  });
   const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS) : activeSoloStage.bossId;
   const enemyBossName = YOKAI[enemyBoss].name;
   $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : enemyBoss].img;
