@@ -9,6 +9,8 @@ import { FX } from './effects';
 import { Meta } from './meta';
 import type { GachaResult } from './meta';
 import { Onboarding } from './onboarding';
+import { SupportUI } from './support';
+import { RegistrationStatsUI } from './registration-stats';
 
 export const MenuUI = {
   rows: null as unknown as (string | null)[][], // 編成画面の作業用コピー [前段, 最奥段]
@@ -35,6 +37,7 @@ export const MenuUI = {
     $('btn-form-save').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     this.initLinkCode();
     this.initProfile();
+    SupportUI.init();
   },
 
   /* ============================== プロフィール ============================== */
@@ -181,6 +184,7 @@ export const MenuUI = {
 
   /* ============================== ガチャ ============================== */
   openGacha() {
+    RegistrationStatsUI.stopPolling();
     this.refreshCurrency();
     $('gacha-result').classList.add('hidden');
     showScreen('screen-gacha');
@@ -303,10 +307,12 @@ export const MenuUI = {
 
   /* ============================== 編成 ============================== */
   openFormation() {
+    RegistrationStatsUI.stopPolling();
     this.rows = Meta.formationRows();
     this.benchSel = null;
     $('form-error').textContent = '';
     $('form-info').innerHTML = '配置する妖怪を選ぼう(大将は1体必須)';
+    this.ensureBossPlaced();
     showScreen('screen-formation');
     FX.setAmbient(['rgba(88,182,255,0.45)', 'rgba(232,196,106,0.4)'], 0.04);
     this.renderFormation();
@@ -314,6 +320,34 @@ export const MenuUI = {
 
   placedIds(): Set<string> {
     return new Set(this.rows.flat().filter((id): id is string => !!id));
+  },
+
+  bossIds(): string[] {
+    return this.rows.flat().filter((id): id is string => !!id && YOKAI[id].type === 'boss');
+  },
+
+  firstOwnedBoss(): string | null {
+    return Meta.ownedList().find(id => YOKAI[id].type === 'boss') || null;
+  },
+
+  ensureBossPlaced() {
+    if (this.bossIds().length > 0) return;
+    const boss = this.firstOwnedBoss();
+    if (!boss) return;
+    this.rows[1][Math.floor(COLS / 2)] = boss;
+  },
+
+  removePlaced(id: string) {
+    for (const row of this.rows) {
+      const i = row.indexOf(id);
+      if (i >= 0) row[i] = null;
+    }
+  },
+
+  updateFormationStatus() {
+    const err = Meta.validateFormation(this.rows);
+    $('form-error').textContent = err ? `⚠ ${err}` : '';
+    $<HTMLButtonElement>('btn-form-save').disabled = !!err;
   },
 
   renderFormation() {
@@ -352,6 +386,7 @@ export const MenuUI = {
       chip.onclick = () => this.onBenchClick(id);
       bench.appendChild(chip);
     }
+    this.updateFormationStatus();
   },
 
   showFormInfo(id: string) {
@@ -367,12 +402,14 @@ export const MenuUI = {
     AudioSys.play('select');
     this.showFormInfo(id);
     if (this.placedIds().has(id)) {
-      /* 配置済みをタップ → 盤から外す */
-      for (const row of this.rows) {
-        const i = row.indexOf(id);
-        if (i >= 0) row[i] = null;
+      if (YOKAI[id].type === 'boss') {
+        /* 大将は必須なので、控えタップでは外さず「移動対象」として扱う */
+        this.benchSel = (this.benchSel === id) ? null : id;
+      } else {
+        /* 配置済みをタップ → 盤から外す */
+        this.removePlaced(id);
+        this.benchSel = null;
       }
-      this.benchSel = null;
     } else {
       this.benchSel = (this.benchSel === id) ? null : id;
     }
@@ -382,13 +419,30 @@ export const MenuUI = {
   onCellClick(ry: number, x: number) {
     const cur = this.rows[ry][x];
     if (this.benchSel) {
+      const selected = this.benchSel;
+      const selectedIsBoss = YOKAI[selected].type === 'boss';
+      const replacingOnlyBoss = cur && YOKAI[cur].type === 'boss' && this.bossIds().length <= 1 && !selectedIsBoss;
+      if (replacingOnlyBoss) {
+        $('form-error').textContent = '⚠ 大将は必須です。大将以外は別のマスに配置してください';
+        return;
+      }
       /* 選択中の妖怪を配置(既存駒は控えに戻る) */
-      this.rows[ry][x] = this.benchSel;
+      if (selectedIsBoss) {
+        for (const bossId of this.bossIds()) this.removePlaced(bossId);
+      } else {
+        this.removePlaced(selected);
+      }
+      this.rows[ry][x] = selected;
       this.benchSel = null;
       AudioSys.play('drop');
     } else if (cur) {
       this.showFormInfo(cur);
-      this.rows[ry][x] = null; // タップで外す
+      if (YOKAI[cur].type === 'boss') {
+        /* うっかり大将を外して詰まらないよう、盤上タップでは移動選択にする */
+        this.benchSel = cur;
+      } else {
+        this.rows[ry][x] = null; // タップで外す
+      }
       AudioSys.play('select');
     }
     this.renderFormation();
@@ -396,6 +450,7 @@ export const MenuUI = {
 
   async saveFormation() {
     /* 即時にローカル検証してから保存(オフライン版・API版とも setFormation 内で再検証) */
+    this.ensureBossPlaced();
     const localErr = Meta.validateFormation(this.rows);
     if (localErr) { $('form-error').textContent = `⚠ ${localErr}`; return; }
     let err: string | null = null;

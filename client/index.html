@@ -59,6 +59,7 @@
         <button id="btn-start" class="btn title-action-primary"><small>ひとりで挑む</small>ソロ対戦</button>
         <button id="btn-online" class="btn title-action-online hidden"><small>猛者と競う</small>オンライン対戦</button>
       </div>
+      <p id="title-registration-stats" class="title-registration-stats hidden">登録プレイヤー <b id="title-registration-count">0</b> 人</p>
       <button id="btn-videos" class="title-video-btn"><b>映</b><span><small>ゲーム紹介動画</small>公式映像を見る</span></button>
       <div class="title-menu-label"><span>支度と資料</span></div>
       <div class="title-secondary-actions">
@@ -72,7 +73,7 @@
       <span class="title-foot-links">
         <a href="/legal/terms.html" target="_blank" rel="noopener noreferrer">利用規約</a>
         <a href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">プライバシー</a>
-        <a href="https://x.com/nit_zunda_dev" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
+        <button type="button" id="btn-support" class="title-foot-btn">お問い合わせ</button>
         <button id="btn-link" class="title-link-btn hidden">データ引き継ぎ</button>
       </span>
     </div>
@@ -242,6 +243,7 @@
         <button id="btn-mute" class="tool-btn" title="サウンド">🔊</button>
         <button id="btn-resign" class="tool-btn" title="投了">🏳</button>
         <button id="btn-rules2" class="tool-btn" title="遊び方">❔</button>
+        <button id="btn-support-battle" class="tool-btn" title="お問い合わせ">✉</button>
       </div>
     </div>
   </div>
@@ -371,6 +373,23 @@
       </div>
       <p class="video-note">再生するとYouTubeへ接続します。</p>
       <button id="btn-videos-close" class="btn btn-dark btn-sub">閉じる</button>
+    </div>
+  </div>
+
+  <!-- お問い合わせモーダル -->
+  <div id="modal-support" class="modal hidden">
+    <div class="modal-box support-box">
+      <h2>お問い合わせ</h2>
+      <p class="link-desc">不具合報告・ご意見・データに関するお問い合わせは、<b id="support-handle">@nit_zunda_dev</b> へ<b>DM</b>でご連絡ください。</p>
+      <ul class="support-notes">
+        <li>下のボタンから、報告文のひな形入りでDM画面を開けます(Xへのログインが必要です)。</li>
+        <li>報告の際は、<b>何が起きたか</b>と<b>どの画面か</b>を書いてください。</li>
+        <li><b>引き継ぎコード・認証情報・個人情報</b>は送らないでください。</li>
+        <li>返信にはお時間をいただく場合があります。</li>
+      </ul>
+      <button id="btn-support-dm" class="btn btn-gold">DMで報告する</button>
+      <button id="btn-support-profile" class="btn btn-dark btn-sub">プロフィールを開く</button>
+      <button id="btn-support-close" class="btn btn-dark btn-sub">閉じる</button>
     </div>
   </div>
 

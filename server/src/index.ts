@@ -16,6 +16,7 @@ import { runDailyJobs } from './cron';
 import { verifyJwt } from './lib/jwt';
 import { matchRoutes } from './routes/matches';
 import { onboardingRoutes } from './routes/onboarding';
+import { statsRoutes } from './routes/stats';
 import { BattleRoom } from './do/battle-room';
 import { Matchmaker } from './do/matchmaker';
 
@@ -56,6 +57,7 @@ v1.route('/', gachaRoutes);
 v1.route('/', soloRoutes);
 v1.route('/', matchRoutes);
 v1.route('/', onboardingRoutes);
+v1.route('/', statsRoutes);
 app.route('/v1', v1);
 
 app.notFound(c => apiError(c, 'VALIDATION', '不明なエンドポイントです'));

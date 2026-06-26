@@ -386,3 +386,16 @@ describe('共通', () => {
     expect(denied.headers.get('access-control-allow-origin')).toBeNull();
   });
 });
+
+describe('統計', () => {
+  it('登録プレイヤー数を返す', async () => {
+    const before = await api('/v1/stats/players');
+    expect(before.status).toBe(200);
+    const base = before.body.registered as number;
+
+    await createGuest();
+    const after = await api('/v1/stats/players');
+    expect(after.status).toBe(200);
+    expect(after.body.registered).toBe(base + 1);
+  });
+});

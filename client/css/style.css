@@ -278,6 +278,13 @@ html, body {
   background: linear-gradient(150deg, #315f8c, #203452 58%, #15152b);
   box-shadow: 0 0 20px rgba(88,182,255,0.2), inset 0 1px rgba(255,255,255,0.15);
 }
+.title-registration-stats {
+  margin: 0.35rem 0 0;
+  color: #8f9eb8;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+.title-registration-stats b { color: #e8c46a; font-weight: 700; }
 .title-video-btn {
   display: flex; align-items: center; justify-content: center; gap: 9px;
   width: min(100%, 460px); margin-top: 8px; padding: 7px 12px;
@@ -1549,6 +1556,27 @@ html, body {
 .maintenance-text { color: #d8d2e4; font-size: 0.82rem; line-height: 1.6; margin: 0 0 0.8rem; }
 .title-foot-links { display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap; justify-content: center; }
 .title-foot-links a, .consent-links a { color: #d8d2e4; font-size: 0.75rem; }
+.title-foot-btn {
+  background: none;
+  border: none;
+  color: #d8d2e4;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.title-foot-btn:hover { color: #fff6d8; }
+.support-box { max-width: 440px; text-align: center; }
+.support-notes {
+  text-align: left;
+  margin: 0.6rem 0 1rem;
+  padding-left: 1.2rem;
+  color: #c8c0d8;
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+.support-notes li + li { margin-top: 0.35rem; }
 .consent-box { max-width: 460px; text-align: center; }
 .consent-links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: 0.5rem 0 1rem; }
 .onboarding-box { max-width: 520px; text-align: center; }
@@ -1687,7 +1715,7 @@ html, body {
   .title-currency span { padding: 3px 7px; }
   .title-foot { bottom: 1%; }
   .title-foot-links { gap: 0.45rem; }
-  .title-foot-links a, .title-link-btn { font-size: 0.6rem; }
+  .title-foot-links a, .title-link-btn, .title-foot-btn { font-size: 0.6rem; }
   #solo-stages { grid-template-columns: 1fr; overflow-y: auto; }
   .solo-stage-card { display: flex; align-items: center; gap: 8px; }
   .solo-stage-card > img { width: 68px; height: 68px; margin: 0; flex: 0 0 auto; }
