@@ -25,6 +25,7 @@ import { initSentry, captureException } from './sentry';
 import { fetchApiStatus } from './status';
 import { renderTitleBosses } from './title';
 import { SupportUI } from './support';
+import { RegistrationStatsUI } from './registration-stats';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 
@@ -199,6 +200,8 @@ function enterTitle() {
   AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
   $('btn-online').classList.toggle('hidden', !Meta.onlineAvailable);
+  if (Meta.onlineAvailable) RegistrationStatsUI.startPolling();
+  else RegistrationStatsUI.stopPolling();
 }
 
 /* ---------- ボタン類 ---------- */
@@ -235,6 +238,7 @@ function wireButtons() {
   $('btn-close-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.add('hidden'); };
   $('btn-pieces').onclick = () => {
     AudioSys.play('click');
+    RegistrationStatsUI.stopPolling();
     showScreen('screen-pieces');
     FX.setAmbient(['rgba(88,182,255,0.4)', 'rgba(200,120,255,0.4)', 'rgba(232,196,106,0.35)'], 0.04);
   };
@@ -270,6 +274,7 @@ function wireButtons() {
 }
 
 function openSolo() {
+  RegistrationStatsUI.stopPolling();
   renderSoloSelect();
   showScreen('screen-solo');
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(200,120,255,0.4)', 'rgba(88,182,255,0.3)'], 0.04);

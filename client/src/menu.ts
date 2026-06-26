@@ -10,6 +10,7 @@ import { Meta } from './meta';
 import type { GachaResult } from './meta';
 import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
+import { RegistrationStatsUI } from './registration-stats';
 
 export const MenuUI = {
   rows: null as unknown as (string | null)[][], // 編成画面の作業用コピー [前段, 最奥段]
@@ -183,6 +184,7 @@ export const MenuUI = {
 
   /* ============================== ガチャ ============================== */
   openGacha() {
+    RegistrationStatsUI.stopPolling();
     this.refreshCurrency();
     $('gacha-result').classList.add('hidden');
     showScreen('screen-gacha');
@@ -305,6 +307,7 @@ export const MenuUI = {
 
   /* ============================== 編成 ============================== */
   openFormation() {
+    RegistrationStatsUI.stopPolling();
     this.rows = Meta.formationRows();
     this.benchSel = null;
     $('form-error').textContent = '';

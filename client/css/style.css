@@ -278,6 +278,13 @@ html, body {
   background: linear-gradient(150deg, #315f8c, #203452 58%, #15152b);
   box-shadow: 0 0 20px rgba(88,182,255,0.2), inset 0 1px rgba(255,255,255,0.15);
 }
+.title-registration-stats {
+  margin: 0.35rem 0 0;
+  color: #8f9eb8;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+.title-registration-stats b { color: #e8c46a; font-weight: 700; }
 .title-video-btn {
   display: flex; align-items: center; justify-content: center; gap: 9px;
   width: min(100%, 460px); margin-top: 8px; padding: 7px 12px;
