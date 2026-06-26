@@ -10,7 +10,7 @@ const POLL_MS = 60_000;
 export async function fetchRegistrationStats(): Promise<PlayerRegistrationStats | null> {
   if (!__API_URL__) return null;
   try {
-    const res = await fetch(`${__API_URL__}/stats/players`, { cache: 'no-store' });
+    const res = await fetch(`${__API_URL__}/v1/stats/players`, { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json() as PlayerRegistrationStats;
   } catch {
