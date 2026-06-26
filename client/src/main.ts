@@ -24,6 +24,7 @@ import { $, sleep, showScreen } from './util';
 import { initSentry, captureException } from './sentry';
 import { fetchApiStatus } from './status';
 import { renderTitleBosses } from './title';
+import { SupportUI } from './support';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 
@@ -230,6 +231,7 @@ function wireButtons() {
   };
   $('btn-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-rules2').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
+  $('btn-support-battle').onclick = () => { AudioSys.play('click'); SupportUI.open('対局中'); };
   $('btn-close-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.add('hidden'); };
   $('btn-pieces').onclick = () => {
     AudioSys.play('click');

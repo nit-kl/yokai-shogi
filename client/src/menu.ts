@@ -9,6 +9,7 @@ import { FX } from './effects';
 import { Meta } from './meta';
 import type { GachaResult } from './meta';
 import { Onboarding } from './onboarding';
+import { SupportUI } from './support';
 
 export const MenuUI = {
   rows: null as unknown as (string | null)[][], // 編成画面の作業用コピー [前段, 最奥段]
@@ -35,6 +36,7 @@ export const MenuUI = {
     $('btn-form-save').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     this.initLinkCode();
     this.initProfile();
+    SupportUI.init();
   },
 
   /* ============================== プロフィール ============================== */
