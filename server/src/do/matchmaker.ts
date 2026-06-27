@@ -1,5 +1,6 @@
 import type { MatchMode, BattlePlayer, ClientBattleMessage, ServerBattleMessage } from '../../../shared/battle';
 import type { Env } from '../env';
+import { isMatchHour } from '../../../shared/match-hour';
 import { loadPlayer, randomCode, send } from './common';
 
 interface Attachment { userId: string }
@@ -47,6 +48,13 @@ export class Matchmaker {
     catch { send(ws, { t: 'error', code: 'VALIDATION', message: 'JSONが不正です' }); return; }
 
     if (msg.t === 'join_queue') {
+      if (this.env.MATCH_HOUR_ENFORCE !== '0' && !isMatchHour()) {
+        send(ws, {
+          t: 'error', code: 'MATCH_HOUR_CLOSED',
+          message: 'ランダムマッチは逢魔が時（毎日20:00〜22:00）のみ開放されています',
+        });
+        return;
+      }
       if (!this.queue.some(entry => entry.userId === userId)) {
         this.queue.push({ userId, joinedAt: Date.now() });
         this.writeQueueMetric('queue_join', userId, 0, this.queue.length);

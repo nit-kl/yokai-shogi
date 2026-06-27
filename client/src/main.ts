@@ -26,6 +26,8 @@ import { fetchApiStatus } from './status';
 import { renderTitleBosses } from './title';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
+import { MatchHourUI } from './match-hour';
+import { isMatchHour } from '../../shared/match-hour';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
@@ -204,8 +206,14 @@ function enterTitle() {
   AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
   $('btn-online').classList.toggle('hidden', !Meta.onlineAvailable);
-  if (Meta.onlineAvailable) RegistrationStatsUI.startPolling();
-  else RegistrationStatsUI.stopPolling();
+  if (Meta.onlineAvailable) {
+    RegistrationStatsUI.startPolling();
+    MatchHourUI.start();
+  } else {
+    RegistrationStatsUI.stopPolling();
+    MatchHourUI.stop();
+    $('title-online-schedule').classList.add('hidden');
+  }
 }
 
 /* ---------- ボタン類 ---------- */
@@ -233,6 +241,11 @@ function wireButtons() {
   };
   $('btn-online-close').onclick = () => closeOnlineModal();
   $('btn-online-random').onclick = () => {
+    if (!isMatchHour()) {
+      MatchHourUI.refresh();
+      $('online-message').textContent = 'ランダムマッチは逢魔が時（毎日20:00〜22:00）のみ開放されています';
+      return;
+    }
     connectMatchmaker();
     online?.send({ t: 'join_queue' });
     $('online-message').textContent = '対戦相手を探しています…';
@@ -254,6 +267,7 @@ function wireButtons() {
   $('btn-pieces').onclick = () => {
     AudioSys.play('click');
     RegistrationStatsUI.stopPolling();
+    MatchHourUI.stop();
     showScreen('screen-pieces');
     FX.setAmbient(['rgba(88,182,255,0.4)', 'rgba(200,120,255,0.4)', 'rgba(232,196,106,0.35)'], 0.04);
   };
@@ -290,6 +304,7 @@ function wireButtons() {
 
 function openSolo() {
   RegistrationStatsUI.stopPolling();
+  MatchHourUI.stop();
   renderSoloSelect();
   showScreen('screen-solo');
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(200,120,255,0.4)', 'rgba(88,182,255,0.3)'], 0.04);
@@ -400,6 +415,7 @@ async function openOnline() {
     }
   }
   $('online-message').textContent = '対戦方法を選んでください';
+  MatchHourUI.refresh();
 }
 
 function openVideos() {

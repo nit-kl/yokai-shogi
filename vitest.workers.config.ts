@@ -17,6 +17,7 @@ export default defineConfig(async () => {
             TEST_MIGRATIONS: migrations,
             JWT_SECRET: 'test-secret',
             ALLOWED_ORIGINS: 'http://localhost:5173',
+            MATCH_HOUR_ENFORCE: '0',
           },
         },
       }),
