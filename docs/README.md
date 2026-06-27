@@ -34,6 +34,7 @@
 | 17 | [X広告 作成手順・運用ガイド](17-x-ads-guide.md) | 集客用X Adsの入稿設定・UTM・審査回避・運用・トラブルシュート |
 | 18 | [ランダムマッチ流動性戦略](18-matchmaking-liquidity-strategy.md) | 対戦時間帯への集約・対戦会・告知・KPI・段階的な実行計画 |
 | 19 | [Discordサーバー作成・運用手順](19-discord-server-setup.md) | サーバー新規作成から権限・チャンネル・安全設定・公開・定例運用までの実作業手順 |
+| 20 | [検索インデックス対応手順](20-search-indexing.md) | Google Search Console登録・sitemap送信・外部リンク整備など検索流入向けの運営作業 |
 
 ## 読み方
 
