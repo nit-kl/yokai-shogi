@@ -322,6 +322,22 @@ html, body {
   letter-spacing: 0.08em;
 }
 .title-registration-stats b { color: #e8c46a; font-weight: 700; }
+.title-online-schedule {
+  margin: 0.35rem 0 0;
+  width: min(100%, 460px);
+  color: #8f9eb8;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+.online-random-schedule {
+  margin: 0;
+  color: #a99dbd;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+.online-random-schedule.match-hour-open { color: #9ad7ff; }
+.online-box .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .title-video-btn {
   display: flex; align-items: center; justify-content: center; gap: 9px;
   width: min(100%, 460px); margin-top: 8px; padding: 7px 12px;

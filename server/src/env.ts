@@ -12,6 +12,8 @@ export interface Env {
   /* CORS許可オリジン(カンマ区切り) */
   ALLOWED_ORIGINS?: string;
   MAINTENANCE?: string;
+  /* 未設定または '1' なら逢魔が時以外のランダムマッチを拒否(テストは '0') */
+  MATCH_HOUR_ENFORCE?: string;
 }
 
 /* Honoのコンテキスト型 */

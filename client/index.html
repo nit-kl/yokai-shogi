@@ -3,7 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>妖怪将棋 〜百鬼夜行の盤上決戦〜</title>
+<title>妖怪将棋｜無料ブラウザ将棋ゲーム</title>
+<meta name="description" content="妖怪の駒で戦う無料ブラウザ将棋ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。登録なしですぐに遊べます。">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#12091f">
+<link rel="canonical" href="https://yokai-shogi.nit-games.com/">
+<meta property="og:site_name" content="妖怪将棋">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:url" content="https://yokai-shogi.nit-games.com/">
+<meta property="og:title" content="妖怪将棋｜無料ブラウザ将棋ゲーム">
+<meta property="og:description" content="妖怪の駒で戦う無料ブラウザ将棋ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。">
+<meta property="og:image" content="https://yokai-shogi.nit-games.com/assets/pieces/kyubi.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="妖怪将棋｜無料ブラウザ将棋ゲーム">
+<meta name="twitter:description" content="妖怪の駒で戦う無料ブラウザ将棋ゲーム。登録なしですぐに遊べます。">
+<meta name="twitter:image" content="https://yokai-shogi.nit-games.com/assets/pieces/kyubi.webp">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "妖怪将棋",
+  "alternateName": "Yokai Shogi",
+  "url": "https://yokai-shogi.nit-games.com/",
+  "description": "妖怪の駒で戦う無料ブラウザ将棋ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。",
+  "applicationCategory": "Game",
+  "operatingSystem": "Web",
+  "inLanguage": "ja",
+  "genre": ["board game", "strategy game", "browser game"],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "JPY"
+  }
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👹</text></svg>">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -54,17 +88,16 @@
       <div class="title-emblem"><span>百</span></div>
       <div class="title-sub-top"><i></i>百鬼夜行の盤上決戦<i></i></div>
       <h1 class="title-logo"><span>妖怪</span><span>将棋</span></h1>
-      <div class="title-catch">ブラウザですぐ遊べる、妖怪たちの将棋バトル。</div>
       <div class="title-value-props" aria-label="ゲームの特徴">
         <span>インストール不要</span>
         <span>無料でプレイ</span>
         <span>1局すぐ開始</span>
       </div>
-      <p class="title-lead">駒を取ると魂力にダメージ。大将を討つか、相手のHPを削り切れば勝利です。</p>
       <div class="title-main-actions">
         <button id="btn-start" class="btn title-action-primary"><small>登録なしで体験</small>今すぐ遊ぶ</button>
         <button id="btn-online" class="btn title-action-online hidden"><small>猛者と競う</small>オンライン対戦</button>
       </div>
+      <p id="title-online-schedule" class="title-online-schedule hidden">ランダムマッチ: 毎日 20:00〜22:00</p>
       <div class="title-steps" aria-label="開始までの流れ">
         <span>大将を選ぶ</span>
         <span>仲間を編成</span>
@@ -354,6 +387,7 @@
     <div class="modal-box online-box">
       <h2>オンライン対戦</h2>
       <div id="online-message">対戦方法を選んでください</div>
+      <p id="online-random-schedule" class="online-random-schedule">ランダムマッチは毎日 20:00〜22:00（逢魔が時）のみ</p>
       <button id="btn-online-random" class="btn btn-gold">ランダムマッチ</button>
       <button id="btn-online-ai" class="btn btn-dark hidden">AI対戦に切り替える</button>
       <button id="btn-online-create" class="btn btn-dark">フレンドルーム作成</button>

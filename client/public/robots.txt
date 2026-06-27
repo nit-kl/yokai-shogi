@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yokai-shogi.nit-games.com/sitemap.xml
