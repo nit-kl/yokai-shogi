@@ -4,9 +4,9 @@
 
 import {
   COLS, ROWS, MAX_HP, ZONE_DEPTH, YOKAI, TYPE_INFO, RARITY_INFO,
-  ALL_IMAGES, ENEMY_BOSS, GACHA_POOL, SETUP,
+  ALL_IMAGES, BOSS_CHOICES, ENEMY_BOSS, GACHA_POOL, SETUP,
 } from '../../shared/data';
-import type { Side } from '../../shared/data';
+import type { Rarity, Side, YokaiType } from '../../shared/data';
 import { Game } from '../../shared/game';
 import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { AI } from './ai';
@@ -27,6 +27,7 @@ import { renderTitleBosses } from './title';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
 import { MatchHourUI } from './match-hour';
+import { AnnouncementsUI } from './announcements';
 import { isMatchHour } from '../../shared/match-hour';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ServerBattleMessage } from '../../shared/battle';
@@ -81,6 +82,7 @@ window.addEventListener('DOMContentLoaded', () => {
   buildPieceCatalog();
   wireButtons();
   MenuUI.init({ enterTitle });
+  AnnouncementsUI.init();
   Onboarding.init({ enterTitle });
   void boot();
   // 初回操作でオーディオ起動
@@ -205,6 +207,7 @@ function enterTitle() {
   AudioSys.init();
   AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
+  void AnnouncementsUI.refresh({ popup: true });
   $('btn-online').classList.toggle('hidden', !Meta.onlineAvailable);
   if (Meta.onlineAvailable) {
     RegistrationStatsUI.startPolling();
@@ -228,13 +231,6 @@ function wireButtons() {
   $('btn-solo-battle').onclick = () => { AudioSys.play('click'); soloStreak = 0; startBattle(); };
   $('btn-solo-single').onclick = () => { AudioSys.play('select'); soloMode = 'single'; renderSoloSelect(); };
   $('btn-solo-streak').onclick = () => { AudioSys.play('select'); soloMode = 'streak'; soloStageId = 'hyakki'; renderSoloSelect(); };
-  $('btn-videos').onclick = () => {
-    trackLandingEvent('video_cta_click', { source: 'title' });
-    openVideos();
-  };
-  $('btn-videos-close').onclick = () => closeVideos();
-  $('btn-video-trailer').onclick = () => playVideo('EjzXcCEKYSI', 'btn-video-trailer');
-  $('btn-video-short').onclick = () => playVideo('LClFmrqygTQ', 'btn-video-short');
   $('btn-online').onclick = () => {
     trackLandingEvent('online_cta_click', { source: 'title' });
     void openOnline();
@@ -264,6 +260,7 @@ function wireButtons() {
   $('btn-rules2').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-support-battle').onclick = () => { AudioSys.play('click'); SupportUI.open('対局中'); };
   $('btn-close-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.add('hidden'); };
+  $('btn-piece-detail-close').onclick = () => { AudioSys.play('click'); $('modal-piece-detail').classList.add('hidden'); };
   $('btn-pieces').onclick = () => {
     AudioSys.play('click');
     RegistrationStatsUI.stopPolling();
@@ -416,30 +413,6 @@ async function openOnline() {
   }
   $('online-message').textContent = '対戦方法を選んでください';
   MatchHourUI.refresh();
-}
-
-function openVideos() {
-  AudioSys.play('click');
-  $('modal-videos').classList.remove('hidden');
-}
-
-function playVideo(videoId: string, activeButtonId: string) {
-  AudioSys.stopBgm();
-  for (const id of ['btn-video-trailer', 'btn-video-short']) {
-    $(id).classList.toggle('active', id === activeButtonId);
-  }
-  const player = $<HTMLIFrameElement>('video-player');
-  player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1`;
-  $('video-player-wrap').classList.remove('hidden');
-}
-
-function closeVideos() {
-  $<HTMLIFrameElement>('video-player').src = '';
-  $('video-player-wrap').classList.add('hidden');
-  $('btn-video-trailer').classList.remove('active');
-  $('btn-video-short').classList.remove('active');
-  $('modal-videos').classList.add('hidden');
-  AudioSys.startTitleBgm();
 }
 
 function closeOnlineModal() {
@@ -1146,13 +1119,164 @@ function renderResultStats() {
 }
 
 /* ============================== 駒一覧 ============================== */
+const PIECE_CATALOG_ORDER = [
+  'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
+  'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
+  'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
+  'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',
+];
+const PIECE_TYPE_ORDER: YokaiType[] = ['boss', 'attack', 'defense', 'ambush', 'debuff', 'support', 'transform', 'trap'];
+const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
+const PIECE_RARITY_RANK: Record<Rarity, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
+
+function pieceSourceText(id: string): string {
+  return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択 / ガチャ' : 'ガチャ';
+}
+
 function buildPieceCatalog() {
+  buildPieceCatalogControls();
+  renderPieceCatalogCards();
+}
+
+function buildPieceCatalogControls() {
+  const rarity = $<HTMLSelectElement>('pieces-rarity-filter');
+  const type = $<HTMLSelectElement>('pieces-type-filter');
+  rarity.replaceChildren(new Option('全レア', 'all'));
+  for (const r of PIECE_RARITY_ORDER) rarity.appendChild(new Option(RARITY_INFO[r].label, r));
+  type.replaceChildren(new Option('全タイプ', 'all'));
+  for (const t of PIECE_TYPE_ORDER) type.appendChild(new Option(TYPE_INFO[t].label, t));
+  $('pieces-search').oninput = renderPieceCatalogCards;
+  rarity.onchange = renderPieceCatalogCards;
+  type.onchange = renderPieceCatalogCards;
+}
+
+function renderPieceCatalogCards() {
+  const wrap = $('pieces-list');
+  wrap.replaceChildren();
+  const q = $<HTMLInputElement>('pieces-search').value.trim().toLowerCase();
+  const rarityFilter = $<HTMLSelectElement>('pieces-rarity-filter').value;
+  const typeFilter = $<HTMLSelectElement>('pieces-type-filter').value;
+  const pieces = PIECE_CATALOG_ORDER
+    .map(id => YOKAI[id])
+    .filter(def => !!def)
+    .filter(def => rarityFilter === 'all' || def.rarity === rarityFilter)
+    .filter(def => typeFilter === 'all' || def.type === typeFilter)
+    .filter(def => {
+      if (!q) return true;
+      return `${def.name} ${def.moveText} ${def.skill.name} ${def.skill.desc}`.toLowerCase().includes(q);
+    })
+    .sort((a, b) =>
+      PIECE_RARITY_RANK[a.rarity] - PIECE_RARITY_RANK[b.rarity]
+      || PIECE_TYPE_ORDER.indexOf(a.type) - PIECE_TYPE_ORDER.indexOf(b.type)
+      || PIECE_CATALOG_ORDER.indexOf(a.id) - PIECE_CATALOG_ORDER.indexOf(b.id));
+
+  $('pieces-summary').textContent = `${pieces.length} / ${PIECE_CATALOG_ORDER.length} 体`;
+  if (pieces.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'pieces-empty';
+    empty.textContent = '条件に合う駒がありません。';
+    wrap.appendChild(empty);
+    return;
+  }
+
+  for (const def of pieces) {
+    const ti = TYPE_INFO[def.type];
+    const ri = RARITY_INFO[def.rarity];
+    const card = document.createElement('article');
+    card.className = `piece-card ${ri.cls}${def.variantOf ? ' special-catalog-card' : ''}`;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `${def.name}の詳細を見る`);
+    card.onclick = () => { AudioSys.play('click'); openPieceDetail(def.id); };
+    card.onkeydown = ev => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        AudioSys.play('click');
+        openPieceDetail(def.id);
+      }
+    };
+    if (def.summonColors) {
+      card.style.setProperty('--special-light', def.summonColors[0]);
+      card.style.setProperty('--special-primary', def.summonColors[1]);
+      card.style.setProperty('--special-accent', def.summonColors[2]);
+    }
+
+    const art = document.createElement('div');
+    art.className = 'piece-art';
+    const img = document.createElement('img');
+    img.src = def.imgSm;
+    img.alt = def.name;
+    img.loading = 'lazy';
+    art.appendChild(img);
+
+    const body = document.createElement('div');
+    body.className = 'rp-body';
+    const top = document.createElement('div');
+    top.className = 'rp-topline';
+    const rarity = document.createElement('span');
+    rarity.className = `rarity-chip ${ri.cls}`;
+    rarity.textContent = def.variantOf ? `${ri.label} 異装` : ri.label;
+    const type = document.createElement('span');
+    type.className = `type-chip ${ti.cls}`;
+    type.textContent = ti.label;
+    top.append(rarity, type);
+
+    const name = document.createElement('div');
+    name.className = 'rp-name';
+    name.textContent = def.name;
+
+    const stats = document.createElement('div');
+    stats.className = 'rp-stats';
+    const atk = document.createElement('b');
+    atk.textContent = `ATK ${def.atk}`;
+    const source = document.createElement('span');
+    source.textContent = pieceSourceText(def.id);
+    source.className = 'rp-source';
+    top.appendChild(source);
+
+    const move = document.createElement('div');
+    move.className = 'rp-section';
+    const moveLabel = document.createElement('small');
+    moveLabel.textContent = '動き';
+    const moveText = document.createElement('span');
+    moveText.textContent = def.moveText;
+    move.append(moveLabel, moveText);
+
+    const skillHint = document.createElement('div');
+    skillHint.className = 'rp-detail-hint';
+    skillHint.textContent = `${def.skill.name} - 詳細を見る`;
+
+    body.append(top, name);
+    card.append(art, body);
+    wrap.appendChild(card);
+  }
+}
+
+function openPieceDetail(id: string) {
+  const def = YOKAI[id];
+  const ti = TYPE_INFO[def.type];
+  const ri = RARITY_INFO[def.rarity];
+  const img = $<HTMLImageElement>('piece-detail-img');
+  img.src = def.img;
+  img.alt = def.name;
+  $('piece-detail-tags').innerHTML =
+    `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span>` +
+    `<span class="type-chip ${ti.cls}">${ti.label}</span>`;
+  $('piece-detail-name').textContent = def.name;
+  $('piece-detail-atk').textContent = `ATK ${def.atk} / ${pieceSourceText(def.id)}で入手`;
+  $('piece-detail-move').textContent = def.moveText;
+  $('piece-detail-skill-name').textContent = def.skill.name;
+  $('piece-detail-skill-desc').textContent = def.skill.desc;
+  $('modal-piece-detail').classList.remove('hidden');
+}
+
+function renderPieceCatalog() {
   const wrap = $('pieces-list');
   const order = [
     'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
     'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
-    'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
-    'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'zashiki', 'tanuki', 'onibi',
+    'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
+    'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',
   ];
   for (const id of order) {
     const def = YOKAI[id];

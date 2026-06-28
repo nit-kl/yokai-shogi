@@ -104,13 +104,13 @@
         <span>対局開始</span>
       </div>
       <p id="title-registration-stats" class="title-registration-stats hidden">登録プレイヤー <b id="title-registration-count">0</b> 人</p>
-      <button id="btn-videos" class="title-video-btn"><b>映</b><span><small>ゲーム紹介動画</small>公式映像を見る</span></button>
       <div class="title-menu-label"><span>支度と資料</span></div>
       <div class="title-secondary-actions">
         <button id="btn-gacha" class="title-menu-btn"><b>召</b><span>妖怪ガチャ</span></button>
         <button id="btn-formation" class="title-menu-btn"><b>陣</b><span>編 成</span></button>
         <button id="btn-pieces" class="title-menu-btn"><b>録</b><span>駒一覧</span></button>
         <button id="btn-rules" class="title-menu-btn"><b>指南</b><span>遊び方</span></button>
+        <button id="btn-announcements" class="title-menu-btn announcement-title-btn"><b>告</b><span>お知らせ</span><i id="announcement-badge" class="announcement-badge hidden"></i></button>
       </div>
     </div>
     <div class="title-foot">
@@ -207,7 +207,38 @@
         <div class="menu-head-spacer"></div>
       </div>
       <p class="pieces-note">駒の動きと能力を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
+      <div class="pieces-toolbar">
+        <label class="pieces-search">
+          <span>探す</span>
+          <input id="pieces-search" type="search" placeholder="駒名・能力で検索" autocomplete="off">
+        </label>
+        <select id="pieces-rarity-filter" aria-label="レアリティで絞り込み"></select>
+        <select id="pieces-type-filter" aria-label="タイプで絞り込み"></select>
+      </div>
+      <div id="pieces-summary" class="pieces-summary"></div>
       <div id="pieces-list"></div>
+    </div>
+  </div>
+
+  <div id="modal-piece-detail" class="modal hidden">
+    <div class="modal-box piece-detail-box">
+      <div class="piece-detail-head">
+        <img id="piece-detail-img" src="" alt="" draggable="false">
+        <div>
+          <div id="piece-detail-tags" class="piece-detail-tags"></div>
+          <h2 id="piece-detail-name"></h2>
+          <div id="piece-detail-atk" class="piece-detail-atk"></div>
+        </div>
+      </div>
+      <div class="piece-detail-section">
+        <b>動き</b>
+        <p id="piece-detail-move"></p>
+      </div>
+      <div class="piece-detail-section">
+        <b id="piece-detail-skill-name"></b>
+        <p id="piece-detail-skill-desc"></p>
+      </div>
+      <button id="btn-piece-detail-close" class="btn btn-gold">閉じる</button>
     </div>
   </div>
 
@@ -353,6 +384,14 @@
   </div>
 
   <!-- オンライン利用同意モーダル -->
+  <div id="modal-announcements" class="modal hidden">
+    <div class="modal-box announcements-box">
+      <h2>お知らせ</h2>
+      <div id="announcements-list" class="announcements-list"></div>
+      <button id="btn-announcements-close" class="btn btn-gold">閉じる</button>
+    </div>
+  </div>
+
   <div id="modal-consent" class="modal hidden">
     <div class="modal-box consent-box">
       <h2>オンライン機能の利用について</h2>
@@ -397,27 +436,6 @@
       </div>
       <div id="online-room-code" class="link-code hidden"></div>
       <button id="btn-online-close" class="btn btn-dark btn-sub">閉じる</button>
-    </div>
-  </div>
-
-  <!-- 公式映像モーダル -->
-  <div id="modal-videos" class="modal hidden">
-    <div class="modal-box video-box">
-      <h2>公式映像</h2>
-      <p class="video-intro">妖怪将棋の世界と対局の魅力を動画で紹介します。</p>
-      <div class="video-select">
-        <button id="btn-video-trailer" class="video-select-btn">
-          <b>TRAILER</b><span>ゲーム紹介トレーラー</span>
-        </button>
-        <button id="btn-video-short" class="video-select-btn">
-          <b>SHORT</b><span>ショート動画</span>
-        </button>
-      </div>
-      <div id="video-player-wrap" class="video-player-wrap hidden">
-        <iframe id="video-player" title="妖怪将棋 公式映像" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-      </div>
-      <p class="video-note">再生するとYouTubeへ接続します。</p>
-      <button id="btn-videos-close" class="btn btn-dark btn-sub">閉じる</button>
     </div>
   </div>
 

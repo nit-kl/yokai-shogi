@@ -320,6 +320,39 @@ export const YOKAI: Record<string, YokaiDef> = {
     skill: { kind: 'crit', name: '百鬼夜行の総帥', desc: '駒を取った時、30%で百鬼が応えダメージ1.8倍', chance: 0.3, mult: 1.8 },
     moves: { steps: STEPS_ALL8 },
   },
+
+  /* ---------- 新規追加妖怪 ---------- */
+  karakasa: {
+    id: 'karakasa', name: 'からかさ小僧', type: 'defense', atk: 110, rarity: 'N', gachaOnly: true,
+    img: img('karakasa'), imgSm: imgSm('karakasa'),
+    moveText: '前と斜め後ろに1マス(成:全方向1マス)',
+    skill: { kind: 'aura', name: '傘のシールド', desc: '盤上にいる間、傘のシールドで自軍の受けるダメージ-12%', reduce: 0.12 },
+    moves: { steps: [[0,-1], [1,1], [-1,1]] },
+    promoted: { steps: STEPS_ALL8 },
+  },
+  chochin: {
+    id: 'chochin', name: '提灯お化け', type: 'support', atk: 150, rarity: 'R', gachaOnly: true,
+    img: img('chochin'), imgSm: imgSm('chochin'),
+    moveText: '縦横に1マス(成:全方向1マス)',
+    skill: { kind: 'heal', name: '提灯の灯火', desc: '駒を取った時、自軍の魂力を200回復する', amount: 200 },
+    moves: { steps: STEPS_ORTHO4 },
+    promoted: { steps: STEPS_ALL8 },
+  },
+  baku: {
+    id: 'baku', name: '獏', type: 'debuff', atk: 200, rarity: 'SR', gachaOnly: true,
+    img: img('baku'), imgSm: imgSm('baku'),
+    moveText: '前後1マス、横にどこまでも(成:縦横+斜め前)',
+    skill: { kind: 'weaken', name: '悪夢喰らい', desc: '盤上にいる間、悪夢喰らいの霧で敵軍の与えるダメージ-15%', reduce: 0.15 },
+    moves: { steps: [[0,-1], [0,1]], slides: [[1,0], [-1,0]] },
+    promoted: { steps: [[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1]] },
+  },
+  yamata: {
+    id: 'yamata', name: '八岐大蛇', type: 'attack', atk: 420, rarity: 'SSR', gachaOnly: true,
+    img: img('yamata'), imgSm: imgSm('yamata'),
+    moveText: '前3方向と横2方向、後ろ1マス',
+    skill: { kind: 'crit', name: '八岐の暴虐', desc: '駒を取った時、30%で八岐の暴虐が発動しダメージ2.2倍', chance: 0.3, mult: 2.2 },
+    moves: { steps: [[0,-1], [1,-1], [-1,-1], [1,0], [-1,0], [0,1]] },
+  },
 };
 
 /* ガチャ排出対象(全妖怪) */
