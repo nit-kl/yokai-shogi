@@ -338,22 +338,6 @@ html, body {
 }
 .online-random-schedule.match-hour-open { color: #9ad7ff; }
 .online-box .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.title-video-btn {
-  display: flex; align-items: center; justify-content: center; gap: 9px;
-  width: min(100%, 460px); margin-top: 8px; padding: 7px 12px;
-  color: #eadfff; border: 1px solid rgba(200,138,255,0.4); border-radius: 10px;
-  background: linear-gradient(135deg, rgba(65,35,91,0.86), rgba(25,20,43,0.9));
-  box-shadow: 0 0 18px rgba(178,105,255,0.14);
-  cursor: pointer; transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
-}
-.title-video-btn:hover { transform: translateY(-2px); border-color: rgba(216,170,255,0.8); box-shadow: 0 0 24px rgba(178,105,255,0.28); }
-.title-video-btn b {
-  display: grid; place-items: center; width: 29px; height: 29px; flex: 0 0 auto;
-  color: #f3dcff; border: 1px solid rgba(216,170,255,0.55); border-radius: 50%;
-  font: 0.78rem "Yu Mincho", serif;
-}
-.title-video-btn span { display: flex; flex-direction: column; align-items: flex-start; font-size: 0.8rem; letter-spacing: 0.13em; }
-.title-video-btn small { color: #9e89bb; font-size: 0.62rem; letter-spacing: 0.08em; }
 .title-menu-label {
   display: flex; align-items: center; gap: 10px;
   width: min(100%, 460px); margin: 0.9em 0 0.45em;
@@ -1594,20 +1578,6 @@ html, body {
 .title-link-btn:hover { background: rgba(40, 32, 56, 0.85); }
 .link-box { max-width: 440px; text-align: center; }
 .online-box { max-width: 440px; text-align: center; gap: 0.8rem; }
-.video-box { width: min(92vw, 720px); max-width: 720px; text-align: center; align-items: center; }
-.video-intro, .video-note { color: #a99dbd; font-size: 0.8rem; line-height: 1.6; margin: 0.2rem 0; }
-.video-note { font-size: 0.68rem; }
-.video-select { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
-.video-select-btn {
-  display: flex; flex-direction: column; gap: 3px; padding: 10px;
-  color: #e8ddf7; border: 1px solid rgba(200,138,255,0.32); border-radius: 10px;
-  background: rgba(28,20,43,0.88); cursor: pointer;
-}
-.video-select-btn:hover, .video-select-btn.active { border-color: rgba(232,196,106,0.75); background: rgba(55,37,75,0.95); }
-.video-select-btn b { color: var(--gold); font-size: 0.68rem; letter-spacing: 0.18em; }
-.video-select-btn span { font-size: 0.78rem; }
-.video-player-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #050408; }
-.video-player-wrap iframe { display: block; width: 100%; height: 100%; border: 0; }
 .online-code-row { display: flex; gap: 0.6rem; justify-content: center; }
 .online-code-row input { width: 10rem; text-align: center; letter-spacing: 0.18em; text-transform: uppercase; }
 .online-status {
