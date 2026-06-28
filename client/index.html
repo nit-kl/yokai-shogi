@@ -207,7 +207,38 @@
         <div class="menu-head-spacer"></div>
       </div>
       <p class="pieces-note">駒の動きと能力を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
+      <div class="pieces-toolbar">
+        <label class="pieces-search">
+          <span>探す</span>
+          <input id="pieces-search" type="search" placeholder="駒名・能力で検索" autocomplete="off">
+        </label>
+        <select id="pieces-rarity-filter" aria-label="レアリティで絞り込み"></select>
+        <select id="pieces-type-filter" aria-label="タイプで絞り込み"></select>
+      </div>
+      <div id="pieces-summary" class="pieces-summary"></div>
       <div id="pieces-list"></div>
+    </div>
+  </div>
+
+  <div id="modal-piece-detail" class="modal hidden">
+    <div class="modal-box piece-detail-box">
+      <div class="piece-detail-head">
+        <img id="piece-detail-img" src="" alt="" draggable="false">
+        <div>
+          <div id="piece-detail-tags" class="piece-detail-tags"></div>
+          <h2 id="piece-detail-name"></h2>
+          <div id="piece-detail-atk" class="piece-detail-atk"></div>
+        </div>
+      </div>
+      <div class="piece-detail-section">
+        <b>動き</b>
+        <p id="piece-detail-move"></p>
+      </div>
+      <div class="piece-detail-section">
+        <b id="piece-detail-skill-name"></b>
+        <p id="piece-detail-skill-desc"></p>
+      </div>
+      <button id="btn-piece-detail-close" class="btn btn-gold">閉じる</button>
     </div>
   </div>
 
