@@ -1151,8 +1151,8 @@ function buildPieceCatalog() {
   const order = [
     'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
     'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
-    'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
-    'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'zashiki', 'tanuki', 'onibi',
+    'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
+    'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',
   ];
   for (const id of order) {
     const def = YOKAI[id];
