@@ -385,6 +385,17 @@ describe('共通', () => {
     const denied = await SELF.fetch(`${BASE}/v1/gacha/rates`, { headers: { Origin: 'https://evil.example.com' } });
     expect(denied.headers.get('access-control-allow-origin')).toBeNull();
   });
+
+  it('お知らせ一覧を公開APIで返す', async () => {
+    const r = await api('/v1/announcements');
+    expect(r.status).toBe(200);
+    expect(r.body.announcements[0]).toMatchObject({
+      id: '2026-06-28-new-pieces-c93015c',
+      type: 'update',
+      priority: 'high',
+      title: '新しい妖怪駒を追加しました',
+    });
+  });
 });
 
 describe('統計', () => {

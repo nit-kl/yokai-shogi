@@ -27,6 +27,7 @@ import { renderTitleBosses } from './title';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
 import { MatchHourUI } from './match-hour';
+import { AnnouncementsUI } from './announcements';
 import { isMatchHour } from '../../shared/match-hour';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ServerBattleMessage } from '../../shared/battle';
@@ -81,6 +82,7 @@ window.addEventListener('DOMContentLoaded', () => {
   buildPieceCatalog();
   wireButtons();
   MenuUI.init({ enterTitle });
+  AnnouncementsUI.init();
   Onboarding.init({ enterTitle });
   void boot();
   // 初回操作でオーディオ起動
@@ -205,6 +207,7 @@ function enterTitle() {
   AudioSys.init();
   AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
+  void AnnouncementsUI.refresh({ popup: true });
   $('btn-online').classList.toggle('hidden', !Meta.onlineAvailable);
   if (Meta.onlineAvailable) {
     RegistrationStatsUI.startPolling();

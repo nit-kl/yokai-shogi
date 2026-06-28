@@ -17,12 +17,14 @@ import { verifyJwt } from './lib/jwt';
 import { matchRoutes } from './routes/matches';
 import { onboardingRoutes } from './routes/onboarding';
 import { statsRoutes } from './routes/stats';
+import { announcementRoutes } from './routes/announcements';
 import { BattleRoom } from './do/battle-room';
 import { Matchmaker } from './do/matchmaker';
 
 const app = new Hono<AppEnv>();
 
 app.use('/v1/*', async (c, next) => {
+  if (c.req.path === '/v1/announcements') { await next(); return; }
   if (c.env.MAINTENANCE === '1') return apiError(c, 'MAINTENANCE', 'メンテナンス中です');
   await next();
 });
@@ -58,6 +60,7 @@ v1.route('/', soloRoutes);
 v1.route('/', matchRoutes);
 v1.route('/', onboardingRoutes);
 v1.route('/', statsRoutes);
+v1.route('/', announcementRoutes);
 app.route('/v1', v1);
 
 app.notFound(c => apiError(c, 'VALIDATION', '不明なエンドポイントです'));
