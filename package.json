@@ -12,7 +12,7 @@
     "build:online": "vite build --mode online",
     "build:staging": "vite build --mode staging",
     "preview": "vite preview --port 4173 --strictPort",
-    "typecheck": "tsc --noEmit && tsc -p server --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p server --noEmit && tsc -p test/workers --noEmit",
     "test": "vitest run",
     "test:workers": "vitest run -c vitest.workers.config.ts",
     "test:e2e": "node test/e2e/run.mjs",
