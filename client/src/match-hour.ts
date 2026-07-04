@@ -1,7 +1,7 @@
 /* 逢魔が時の表示・ランダムマッチボタン制御 */
 
 import {
-  EVENT_LABEL, EVENT_PARTICIPATION_TICKETS, EVENT_YOKAI_ID, PARTICIPATION_TICKETS,
+  EVENT_PARTICIPATION_TICKETS, EVENT_YOKAI_ID, PARTICIPATION_TICKETS,
   isEventDay, isMatchHour, MATCH_HOUR_LABEL, msUntilMatchHourOpen,
 } from '../../shared/match-hour';
 import { YOKAI } from '../../shared/data';
@@ -33,13 +33,12 @@ export const MatchHourUI = {
     const randomNote = $('online-random-schedule');
 
     schedule.classList.remove('hidden');
-    const eventName = isEventDay() ? EVENT_LABEL : '逢魔が時';
     if (open) {
-      schedule.textContent = `${eventName} 開催中 — ${meritText()}`;
-      randomNote.textContent = `${eventName} 開催中（20:00〜22:00）— ${meritText()}`;
+      schedule.textContent = `逢魔が時 開催中 — ${meritText()}`;
+      randomNote.textContent = `逢魔が時 開催中（20:00〜22:00）— ${meritText()}`;
     } else {
       const remain = formatCountdown(msUntilMatchHourOpen());
-      schedule.textContent = `${eventName}: ${MATCH_HOUR_LABEL}（あと ${remain}）— ${meritText()}`;
+      schedule.textContent = `逢魔が時: ${MATCH_HOUR_LABEL}（あと ${remain}）— ${meritText()}`;
       randomNote.textContent = `ランダムマッチは ${MATCH_HOUR_LABEL} のみです（開始まであと ${remain}）— ${meritText()}`;
     }
 
