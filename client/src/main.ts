@@ -664,6 +664,18 @@ function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement 
   return el;
 }
 
+/* 移動時の残像 */
+function spawnGhost(el: HTMLElement, x: number, y: number) {
+  const img = el.querySelector('img');
+  if (!img) return;
+  const g = document.createElement('div');
+  g.className = 'piece-ghost';
+  g.appendChild(img.cloneNode() as HTMLElement);
+  positionPiece(g, x, y);
+  $('board-pieces').appendChild(g);
+  setTimeout(() => g.remove(), 420);
+}
+
 function setPromoted(el: HTMLElement) {
   if (el.classList.contains('promoted')) return;
   el.classList.add('promoted');
@@ -889,11 +901,20 @@ async function animEvent(ev: GameEvent) {
     case 'move': {
       const el = pieceEls.get(ev.uid);
       if (el) {
+        const from = cellCenter(ev.from.x, ev.from.y);
+        const to = cellCenter(ev.to.x, ev.to.y);
+        const isPlayer = el.classList.contains('owner-p');
+        spawnGhost(el, ev.from.x, ev.from.y);
+        FX.trail(from.x, from.y, to.x, to.y,
+          isPlayer ? ['rgba(140,190,255,0.85)', 'rgba(200,230,255,0.7)'] : ['rgba(255,130,120,0.85)', 'rgba(255,200,180,0.7)']);
         el.classList.add('moving');
         positionPiece(el, ev.to.x, ev.to.y);
         AudioSys.play('move');
         await sleep(290);
         el.classList.remove('moving');
+        el.classList.add('landed');
+        FX.shockwave(to.x, to.y, isPlayer ? 'rgba(150,195,255,0.55)' : 'rgba(255,140,130,0.55)', 3.5);
+        setTimeout(() => el.classList.remove('landed'), 260);
       }
       break;
     }
@@ -941,18 +962,26 @@ async function animCapture(ev: CaptureEvent) {
     await FX.cutin(ev.decoy.img, ev.decoy.name, 'ダメージ半減! 駒は葉っぱに化けていた', 'counter');
   }
 
-  /* 撃破演出 */
+  /* 撃破演出: 斬撃 → ヒットストップ(一瞬静止) → 爆発 */
   const victimEl = pieceEls.get(ev.victim.uid);
+  const big = ev.damage >= 450 || ev.procs.length > 0;
+
+  AudioSys.play(big ? 'bighit' : 'capture');
+  FX.slash(c.x, c.y, big);
+  if (victimEl) victimEl.classList.add('hitflash');
+  await sleep(big ? 150 : 100); // ヒットストップ
+
   if (victimEl) {
     victimEl.classList.add('dying');
     setTimeout(() => { victimEl.remove(); pieceEls.delete(ev.victim.uid); }, 420);
   }
 
-  const big = ev.damage >= 450 || ev.procs.length > 0;
-  AudioSys.play(big ? 'bighit' : 'capture');
-  FX.burst(c.x, c.y, colors, big ? 44 : 26, big ? 7.5 : 5.5);
+  if (big) FX.flash('rgba(255,240,205,0.6)', 200);
+  FX.burst(c.x, c.y, colors, big ? 54 : 30, big ? 8.5 : 6);
   FX.ring(c.x, c.y, colors[0], 16, big ? 80 : 55);
+  FX.shockwave(c.x, c.y, colors[0], big ? 16 : 9);
   FX.shake(big);
+  FX.zoomPunch(big);
   FX.damageNumber(c.x, c.y - 14, ev.damage, big ? 'big' : 'normal');
 
   /* 座敷童子: 回復 */
@@ -967,13 +996,16 @@ async function animCapture(ev: CaptureEvent) {
 
   updateHP(ev.hp);
   updateCombo(ev.attacker.owner);
-  await sleep(big ? 720 : 560);
+  await sleep(big ? 600 : 480);
 
   /* 罠の反撃 */
   if (ev.counter) {
     await FX.cutin(ev.counter.img, ev.counter.name, `反撃ダメージ ${ev.counter.dmg}!`, 'counter');
     FX.burst(c.x, c.y, ['#c88aff', '#8a4aff', '#e8d0ff'], 36, 6.5);
+    FX.shockwave(c.x, c.y, '#c88aff', 14);
+    FX.flash('rgba(200,140,255,0.4)', 180);
     FX.shake(true);
+    FX.zoomPunch(true);
     AudioSys.play('bighit');
     FX.damageNumber(c.x, c.y - 14, ev.counter.dmg, 'counter');
     updateHP(ev.counter.hp);
@@ -990,7 +1022,10 @@ async function animCapture(ev: CaptureEvent) {
     }
     FX.burst(c.x, c.y, ['#ff9a3c', '#ff5d5d', '#ffd24a'], 42, 7.2);
     FX.ring(c.x, c.y, '#ff9a3c', 16, 80);
+    FX.shockwave(c.x, c.y, '#ff9a3c', 15);
+    FX.flash('rgba(255,160,80,0.45)', 200);
     FX.shake(true);
+    FX.zoomPunch(true);
     AudioSys.play('bighit');
     await sleep(680);
   }

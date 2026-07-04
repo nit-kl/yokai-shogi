@@ -609,21 +609,57 @@ html, body {
 .combo-badge.show { opacity: 1; animation: comboPop 0.4s cubic-bezier(0.2, 1.8, 0.4, 1); }
 @keyframes comboPop { from { transform: scale(2.2) rotate(-6deg); } to { transform: scale(1) rotate(0); } }
 
-/* ---------- 盤 ---------- */
+/* ---------- 盤 (妖界ステージ) ---------- */
 #board-wrap { position: relative; flex-shrink: 1; min-height: 0; }
+/* 盤の背後で回転する召喚陣 */
+#board-wrap::before {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 132%; aspect-ratio: 1;
+  background: repeating-conic-gradient(rgba(190, 150, 255, 0.55) 0deg 9deg, transparent 9deg 15deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 53%, #000 54% 58%, transparent 59% 62.6%, #000 63.6% 64.4%, transparent 65.4%);
+  mask: radial-gradient(circle, transparent 0 53%, #000 54% 58%, transparent 59% 62.6%, #000 63.6% 64.4%, transparent 65.4%);
+  animation: stageSpin 48s linear infinite;
+  opacity: 0.55;
+  pointer-events: none;
+}
+@keyframes stageSpin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
 #board-frame {
   --bw: min(92vw, 56vh);
   position: relative;
   width: var(--bw);
   height: calc(var(--bw) * 1.2); /* 5:6 */
-  border-radius: 8px;
+  border-radius: 10px;
   padding: calc(var(--bw) * 0.018);
   background:
-    linear-gradient(160deg, #4a3520, #2c1d0e);
+    linear-gradient(160deg, #2b2050 0%, #120c28 45%, #241338 100%);
   box-shadow:
-    0 10px 36px rgba(0,0,0,0.75),
-    0 0 0 1px rgba(232,196,106,0.25),
-    0 0 38px rgba(232,196,106,0.12);
+    0 16px 44px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(232, 196, 106, 0.4),
+    0 0 30px rgba(150, 100, 255, 0.3),
+    inset 0 0 22px rgba(110, 70, 200, 0.4);
+  animation: boardFloat 5.6s ease-in-out infinite;
+}
+@keyframes boardFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+/* 盤上を漂う霊気の霧 */
+#board-frame::after {
+  content: "";
+  position: absolute; inset: -4%;
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse 42% 16% at 22% 86%, rgba(150, 120, 255, 0.16), transparent 70%),
+    radial-gradient(ellipse 46% 15% at 76% 12%, rgba(255, 110, 110, 0.11), transparent 70%),
+    radial-gradient(ellipse 50% 18% at 55% 55%, rgba(110, 170, 255, 0.08), transparent 70%);
+  pointer-events: none;
+  z-index: 3;
+  animation: mistDrift 8s ease-in-out infinite alternate;
+}
+@keyframes mistDrift {
+  from { transform: translateX(-2%); opacity: 0.65; }
+  to { transform: translateX(2%); opacity: 1; }
 }
 #board-cells {
   position: absolute; inset: calc(var(--bw) * 0.018);
@@ -633,17 +669,26 @@ html, body {
   border-radius: 4px;
   overflow: hidden;
   background:
-    repeating-linear-gradient(93deg, rgba(120, 80, 20, 0.10) 0 3px, transparent 3px 11px),
-    repeating-linear-gradient(2deg, rgba(255, 240, 200, 0.06) 0 2px, transparent 2px 14px),
-    linear-gradient(165deg, var(--board-wood), var(--board-wood2) 60%, #ad8843);
+    radial-gradient(1px 1px at 12% 22%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 34% 68%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1.5px 1.5px at 58% 14%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 71% 47%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1.5px 1.5px at 88% 81%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 22% 91%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 45% 38%, rgba(255, 255, 255, 0.25), transparent),
+    radial-gradient(1.2px 1.2px at 79% 27%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(circle at 25% 20%, rgba(150, 105, 255, 0.16), transparent 45%),
+    radial-gradient(circle at 78% 82%, rgba(85, 140, 255, 0.14), transparent 45%),
+    linear-gradient(170deg, #1a1338 0%, #0e0a22 55%, #1c1140 100%);
 }
 .cell {
   position: relative;
-  border: 1px solid rgba(60, 36, 8, 0.55);
+  border: 1px solid rgba(160, 130, 255, 0.2);
+  box-shadow: inset 0 0 12px rgba(90, 60, 180, 0.12);
   cursor: pointer;
 }
-.cell.zone-enemy { background: rgba(180, 40, 40, 0.07); }
-.cell.zone-player { background: rgba(40, 110, 200, 0.07); }
+.cell.zone-enemy { background: linear-gradient(180deg, rgba(255, 60, 60, 0.12), rgba(255, 60, 60, 0.04)); }
+.cell.zone-player { background: linear-gradient(0deg, rgba(70, 140, 255, 0.12), rgba(70, 140, 255, 0.04)); }
 
 .cell .hl { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .cell.hl-move .hl {
@@ -679,6 +724,30 @@ html, body {
   z-index: 2;
 }
 .piece.moving { z-index: 5; }
+.piece.moving img { animation: pieceHop 0.28s cubic-bezier(0.3, 0.8, 0.4, 1); }
+@keyframes pieceHop { 45% { transform: translateY(-13%) scale(1.12); } }
+.piece.landed img { animation: pieceLand 0.24s cubic-bezier(0.2, 1.5, 0.4, 1); }
+@keyframes pieceLand { 30% { transform: translateY(3%) scale(1.05, 0.92); } }
+.piece.hitflash img { animation: hitFlash 0.1s linear 2; }
+@keyframes hitFlash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(3.2) saturate(0.2); }
+}
+/* 移動時の残像 */
+.piece-ghost {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  animation: ghostFade 0.4s ease-out forwards;
+}
+.piece-ghost img {
+  position: absolute; inset: 3%;
+  width: 94%; height: 94%;
+  object-fit: contain;
+  opacity: 0.55;
+  filter: blur(1px) brightness(1.7);
+}
+@keyframes ghostFade { to { opacity: 0; transform: scale(0.92); } }
 .piece-base {
   position: absolute; left: 10%; right: 10%; bottom: 2%; height: 26%;
   border-radius: 50%;
@@ -944,6 +1013,52 @@ html, body {
 
 /* ---------- ダメージ数字・フロートテキスト ---------- */
 #fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 150; overflow: hidden; }
+
+/* 画面フラッシュ */
+.fx-flash {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  animation: fxFlash ease-out forwards;
+}
+@keyframes fxFlash { from { opacity: 1; } to { opacity: 0; } }
+
+/* 衝撃波リング */
+.fx-shockwave {
+  position: fixed;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 3px solid var(--sw-color, #fff);
+  box-shadow: 0 0 16px var(--sw-color, #fff), inset 0 0 10px var(--sw-color, #fff);
+  transform: translate(-50%, -50%) scale(0.3);
+  pointer-events: none;
+  animation: fxShock 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+@keyframes fxShock {
+  to { transform: translate(-50%, -50%) scale(var(--sw-scale, 10)); border-width: 1px; opacity: 0; }
+}
+
+/* 斬撃ライン */
+.fx-slash {
+  position: fixed;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #fff 18% 82%, transparent);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.95), 0 0 30px rgba(255, 230, 180, 0.6);
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(var(--sl-ang, -30deg)) scaleX(0);
+  animation: fxSlash 0.3s ease-out forwards;
+}
+@keyframes fxSlash {
+  0% { transform: translate(-50%, -50%) rotate(var(--sl-ang, -30deg)) scaleX(0); opacity: 0; }
+  30% { transform: translate(-50%, -50%) rotate(var(--sl-ang, -30deg)) scaleX(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--sl-ang, -30deg)) scaleX(1.35); opacity: 0; }
+}
+
+/* 画面ズームパンチ */
+#screen-battle.zoom-punch { animation: zoomPunch 0.24s ease-out; }
+@keyframes zoomPunch { 30% { transform: scale(1.018); } }
+#screen-battle.zoom-punch-big { animation: zoomPunchBig 0.34s cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes zoomPunchBig { 25% { transform: scale(1.04); } }
 .dmg-num {
   position: absolute;
   transform: translate(-50%, -50%);
