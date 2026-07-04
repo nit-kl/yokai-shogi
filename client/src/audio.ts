@@ -4,6 +4,12 @@
 
 type BgmMode = 'title' | 'battle';
 
+const BATTLE_BGM_SOURCES = [
+  '/assets/audio/battle-bgm.mp3',
+  '/assets/audio/battle-bgm-1.mp3',
+  '/assets/audio/battle-bgm-2.mp3',
+];
+
 export const AudioSys = {
   ctx: null as AudioContext | null,
   master: null as GainNode | null,
@@ -19,8 +25,8 @@ export const AudioSys = {
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.9;
       this.master.connect(this.ctx.destination);
-      this.bgmTitle = this._makeBgm('/assets/audio/title-bgm.mp3', 0.38);
-      this.bgmBattle = this._makeBgm('/assets/audio/battle-bgm.mp3', 0.42);
+      this.bgmTitle = this._makeBgm('/assets/audio/title-bgm.mp3', 0.28);
+      this.bgmBattle = this._makeBgm('/assets/audio/battle-bgm.mp3', 0.32);
     } catch { /* 音なしでも動作 */ }
   },
 
@@ -65,7 +71,18 @@ export const AudioSys = {
 
   /* ---------- BGM ---------- */
   startTitleBgm() { this._playBgm('title'); },
-  startBattleBgm() { this._playBgm('battle'); },
+  startBattleBgm() {
+    if (this.bgmBattle) {
+      const src = BATTLE_BGM_SOURCES[Math.floor(Math.random() * BATTLE_BGM_SOURCES.length)];
+      if (this.bgmBattle.getAttribute('src') !== src) {
+        this.bgmBattle.pause();
+        this.bgmBattle.currentTime = 0;
+        this.bgmBattle.src = src;
+        this.bgmBattle.load();
+      }
+    }
+    this._playBgm('battle');
+  },
   startBgm() { this.startBattleBgm(); },
 
   stopBgm() {

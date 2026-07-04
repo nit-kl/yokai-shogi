@@ -1724,6 +1724,10 @@ html, body {
 .title-link-btn:hover { background: rgba(40, 32, 56, 0.85); }
 .link-box { max-width: 440px; text-align: center; }
 .online-box { max-width: 440px; text-align: center; gap: 0.8rem; }
+.online-box > .btn {
+  min-width: min(100%, 18rem);
+  white-space: nowrap;
+}
 .online-code-row { display: flex; gap: 0.6rem; justify-content: center; }
 .online-code-row input { width: 10rem; text-align: center; letter-spacing: 0.18em; text-transform: uppercase; }
 .online-status {

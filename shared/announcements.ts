@@ -13,6 +13,14 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-07-04-hyakki-nurarihyon-event',
+    type: 'campaign',
+    title: '毎週土曜の逢魔が時に限定妖怪が登場',
+    body: 'ぬらりひょんの色違い「百鬼夜行ぬらりひょん」が登場しました。毎週土曜の逢魔が時（20:00〜22:00）にランダムマッチを1局完走すると、勝敗に関係なく初回のみ確定で入手できます。さらに参加報酬としてガチャチケット🎟+2も獲得できます（1日1回）。',
+    publishedAt: '2026-07-04T00:00:00+09:00',
+    priority: 'high',
+  },
+  {
     id: '2026-06-28-new-pieces-c93015c',
     type: 'update',
     title: '新しい妖怪駒を追加しました',
