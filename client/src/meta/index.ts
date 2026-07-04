@@ -71,6 +71,8 @@ class MetaFacade {
   pickBoss(bossId: string): Promise<string | null> { return this.provider.pickBoss(bossId); }
   completeOnboarding(): Promise<LoginBonus | null> { return this.provider.completeOnboarding(); }
   addTickets(n: number): void { if (n > 0) this.provider.data.tickets += n; }
+  /** サーバーが付与済みの妖怪をローカル表示へ反映(対戦会限定妖怪など) */
+  addYokai(id: string): void { this.provider.data.owned[id] = 1; }
 
   /* ---------- 同期の読み取りヘルパ(data から導出) ---------- */
   bossId(): string { return bossIdOf(this.provider.data); }

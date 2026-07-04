@@ -17,22 +17,43 @@ Cloudflareダッシュボード → Analytics Engine → SQL で実行する。
 `queue_exit` の reason は `matched`（成立）、`cancel`（手動取消）、`timeout`（AI切替）、
 `disconnect`（切断）、`invalid`（ユーザーデータ不正）のいずれか。
 
-## キュー参加・成立率・待機時間
+> **構文の注意**: Analytics Engine の SQL は ClickHouse の限定サブセット。
+> `FILTER (WHERE ...)`・`JOIN`・`UNION`・`WITH`(CTE)・`NULLIF` は**使えない**。
+> 代わりに `countIf(<条件>)` / `sumIf` / `avgIf`、分位数は
+> `quantileExactWeighted(q)(値, _sample_interval)`、ゼロ除算回避は `if()` を使う。
+> （参考: developers.cloudflare.com/analytics/analytics-engine/sql-reference/）
+
+## キュー参加・成立率
 
 ```sql
 SELECT
   toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
-  COUNT_IF(blob1 = 'queue_join') AS joins,
-  COUNT_IF(blob1 = 'queue_exit' AND blob2 = 'matched') AS matched_users,
-  ROUND(100.0 * matched_users / NULLIF(joins, 0), 1) AS match_rate_pct,
-  COUNT_IF(blob1 = 'queue_exit' AND blob2 = 'matched' AND double1 <= 30000) AS matched_within_30s,
-  ROUND(100.0 * matched_within_30s / NULLIF(matched_users, 0), 1) AS matched_within_30s_pct,
-  ROUND(quantile(0.5)(double1) FILTER (WHERE blob1 = 'queue_exit' AND blob2 = 'matched') / 1000.0, 1)
-    AS matched_wait_p50_sec,
-  ROUND(quantile(0.9)(double1) FILTER (WHERE blob1 = 'queue_exit' AND blob2 = 'matched') / 1000.0, 1)
-    AS matched_wait_p90_sec
+  countIf(blob1 = 'queue_join') AS joins,
+  countIf(blob1 = 'queue_exit' AND blob2 = 'matched') AS matched_users,
+  countIf(blob1 = 'queue_exit' AND blob2 = 'matched' AND double1 <= 30000) AS matched_within_30s,
+  round(100.0 * countIf(blob1 = 'queue_exit' AND blob2 = 'matched')
+        / if(countIf(blob1 = 'queue_join') = 0, 1, countIf(blob1 = 'queue_join')), 1) AS match_rate_pct,
+  round(100.0 * countIf(blob1 = 'queue_exit' AND blob2 = 'matched' AND double1 <= 30000)
+        / if(countIf(blob1 = 'queue_exit' AND blob2 = 'matched') = 0, 1,
+             countIf(blob1 = 'queue_exit' AND blob2 = 'matched')), 1) AS matched_within_30s_pct
 FROM yokai_shogi_metrics_production
-WHERE blob1 IN ('queue_join', 'queue_exit')
+WHERE blob1 = 'queue_join' OR blob1 = 'queue_exit'
+GROUP BY day
+ORDER BY day DESC;
+```
+
+## 成立時の待機時間（p50 / p90）
+
+成立（`matched`）した退出だけに絞るため、上のクエリと分けて実行する。
+
+```sql
+SELECT
+  toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
+  count() AS matched_users,
+  round(quantileExactWeighted(0.5)(double1, _sample_interval) / 1000.0, 1) AS wait_p50_sec,
+  round(quantileExactWeighted(0.9)(double1, _sample_interval) / 1000.0, 1) AS wait_p90_sec
+FROM yokai_shogi_metrics_production
+WHERE blob1 = 'queue_exit' AND blob2 = 'matched'
 GROUP BY day
 ORDER BY day DESC;
 ```
@@ -43,8 +64,8 @@ ORDER BY day DESC;
 SELECT
   toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
   blob2 AS reason,
-  COUNT(*) AS users,
-  ROUND(AVG(double1) / 1000.0, 1) AS avg_wait_sec
+  count() AS users,
+  round(avg(double1) / 1000.0, 1) AS avg_wait_sec
 FROM yokai_shogi_metrics_production
 WHERE blob1 = 'queue_exit'
 GROUP BY day, reason
@@ -56,8 +77,8 @@ ORDER BY day DESC, users DESC;
 ```sql
 SELECT
   toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
-  blob1 AS mode,
-  COUNT(*) AS match_found
+  blob2 AS mode,
+  count() AS match_found
 FROM yokai_shogi_metrics_production
 WHERE blob1 = 'match_found'
 GROUP BY day, mode
@@ -69,10 +90,10 @@ ORDER BY day DESC, mode;
 ```sql
 SELECT
   toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
-  blob1 AS mode,
-  blob2 AS reason,
-  blob3 AS winner,
-  COUNT(*) AS match_end
+  blob2 AS mode,
+  blob3 AS reason,
+  blob4 AS winner,
+  count() AS match_end
 FROM yokai_shogi_metrics_production
 WHERE blob1 = 'match_end'
 GROUP BY day, mode, reason, winner
@@ -82,31 +103,20 @@ ORDER BY day DESC, match_end DESC;
 ## 完走率（日別・ランダムマッチ）
 
 `match_end` が記録された対局を「完走」とみなす（途中切断も終了イベントは出る）。
+JOIN が使えないため日別の件数比較で近似する（日付をまたいだ対局は found と end が
+別の日に数えられる。厳密に突合したいときは D1 の `matches` を見る）。
 
 ```sql
-WITH found AS (
-  SELECT
-    toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
-    index1 AS match_id
-  FROM yokai_shogi_metrics_production
-  WHERE blob1 = 'match_found' AND blob2 = 'random'
-),
-ended AS (
-  SELECT
-    toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
-    index1 AS match_id
-  FROM yokai_shogi_metrics_production
-  WHERE blob1 = 'match_end' AND blob2 = 'random'
-)
 SELECT
-  f.day,
-  COUNT(DISTINCT f.match_id) AS found,
-  COUNT(DISTINCT e.match_id) AS ended,
-  ROUND(100.0 * COUNT(DISTINCT e.match_id) / NULLIF(COUNT(DISTINCT f.match_id), 0), 1) AS completion_pct
-FROM found f
-LEFT JOIN ended e ON f.day = e.day AND f.match_id = e.match_id
-GROUP BY f.day
-ORDER BY f.day DESC;
+  toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
+  countIf(blob1 = 'match_found') AS found,
+  countIf(blob1 = 'match_end') AS ended,
+  round(100.0 * countIf(blob1 = 'match_end')
+        / if(countIf(blob1 = 'match_found') = 0, 1, countIf(blob1 = 'match_found')), 1) AS completion_pct
+FROM yokai_shogi_metrics_production
+WHERE (blob1 = 'match_found' OR blob1 = 'match_end') AND blob2 = 'random'
+GROUP BY day
+ORDER BY day DESC;
 ```
 
 ## 平均対局時間（秒）
@@ -114,9 +124,9 @@ ORDER BY f.day DESC;
 ```sql
 SELECT
   toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day,
-  blob2 AS reason,
-  AVG(double1) / 1000.0 AS avg_duration_sec,
-  AVG(double2) AS avg_actions
+  blob3 AS reason,
+  round(avg(double1) / 1000.0, 1) AS avg_duration_sec,
+  round(avg(double2), 1) AS avg_actions
 FROM yokai_shogi_metrics_production
 WHERE blob1 = 'match_end'
 GROUP BY day, reason

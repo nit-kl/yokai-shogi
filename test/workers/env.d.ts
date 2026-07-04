@@ -1,3 +1,6 @@
+/// <reference types="@cloudflare/workers-types" />
+/// <reference types="@cloudflare/vitest-pool-workers/types" />
+
 import type { Env as ApiEnv } from '../../server/src/env';
 import type { D1Migration } from 'cloudflare:test';
 

@@ -38,6 +38,7 @@ export interface YokaiDef {
   atk: number;
   rarity: Rarity;
   gachaOnly?: boolean;
+  limited?: boolean;  // ガチャ排出なし(土曜対戦会などイベント限定入手: shared/match-hour.ts)
   img: string;    // フルサイズ(512px WebP)
   imgSm: string;  // 小サイズ(チップ・一覧用 WebP)
   moveText: string;
@@ -355,7 +356,6 @@ export const YOKAI: Record<string, YokaiDef> = {
   },
 };
 
-/* ガチャ排出対象(全妖怪) */
 /* ---------- SSR異装（性能は通常版と同一） ---------- */
 YOKAI.kyubi_eclipse = {
   ...YOKAI.kyubi,
@@ -403,6 +403,7 @@ YOKAI.nurarihyon_hyakki = {
   ...YOKAI.nurarihyon,
   id: 'nurarihyon_hyakki',
   name: '百鬼夜行・ぬらりひょん',
+  limited: true,  // 土曜対戦会 限定(EVENT_YOKAI_ID)
   img: img('nurarihyon-hyakki'),
   imgSm: imgSm('nurarihyon-hyakki'),
   variantOf: 'nurarihyon',
@@ -410,7 +411,8 @@ YOKAI.nurarihyon_hyakki = {
   summonColors: ['#dbe7ff', '#6157a8', '#d98945'],
 };
 
-export const GACHA_POOL: string[] = Object.keys(YOKAI);
+/* ガチャ排出対象(limited=イベント限定を除く全妖怪) */
+export const GACHA_POOL: string[] = Object.keys(YOKAI).filter(id => !YOKAI[id].limited);
 
 /* 初回オンボーディングで選べる大将(ぬらりひょんはガチャでも排出) */
 export const BOSS_CHOICES = ['kyubi', 'shuten', 'nurarihyon'] as const;

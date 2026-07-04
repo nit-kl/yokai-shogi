@@ -18,6 +18,7 @@ export default defineConfig(async () => {
             JWT_SECRET: 'test-secret',
             ALLOWED_ORIGINS: 'http://localhost:5173',
             MATCH_HOUR_ENFORCE: '0',
+            PARTICIPATION_MIN_ACTIONS: '1',
           },
         },
       }),

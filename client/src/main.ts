@@ -43,6 +43,8 @@ let onlineSide: Side | null = null;
 let onlineMatch: { matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string } | null = null;
 let onlineEndReason: string | null = null;
 let onlineReward = 0;
+let onlineParticipation = 0;
+let onlineEventYokai: string | null = null;
 let onlineSeq = 0;
 const ONLINE_TURN_MS = 60_000;
 const ONLINE_DISCONNECT_MS = 60_000;
@@ -497,7 +499,10 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     G.winner = message.winner === 'draw' ? null : (message.winner === onlineSide ? 'p' : 'e');
     onlineEndReason = message.reason;
     onlineReward = message.reward.tickets;
-    if (message.reward.tickets > 0) Meta.addTickets(message.reward.tickets);
+    onlineParticipation = message.reward.participation ?? 0;
+    onlineEventYokai = message.reward.eventYokai ?? null;
+    Meta.addTickets(message.reward.tickets + onlineParticipation);
+    if (onlineEventYokai) Meta.addYokai(onlineEventYokai);
     clearOnlineMatch();
     stopOnlineTimer();
     showResult();
@@ -815,6 +820,8 @@ function startBattle() {
   onlineSide = null;
   onlineEndReason = null;
   onlineReward = 0;
+  onlineParticipation = 0;
+  onlineEventYokai = null;
   stopOnlineTimer();
   $('online-status').classList.add('hidden');
   G = Game.newState(Meta.formationRows(), stage.enemyRows);
@@ -1063,9 +1070,17 @@ function showResult() {
     }).catch(() => {
       $('result-reward').textContent = '勝利報酬の付与に失敗しました(通信状態を確認)';
     });
-  } else if (win && onlineSide && onlineReward > 0) {
-    $('result-reward').textContent = `勝利報酬: ガチャチケット 🎟 +${onlineReward}`;
-    $('result-reward').classList.remove('hidden');
+  } else if (onlineSide) {
+    const lines: string[] = [];
+    if (win && onlineReward > 0) lines.push(`勝利報酬: ガチャチケット 🎟 +${onlineReward}`);
+    if (onlineParticipation > 0) lines.push(`参加報酬: ガチャチケット 🎟 +${onlineParticipation}`);
+    if (onlineEventYokai) lines.push(`対戦会限定「${YOKAI[onlineEventYokai]?.name ?? onlineEventYokai}」を入手!`);
+    if (lines.length > 0) {
+      $('result-reward').textContent = lines.join(' ／ ');
+      $('result-reward').classList.remove('hidden');
+    } else {
+      $('result-reward').classList.add('hidden');
+    }
   } else {
     $('result-reward').classList.add('hidden');
   }
@@ -1130,6 +1145,7 @@ const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
 const PIECE_RARITY_RANK: Record<Rarity, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
 
 function pieceSourceText(id: string): string {
+  if (YOKAI[id]?.limited) return '土曜対戦会 限定';
   return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択 / ガチャ' : 'ガチャ';
 }
 

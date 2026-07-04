@@ -2,6 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { Game } from '../../shared/game';
 import type { BattlePlayer, ServerBattleMessage } from '../../shared/battle';
+import { EVENT_YOKAI_ID, isEventDay, participationTicketsFor } from '../../shared/match-hour';
 import { bossId } from '../../server/src/do/common';
 
 class Inbox {
@@ -229,5 +230,62 @@ describe('オンライン報酬', () => {
       'SELECT tickets FROM user_profiles WHERE user_id = ?1',
     ).bind(friend.p.userId).first<{ tickets: number }>();
     expect(friendProfile?.tickets).toBe(0);
+  });
+
+  it('ランダムマッチ完走で参加報酬を両者に付与し、同日2局目は付与しない', async () => {
+    /* テスト環境は PARTICIPATION_MIN_ACTIONS='1'(vitest.workers.config.ts)。
+       1手指してから投了すると seq>=1 で「完走」扱いになる */
+    async function playOneActionResign(p: BattlePlayer, e: BattlePlayer) {
+      const matchId = crypto.randomUUID();
+      const stub = env.BATTLE.get(env.BATTLE.idFromName(matchId));
+      const init = await stub.fetch('https://battle/init', {
+        method: 'POST',
+        body: JSON.stringify({ matchId, mode: 'random', players: { p, e } }),
+      });
+      expect(init.status).toBe(201);
+      const pws = await connect(stub, p, matchId);
+      const ews = await connect(stub, e, matchId);
+      const pSnapshot = await pws.nextType('snapshot');
+      await ews.nextType('snapshot');
+      await pws.nextType('your_turn');
+      const action = Game.getAllActions(pSnapshot.state, 'p')[0];
+      pws.ws.send(JSON.stringify({ t: 'action', action }));
+      await pws.nextType('events');
+      pws.ws.send(JSON.stringify({ t: 'resign' }));
+      const [pEnd, eEnd] = await Promise.all([pws.nextType('game_end'), ews.nextType('game_end')]);
+      return { pEnd, eEnd };
+    }
+
+    const p = await createPlayer('参加A');
+    const e = await createPlayer('参加B');
+    const expected = participationTicketsFor(new Date());
+
+    const first = await playOneActionResign(p, e);
+    /* 参加報酬は勝敗不問で両者に付与(pは投了した敗者) */
+    expect(first.pEnd.reward).toMatchObject({ tickets: 0, participation: expected });
+    expect(first.eEnd.reward).toMatchObject({ tickets: 1, participation: expected });
+    const logs = await env.DB.prepare('SELECT COUNT(*) count FROM participation_logs').first<{ count: number }>();
+    expect(logs?.count).toBe(2);
+    /* 土曜(JST)の対戦会日は限定妖怪も新規付与される */
+    if (isEventDay(new Date()) && EVENT_YOKAI_ID) {
+      expect(first.pEnd.reward.eventYokai).toBe(EVENT_YOKAI_ID);
+      const owned = await env.DB.prepare('SELECT COUNT(*) count FROM user_yokai WHERE yokai_id = ?1')
+        .bind(EVENT_YOKAI_ID).first<{ count: number }>();
+      expect(owned?.count).toBe(2);
+    } else {
+      expect(first.pEnd.reward.eventYokai).toBeNull();
+    }
+
+    /* 同日2局目: 勝利報酬は付くが参加報酬は1日1回 */
+    const second = await playOneActionResign(p, e);
+    expect(second.pEnd.reward).toMatchObject({ tickets: 0, participation: 0 });
+    expect(second.eEnd.reward).toMatchObject({ tickets: 1, participation: 0 });
+
+    const pProfile = await env.DB.prepare('SELECT tickets FROM user_profiles WHERE user_id = ?1')
+      .bind(p.userId).first<{ tickets: number }>();
+    const eProfile = await env.DB.prepare('SELECT tickets FROM user_profiles WHERE user_id = ?1')
+      .bind(e.userId).first<{ tickets: number }>();
+    expect(pProfile?.tickets).toBe(expected);      // 参加報酬のみ
+    expect(eProfile?.tickets).toBe(2 + expected);  // 勝利2 + 参加報酬
   });
 });

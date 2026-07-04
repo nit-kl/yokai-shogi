@@ -14,7 +14,8 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "src",
-    "../shared"
+    "./**/*.ts",
+    "../../shared/**/*.ts",
+    "../../server/src/**/*.ts"
   ]
 }

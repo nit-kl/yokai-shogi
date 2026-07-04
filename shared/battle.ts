@@ -40,6 +40,9 @@ export type ServerBattleMessage =
   | { t: 'snapshot'; state: GameState; remainMs: number; seq: number }
   | {
       t: 'game_end'; winner: Side | 'draw'; reason: BattleEndReason;
-      reward: { tickets: number }; rating: { before: number; after: number };
+      /* tickets=勝利報酬 / participation=逢魔が時の完走報酬(勝敗不問・1日1回) /
+         eventYokai=土曜対戦会の限定妖怪(このゲームで新規入手した場合のみ) */
+      reward: { tickets: number; participation?: number; eventYokai?: string | null };
+      rating: { before: number; after: number };
     }
   | { t: 'error'; code: string; message: string };
