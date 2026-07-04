@@ -390,11 +390,14 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-06-28-new-pieces-c93015c',
-      type: 'update',
+      id: '2026-07-04-hyakki-nurarihyon-event',
+      type: 'campaign',
       priority: 'high',
-      title: '新しい妖怪駒を追加しました',
+      title: '毎週土曜の逢魔が時に限定妖怪が登場',
     });
+    expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: '2026-06-28-new-pieces-c93015c' }),
+    ]));
   });
 });
 
