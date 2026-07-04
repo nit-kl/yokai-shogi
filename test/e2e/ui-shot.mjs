@@ -53,14 +53,15 @@ await page.waitForTimeout(1400);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 
 // 小鬼(x=1,y=4)を選択 → 移動ハイライト確認
+// #board-frame の boardFloat でセルが常に動くため、Playwright の stable 判定を force で迂回する
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
-await cell(1, 4).click();
+await cell(1, 4).click({ force: true });
 if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
 await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-3-select.png') });
 
 // (1,3)へ移動 → AIの応手まで待つ
-await cell(1, 3).click();
+await cell(1, 3).click({ force: true });
 await page.waitForTimeout(3500);
 await page.screenshot({ path: path.join(dir, 'shot-4-after-ai.png') });
 
