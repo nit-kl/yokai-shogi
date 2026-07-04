@@ -170,7 +170,75 @@ export const FX = {
     }
   },
 
+  /* 移動の軌跡: 2点間に光の粒を撒く */
+  trail(x1: number, y1: number, x2: number, y2: number, colors: string[]) {
+    const steps = 14;
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      this.parts.push({
+        kind: 'glow',
+        x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * 8,
+        y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * 8,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: -(0.2 + Math.random() * 0.6),
+        size: 1.5 + Math.random() * 1.8,
+        life: 0.85 - t * 0.3, decay: 0.028 + Math.random() * 0.02,
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  },
+
   /* ---------- DOM系演出 ---------- */
+  /* 画面全体フラッシュ */
+  flash(color = 'rgba(255,245,220,0.75)', dur = 180) {
+    const el = document.createElement('div');
+    el.className = 'fx-flash';
+    el.style.background = color;
+    el.style.animationDuration = dur + 'ms';
+    document.getElementById('fx-layer')!.appendChild(el);
+    setTimeout(() => el.remove(), dur + 80);
+  },
+
+  /* 広がる衝撃波リング */
+  shockwave(x: number, y: number, color = '#fff', scale = 10) {
+    const el = document.createElement('div');
+    el.className = 'fx-shockwave';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.setProperty('--sw-color', color);
+    el.style.setProperty('--sw-scale', String(scale));
+    document.getElementById('fx-layer')!.appendChild(el);
+    setTimeout(() => el.remove(), 540);
+  },
+
+  /* 斬撃ライン(捕獲時) */
+  slash(x: number, y: number, big = false) {
+    const angles = big ? [-38, 27, -8] : [-32, 22];
+    angles.forEach((a, i) => {
+      setTimeout(() => {
+        const el = document.createElement('div');
+        el.className = 'fx-slash';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.width = big ? '210px' : '150px';
+        el.style.setProperty('--sl-ang', a + 'deg');
+        document.getElementById('fx-layer')!.appendChild(el);
+        setTimeout(() => el.remove(), 380);
+      }, i * 70);
+    });
+  },
+
+  /* 画面ズームパンチ */
+  zoomPunch(big = false) {
+    const el = document.getElementById('screen-battle');
+    if (!el) return;
+    const cls = big ? 'zoom-punch-big' : 'zoom-punch';
+    el.classList.remove('zoom-punch', 'zoom-punch-big');
+    void el.offsetWidth;
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), big ? 360 : 260);
+  },
+
   damageNumber(x: number, y: number, value: number | string, kind = 'normal') {
     const el = document.createElement('div');
     el.className = `dmg-num dmg-${kind}`;
