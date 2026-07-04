@@ -8,6 +8,9 @@ import type { Env } from '../env';
 import {
   DISCONNECT_GRACE_MS, RULE_VERSION, TURN_MS, isLegalAction, newOnlineState, other, send,
 } from './common';
+import {
+  EVENT_YOKAI_ID, PARTICIPATION_MIN_ACTIONS, isEventDay, jstDateString, participationTicketsFor,
+} from '../../../shared/match-hour';
 
 interface Meta {
   matchId: string;
@@ -229,6 +232,7 @@ export class BattleRoom {
     }
     await this.persistRuntime();
     const rewards = await this.flush(winner, reason);
+    const participation = await this.grantParticipation();
     this.env.METRICS?.writeDataPoint({
       blobs: ['match_end', this.meta.mode, reason, winner],
       doubles: [Date.now() - Date.parse(this.meta.startedAt), this.seq],
@@ -238,11 +242,70 @@ export class BattleRoom {
       const player = this.meta.players[side];
       const reward = winner === side ? rewards[side] : 0;
       const message: ServerBattleMessage = {
-        t: 'game_end', winner, reason, reward: { tickets: reward },
+        t: 'game_end', winner, reason,
+        reward: {
+          tickets: reward,
+          participation: participation[side].tickets,
+          eventYokai: participation[side].yokaiId,
+        },
         rating: { before: player.rating, after: player.rating },
       };
       for (const ws of this.state.getWebSockets(side)) send(ws, message);
     }
+  }
+
+  /* 逢魔が時のランダムマッチ完走報酬(勝敗不問・1日1回)+土曜対戦会の限定妖怪(doc 18)。
+     1日1回は participation_logs の PK(user_id, date) で担保する:
+     プレーンINSERTを含むbatchが衝突で丸ごと失敗 = 本日付与済み(冪等) */
+  private async grantParticipation(): Promise<Record<Side, { tickets: number; yokaiId: string | null }>> {
+    const result: Record<Side, { tickets: number; yokaiId: string | null }> = {
+      p: { tickets: 0, yokaiId: null }, e: { tickets: 0, yokaiId: null },
+    };
+    if (!this.meta || this.meta.mode !== 'random') return result;
+    const minActions = Number(this.env.PARTICIPATION_MIN_ACTIONS ?? '') || PARTICIPATION_MIN_ACTIONS;
+    if (this.seq < minActions) return result;
+    const startedAt = new Date(Date.parse(this.meta.startedAt));
+    const date = jstDateString(startedAt);
+    const tickets = participationTicketsFor(startedAt);
+    const eventYokai = isEventDay(startedAt) ? EVENT_YOKAI_ID : null;
+    for (const side of ['p', 'e'] as const) {
+      const userId = this.meta.players[side].userId;
+      try {
+        const profile = await this.env.DB.prepare('SELECT tickets FROM user_profiles WHERE user_id = ?1')
+          .bind(userId).first<{ tickets: number }>();
+        if (!profile) continue;
+        const grant = Math.min(tickets, Math.max(0, 999 - profile.tickets));
+        const owned = eventYokai
+          ? await this.env.DB.prepare('SELECT 1 AS x FROM user_yokai WHERE user_id = ?1 AND yokai_id = ?2')
+            .bind(userId, eventYokai).first()
+          : null;
+        const isNew = !!eventYokai && !owned;
+        const stmts = [
+          this.env.DB.prepare(
+            'INSERT INTO participation_logs (user_id, date, tickets, yokai_id, yokai_new, match_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)',
+          ).bind(userId, date, grant, eventYokai, isNew ? 1 : 0, this.meta.matchId),
+        ];
+        if (grant > 0) {
+          stmts.push(
+            this.env.DB.prepare('UPDATE user_profiles SET tickets = tickets + ?2 WHERE user_id = ?1')
+              .bind(userId, grant),
+            this.env.DB.prepare(
+              "INSERT INTO currency_logs (user_id, currency, delta, balance, reason, ref_id) VALUES (?1, 'tickets', ?2, ?3, 'event_participation', ?4)",
+            ).bind(userId, grant, profile.tickets + grant, this.meta.matchId),
+          );
+        }
+        if (isNew) {
+          stmts.push(
+            this.env.DB.prepare('INSERT INTO user_yokai (user_id, yokai_id) VALUES (?1, ?2)').bind(userId, eventYokai),
+          );
+        }
+        await this.env.DB.batch(stmts);
+        result[side] = { tickets: grant, yokaiId: isNew ? eventYokai : null };
+      } catch {
+        /* PK(user_id, date)衝突 = 本日付与済み。何も付与しない */
+      }
+    }
+    return result;
   }
 
   private async flush(winner: Side | 'draw', reason: BattleEndReason): Promise<Record<Side, number>> {

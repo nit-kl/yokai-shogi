@@ -36,7 +36,8 @@ test('shared/gacha: SSR異装はSSR内の0.5%枠から抽選される', () => {
     .flatMap(r => r.yokai)
     .filter(y => YOKAI[y.id].variantOf)
     .map(y => y.rate);
-  expect(specialRates).toHaveLength(5);
+  const poolVariants = GACHA_POOL.filter(id => YOKAI[id].variantOf);
+  expect(specialRates).toHaveLength(poolVariants.length);
   expect(specialRates.reduce((sum, rate) => sum + rate, 0)).toBeCloseTo(0.005);
 });
 
@@ -60,8 +61,10 @@ test('shared/gacha: 排出はプール内・レアリティ一致・被りは妖
   expect(new Set(draw.newIds).size).toBe(draw.newIds.length);
 });
 
-test('shared/gacha: 全妖怪が排出対象', () => {
-  expect(new Set(GACHA_POOL)).toEqual(new Set(Object.keys(YOKAI)));
+test('shared/gacha: limited(イベント限定)以外の全妖怪が排出対象', () => {
+  expect(new Set(GACHA_POOL)).toEqual(new Set(Object.keys(YOKAI).filter(id => !YOKAI[id].limited)));
+  for (const id of GACHA_POOL) expect(YOKAI[id].limited, '限定妖怪はガチャ排出しない: ' + id).toBeFalsy();
+  expect(GACHA_POOL.includes('nurarihyon_hyakki'), '対戦会限定はプール外').toBe(false);
 });
 
 test('shared/gacha: 排出率公開の重みと個別確率', () => {
