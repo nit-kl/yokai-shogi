@@ -240,12 +240,17 @@ function wireButtons() {
     AudioSys.play('select');
     soloMode = 'streak';
     soloStageId = 'hyakki';
-    trackLandingEvent('hyakki_rank_view', {});
     renderSoloSelect();
   };
   $('btn-hyakki-name').onclick = () => { AudioSys.play('click'); MenuUI.openProfile(); };
   /* プロフィール保存後に名前設定導線を消す(menu.tsが発火) */
   document.addEventListener('player-name-changed', () => renderHyakkiPanel());
+  $('btn-ranking').onclick = () => {
+    trackLandingEvent('hyakki_rank_view', { source: 'title' });
+    AudioSys.play('click');
+    openRanking();
+  };
+  $('btn-ranking-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-online').onclick = () => {
     trackLandingEvent('online_cta_click', { source: 'title' });
     void openOnline();
@@ -322,6 +327,14 @@ function openSolo() {
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(200,120,255,0.4)', 'rgba(88,182,255,0.3)'], 0.04);
 }
 
+function openRanking() {
+  RegistrationStatsUI.stopPolling();
+  MatchHourUI.stop();
+  renderHyakkiPanel();
+  showScreen('screen-ranking');
+  FX.setAmbient(['rgba(200,120,255,0.45)', 'rgba(232,196,106,0.35)', 'rgba(88,182,255,0.25)'], 0.04);
+}
+
 function renderSoloSelect() {
   $('btn-solo-single').classList.toggle('active', soloMode === 'single');
   $('btn-solo-streak').classList.toggle('active', soloMode === 'streak');
@@ -335,10 +348,18 @@ function renderSoloSelect() {
     const card = document.createElement('button');
     card.className = 'solo-stage-card' + (stage.id === soloStageId ? ' selected' : '');
 
-    const bossImg = document.createElement('img');
-    bossImg.src = boss.imgSm;
-    bossImg.alt = boss.name;
-    card.appendChild(bossImg);
+    if (stage.randomized) {
+      const randomBoss = document.createElement('div');
+      randomBoss.className = 'solo-stage-random-boss';
+      randomBoss.setAttribute('aria-label', 'ランダムな大将');
+      randomBoss.textContent = '?';
+      card.appendChild(randomBoss);
+    } else {
+      const bossImg = document.createElement('img');
+      bossImg.src = boss.imgSm;
+      bossImg.alt = boss.name;
+      card.appendChild(bossImg);
+    }
 
     const body = document.createElement('div');
     body.className = 'solo-stage-body';
@@ -353,7 +374,7 @@ function renderSoloSelect() {
 
     const bossLine = document.createElement('div');
     bossLine.className = 'solo-stage-boss';
-    bossLine.textContent = `大将 ${boss.name}`;
+    bossLine.textContent = stage.randomized ? '大将 毎回ランダム' : `大将 ${boss.name}`;
 
     const desc = document.createElement('p');
     desc.textContent = stage.desc;
@@ -407,7 +428,6 @@ function renderSoloSelect() {
     difficulties.appendChild(button);
   }
 
-  renderHyakkiPanel();
 }
 
 /* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
@@ -417,10 +437,14 @@ function hyakkiRankEligible(): boolean {
 }
 
 function renderHyakkiPanel() {
-  const panel = $('hyakki-ranking');
-  const show = soloMode === 'streak' && Meta.online;
-  panel.classList.toggle('hidden', !show);
-  if (!show) return;
+  const note = $('hyakki-ranking-note');
+  note.textContent = '対象: ソロ対戦 > 連戦 > 上級';
+  note.classList.remove('hidden');
+  if (!Meta.online) {
+    hyakkiRanking = null;
+    renderHyakkiEntries('オンライン接続時にランキングを閲覧できます');
+    return;
+  }
   if (Date.now() - hyakkiRankingAt > 60_000) {
     hyakkiRankingAt = Date.now();
     Meta.hyakkiRanking().then(r => {
@@ -453,17 +477,13 @@ function hyakkiEntryLi(rank: number, name: string, bestStreak: number): HTMLLIEl
   return li;
 }
 
-function renderHyakkiEntries() {
-  const note = $('hyakki-ranking-note');
-  note.textContent = hyakkiRankEligible() ? '' : 'ランキング対象は難易度「上級」のみ';
-  note.classList.toggle('hidden', hyakkiRankEligible());
-
+function renderHyakkiEntries(emptyMessage = 'ランキングを読み込み中…') {
   const list = $('hyakki-ranking-list');
   const meEl = $('hyakki-ranking-me');
   list.replaceChildren();
   meEl.textContent = '';
   if (!hyakkiRanking) {
-    meEl.textContent = 'ランキングを読み込み中…';
+    meEl.textContent = emptyMessage;
     $('hyakki-lastweek').classList.add('hidden');
     $('btn-hyakki-name').classList.add('hidden');
     return;

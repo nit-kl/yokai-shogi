@@ -344,7 +344,7 @@ html, body {
   color: #75698e; font-size: 0.62rem; letter-spacing: 0.3em;
 }
 .title-menu-label::before, .title-menu-label::after { content: ""; flex: 1; height: 1px; background: rgba(232,196,106,0.15); }
-.title-secondary-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; width: min(100%, 560px); }
+.title-secondary-actions { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; width: min(100%, 620px); }
 .title-menu-btn {
   position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -396,6 +396,19 @@ html, body {
   font-size: 0.68rem;
   letter-spacing: 0.08em;
 }
+/* ---------- ランキング ---------- */
+.ranking-col {
+  justify-content: flex-start;
+  width: min(96vw, 620px);
+}
+.ranking-note {
+  width: min(100%, 500px);
+  color: #b3a8d6;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+}
+
 /* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
 #hyakki-ranking {
   width: min(100%, 500px);
@@ -448,6 +461,20 @@ html, body {
 .solo-stage-card:hover { transform: translateY(-2px); border-color: rgba(232,196,106,0.65); }
 .solo-stage-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(232,196,106,0.35); }
 .solo-stage-card > img { display: block; width: 86px; height: 86px; object-fit: contain; margin: 0 auto 4px; }
+.solo-stage-random-boss {
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  margin: 0 auto 4px;
+  color: #ffe9a0;
+  border: 1px solid rgba(232,196,106,0.35);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, rgba(80,62,116,0.95), rgba(20,16,31,0.95));
+  box-shadow: inset 0 1px rgba(255,255,255,0.08), 0 0 18px rgba(200,120,255,0.18);
+  font: 700 2.7rem "Yu Mincho", serif;
+  text-shadow: 0 0 12px rgba(232,196,106,0.45);
+}
 .solo-stage-head { display: flex; align-items: center; gap: 6px; font-family: "Yu Mincho", serif; }
 .solo-stage-head span {
   padding: 2px 6px; border-radius: 4px; background: rgba(255,210,74,0.18);
@@ -2066,7 +2093,7 @@ html, body {
   .title-main-actions .btn { padding: 0.62em 0.35em; font-size: 0.88rem; }
   .title-steps { margin-top: 0.4em; font-size: 0.55rem; }
   .title-menu-label { margin-top: 0.65em; }
-  .title-secondary-actions { gap: 5px; width: min(100%, 520px); }
+  .title-secondary-actions { gap: 5px; width: min(100%, 560px); }
   .title-menu-btn { padding: 6px 2px; }
   .title-menu-btn b { width: 26px; height: 26px; }
   .title-menu-btn span { font-size: 0.6rem; }
@@ -2087,6 +2114,13 @@ html, body {
   #solo-stages { grid-template-columns: 1fr; overflow-y: auto; }
   .solo-stage-card { display: flex; align-items: center; gap: 8px; }
   .solo-stage-card > img { width: 68px; height: 68px; margin: 0; flex: 0 0 auto; }
+  .solo-stage-random-boss {
+    width: 68px;
+    height: 68px;
+    margin: 0;
+    flex: 0 0 auto;
+    font-size: 2.15rem;
+  }
   .solo-stage-card p { min-height: 0; }
   #solo-difficulties { grid-template-columns: 1fr 1fr 1fr; }
 }
