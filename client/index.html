@@ -109,6 +109,7 @@
         <button id="btn-gacha" class="title-menu-btn"><b>召</b><span>妖怪ガチャ</span></button>
         <button id="btn-formation" class="title-menu-btn"><b>陣</b><span>編 成</span></button>
         <button id="btn-pieces" class="title-menu-btn"><b>録</b><span>駒一覧</span></button>
+        <button id="btn-ranking" class="title-menu-btn"><b>冠</b><span>ランキング</span></button>
         <button id="btn-rules" class="title-menu-btn"><b>指南</b><span>遊び方</span></button>
         <button id="btn-announcements" class="title-menu-btn announcement-title-btn"><b>告</b><span>お知らせ</span><i id="announcement-badge" class="announcement-badge hidden"></i></button>
       </div>
@@ -137,10 +138,27 @@
         <button id="btn-solo-streak" class="solo-mode"><b>連戦</b><span>百鬼夜行を相手に連勝へ挑む</span></button>
       </div>
       <div id="solo-progress"></div>
-      <!-- 百鬼夜行 週間連勝ランキング(連戦モードのみ表示: doc 21) -->
-      <div id="hyakki-ranking" class="hidden">
+      <div id="solo-stages"></div>
+      <div class="solo-difficulty-wrap">
+        <h3>難易度</h3>
+        <div id="solo-difficulties"></div>
+      </div>
+      <button id="btn-solo-battle" class="btn btn-gold">対戦開始</button>
+    </div>
+  </div>
+
+  <!-- ランキング画面 -->
+  <div id="screen-ranking" class="screen">
+    <div class="menu-col ranking-col">
+      <div class="menu-head">
+        <button id="btn-ranking-back" class="tool-btn" title="戻る">←</button>
+        <h2 class="menu-title">ランキング</h2>
+        <div class="menu-head-spacer"></div>
+      </div>
+      <p class="ranking-note">ソロ対戦の連戦「上級」で記録した、今週の百鬼夜行ベスト連勝数です。</p>
+      <div id="hyakki-ranking">
         <h3>今週の百鬼夜行 <small>上級 連勝ランキング(月曜リセット)</small></h3>
-        <p id="hyakki-ranking-note" class="hyakki-note hidden"></p>
+        <p id="hyakki-ranking-note" class="hyakki-note"></p>
         <ol id="hyakki-ranking-list"></ol>
         <p id="hyakki-ranking-me"></p>
         <button id="btn-hyakki-name" class="btn hidden">名前を設定して名乗りを上げる</button>
@@ -149,12 +167,6 @@
           <ol id="hyakki-lastweek-list"></ol>
         </div>
       </div>
-      <div id="solo-stages"></div>
-      <div class="solo-difficulty-wrap">
-        <h3>難易度</h3>
-        <div id="solo-difficulties"></div>
-      </div>
-      <button id="btn-solo-battle" class="btn btn-gold">対戦開始</button>
     </div>
   </div>
 
