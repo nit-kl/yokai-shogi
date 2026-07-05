@@ -3,7 +3,7 @@
 import { env, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { runDailyJobs } from '../../server/src/cron';
-import { gameDate, prevGameDate } from '../../server/src/lib/time';
+import { gameDate, gameWeek, prevGameDate } from '../../server/src/lib/time';
 
 const BASE = 'http://example.com';
 
@@ -325,6 +325,126 @@ describe('ソロ勝利報酬', () => {
   });
 });
 
+describe('百鬼夜行 週間連勝ランキング(doc 21)', () => {
+  const hyakkiStart = (token: string) =>
+    api('/v1/solo/hyakki/start', { method: 'POST', token, body: '{}' });
+  const hyakkiResult = (token: string, win: unknown) =>
+    api('/v1/solo/hyakki/result', { method: 'POST', token, body: JSON.stringify({ win }) });
+  /* 最短対局時間(30秒)を満たすため、start申告を過去に戻す */
+  const backdatePending = (userId: string, secondsAgo = 60) =>
+    env.DB.prepare('UPDATE user_profiles SET hyakki_pending_at = ?2 WHERE user_id = ?1')
+      .bind(userId, new Date(Date.now() - secondsAgo * 1000).toISOString()).run();
+  const hyakkiWin = async (g: { userId: string; accessToken: string }) => {
+    await hyakkiStart(g.accessToken);
+    await backdatePending(g.userId);
+    return hyakkiResult(g.accessToken, true);
+  };
+
+  it('週キー: JST月曜4:00で週が替わる', () => {
+    expect(gameWeek(new Date('2026-07-05T03:59:00+09:00'))).toBe('2026-06-29'); // 日曜未明=土曜扱い
+    expect(gameWeek(new Date('2026-07-06T03:59:00+09:00'))).toBe('2026-06-29'); // 月曜3:59はまだ前週
+    expect(gameWeek(new Date('2026-07-06T04:00:00+09:00'))).toBe('2026-07-06'); // 月曜4:00から新週
+  });
+
+  it('勝利で連勝・週間ベスト・順位が伸び、敗北で連勝が0に戻る', async () => {
+    const g = await createGuest();
+    const w1 = await hyakkiWin(g);
+    expect(w1.body).toEqual({ currentStreak: 1, bestStreak: 1, rank: 1 });
+    const w2 = await hyakkiWin(g);
+    expect(w2.body).toEqual({ currentStreak: 2, bestStreak: 2, rank: 1 });
+
+    await hyakkiStart(g.accessToken);
+    await backdatePending(g.userId);
+    const lose = await hyakkiResult(g.accessToken, false);
+    expect(lose.body).toEqual({ currentStreak: 0, bestStreak: 2, rank: 1 });
+  });
+
+  it('開始から30秒未満の勝利報告は負け扱い(連打対策)', async () => {
+    const g = await createGuest();
+    await hyakkiStart(g.accessToken);
+    const r = await hyakkiResult(g.accessToken, true);
+    expect(r.status).toBe(200);
+    expect(r.body.currentStreak).toBe(0);
+  });
+
+  it('結果未報告のまま再開始すると前局は負け扱い(劣勢リロード対策)', async () => {
+    const g = await createGuest();
+    await hyakkiWin(g);
+    await hyakkiStart(g.accessToken); // 1局目: 開始したが結果を報告しない
+    const again = await hyakkiStart(g.accessToken);
+    expect(again.body.currentStreak).toBe(0);
+  });
+
+  it('開始申告なしの結果報告・不正なwinは400', async () => {
+    const g = await createGuest();
+    const noStart = await hyakkiResult(g.accessToken, true);
+    expect(noStart.status).toBe(400);
+    await hyakkiStart(g.accessToken);
+    const badWin = await hyakkiResult(g.accessToken, 'yes');
+    expect(badWin.status).toBe(400);
+  });
+
+  /* D1はファイル内のテスト間で共有されるため、他テストの記録が混ざる前提で
+     自分の名前のエントリだけを検証する(他のdescribeと同じ流儀) */
+
+  it('週替わりで連勝はリセットされ、前週の記録はlastWeekに掲載される', async () => {
+    const g = await createGuest();
+    await api('/v1/me/name', { method: 'PUT', token: g.accessToken, body: JSON.stringify({ name: '週跨ぎの丙' }) });
+    await hyakkiWin(g);
+    /* 記録を丸ごと前週へ移す */
+    const lastWeek = gameWeek(new Date(Date.now() - 7 * 86400e3));
+    await env.DB.prepare('UPDATE user_profiles SET hyakki_week = ?2 WHERE user_id = ?1').bind(g.userId, lastWeek).run();
+    await env.DB.prepare('UPDATE hyakki_weekly SET week = ?2 WHERE user_id = ?1').bind(g.userId, lastWeek).run();
+
+    const start = await hyakkiStart(g.accessToken);
+    expect(start.body.currentStreak).toBe(0);
+
+    const ranking = await api('/v1/rankings/hyakki');
+    expect(ranking.status).toBe(200);
+    expect(ranking.body.week).toBe(gameWeek());
+    const names = (ranking.body.top as { name: string }[]).map(e => e.name);
+    expect(names).not.toContain('週跨ぎの丙');
+    expect(ranking.body.lastWeek).toContainEqual({ name: '週跨ぎの丙', bestStreak: 1 });
+  });
+
+  it('ランキングは連勝数降順で名前つき・認証時はmeつき・BANは除外', async () => {
+    const a = await createGuest();
+    const b = await createGuest();
+    const c = await createGuest();
+    await api('/v1/me/name', { method: 'PUT', token: a.accessToken, body: JSON.stringify({ name: '鬼神の甲' }) });
+    await api('/v1/me/name', { method: 'PUT', token: b.accessToken, body: JSON.stringify({ name: '妖狐の乙' }) });
+    await api('/v1/me/name', { method: 'PUT', token: c.accessToken, body: JSON.stringify({ name: '化猫の丁' }) });
+    await hyakkiWin(a);
+    await hyakkiWin(a);
+    await hyakkiWin(b);
+    await hyakkiWin(c);
+    /* 同率の並びは先着順(updated_at ASC)。datetime('now')は秒精度で
+       テスト内では同時刻になり得るため、bを確実に先着にする */
+    await env.DB.prepare("UPDATE hyakki_weekly SET updated_at = datetime('now', '-60 seconds') WHERE user_id = ?1")
+      .bind(b.userId).run();
+
+    const anon = await api('/v1/rankings/hyakki');
+    const top = anon.body.top as { name: string; bestStreak: number }[];
+    expect(top.filter(e => ['鬼神の甲', '妖狐の乙', '化猫の丁'].includes(e.name))).toEqual([
+      { name: '鬼神の甲', bestStreak: 2 },
+      { name: '妖狐の乙', bestStreak: 1 },
+      { name: '化猫の丁', bestStreak: 1 },
+    ]);
+    expect(anon.body.me).toBeNull();
+
+    /* bの順位: 自分よりベストが大きい記録の数+1(同率同順位) */
+    const asB = await api('/v1/rankings/hyakki', { token: b.accessToken });
+    const expectedRank = top.filter(e => e.bestStreak > 1).length + 1;
+    expect(asB.body.me).toEqual({ rank: expectedRank, bestStreak: 1 });
+
+    await env.DB.prepare("UPDATE users SET status = 'banned' WHERE id = ?1").bind(c.userId).run();
+    const afterBan = await api('/v1/rankings/hyakki');
+    const namesAfter = (afterBan.body.top as { name: string }[]).map(e => e.name);
+    expect(namesAfter).not.toContain('化猫の丁');
+    expect(namesAfter).toContain('鬼神の甲');
+  });
+});
+
 describe('表示名', () => {
   it('変更できる・不正な名前は拒否', async () => {
     const g = await createGuest();
@@ -390,12 +510,13 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-04-hyakki-nurarihyon-event',
-      type: 'campaign',
+      id: '2026-07-05-hyakki-weekly-ranking',
+      type: 'update',
       priority: 'high',
-      title: '毎週土曜の逢魔が時に限定妖怪が登場',
+      title: '百鬼夜行の週間連勝ランキングが始まりました',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: '2026-07-04-hyakki-nurarihyon-event' }),
       expect.objectContaining({ id: '2026-06-28-new-pieces-c93015c' }),
     ]));
   });

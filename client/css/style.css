@@ -396,6 +396,38 @@ html, body {
   font-size: 0.68rem;
   letter-spacing: 0.08em;
 }
+/* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
+#hyakki-ranking {
+  width: min(100%, 500px);
+  padding: 10px 14px;
+  border: 1px solid rgba(200,138,255,0.25);
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(42,35,66,0.96), rgba(20,16,31,0.96));
+}
+#hyakki-ranking h3 {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font: 0.86rem "Yu Mincho", serif;
+  letter-spacing: 0.1em;
+}
+#hyakki-ranking h3 small { color: #9a8fc0; font-size: 0.64rem; font-family: sans-serif; letter-spacing: 0.04em; }
+#hyakki-ranking h4 { margin: 8px 0 4px; color: #b3a8d6; font-size: 0.72rem; letter-spacing: 0.08em; }
+.hyakki-note { margin: 0 0 6px; color: #ff9b6a; font-size: 0.68rem; }
+#hyakki-ranking ol { margin: 0; padding: 0; list-style: none; }
+#hyakki-ranking li {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(255,255,255,0.07);
+  font-size: 0.74rem;
+}
+#hyakki-ranking li:last-child { border-bottom: none; }
+.hyakki-rank { flex: 0 0 2.6em; color: #ffe9a0; }
+#hyakki-ranking li:nth-child(1) .hyakki-rank { color: var(--gold); font-weight: bold; }
+.hyakki-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--paper); }
+#hyakki-ranking li b { color: #ffe9a0; }
+#hyakki-ranking-me { margin: 6px 0 0; color: #9a8fc0; font-size: 0.7rem; }
+#btn-hyakki-name { margin-top: 6px; padding: 6px 12px; font-size: 0.72rem; }
+
 #solo-stages {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

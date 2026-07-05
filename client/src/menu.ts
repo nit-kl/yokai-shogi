@@ -71,6 +71,7 @@ export const MenuUI = {
       AudioSys.play('promote');
       $('title-player-name').textContent = Meta.data.name;
       $('player-name').textContent = Meta.data.name;
+      document.dispatchEvent(new CustomEvent('player-name-changed'));
       $('profile-msg').textContent = 'プレイヤーネームを変更しました';
       setTimeout(() => $('modal-profile').classList.add('hidden'), 650);
     } catch (e) {

@@ -29,7 +29,16 @@
       "PowerShell(npm install *)",
       "PowerShell(node test/e2e/run.mjs 2>&1 | Select-Object -Last 10)",
       "PowerShell(git status --short; \"--- untracked dirs ---\"; git status --porcelain | Where-Object { $_ -match '^\\\\?\\\\?' })",
-      "PowerShell(npm test *)"
+      "PowerShell(npm test *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(npx vitest *)",
+      "Bash(npx vite *)",
+      "Bash(curl *)",
+      "Bash(python *)",
+      "Bash(VITE_API_URL=http://localhost:8787 npx vite build)",
+      "Bash(npx wrangler *)"
     ]
   }
 }

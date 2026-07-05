@@ -16,3 +16,10 @@ export function prevGameDate(date: string): string {
 export function gameDateDaysAgo(days: number, now: Date = new Date()): string {
   return gameDate(new Date(now.getTime() - days * 86400e3));
 }
+
+/* 週開始(月曜)のゲーム内日付。週間ランキングの週キー(doc 21) */
+export function gameWeek(now: Date = new Date()): string {
+  const t = new Date(now.getTime() + 5 * 3600e3);
+  t.setUTCDate(t.getUTCDate() - (t.getUTCDay() + 6) % 7);
+  return t.toISOString().slice(0, 10);
+}

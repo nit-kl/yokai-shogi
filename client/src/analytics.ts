@@ -8,7 +8,8 @@ type LandingEventName =
   | 'onboarding_start'
   | 'solo_battle_start'
   | 'online_battle_start'
-  | 'result_view';
+  | 'result_view'
+  | 'hyakki_rank_view';
 
 type EventPayload = {
   event: string;

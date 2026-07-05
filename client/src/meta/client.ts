@@ -116,6 +116,8 @@ export class ApiClient {
       try {
         return await fetch(`${this.baseUrl}${path}`, {
           method,
+          /* APIレスポンスは全て動的。HTTPキャッシュに乗せない(取得間隔はUI側で調整する) */
+          cache: 'no-store',
           headers: {
             'content-type': 'application/json',
             ...(this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {}),
