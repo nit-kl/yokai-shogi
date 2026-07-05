@@ -29,6 +29,9 @@ export interface ProfileRow {
   daily_win_reward_count: number;
   daily_reset_date: string | null;
   onboarding_done: number;
+  hyakki_streak: number;
+  hyakki_week: string | null;
+  hyakki_pending_at: string | null;
 }
 
 export async function getProfile(db: D1Database, userId: string): Promise<ProfileRow | null> {

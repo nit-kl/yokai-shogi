@@ -10,6 +10,8 @@ import { validateFormation as sharedValidateFormation } from '../../../shared/va
 
 export type { GachaResult } from '../../../shared/gacha';
 import type { GachaResult } from '../../../shared/gacha';
+export type { HyakkiProgress, HyakkiRanking } from '../../../shared/hyakki';
+import type { HyakkiProgress, HyakkiRanking } from '../../../shared/hyakki';
 
 /* UIが同期で参照する読み取りモデル(キャッシュ) */
 export interface MetaState {
@@ -53,6 +55,12 @@ export interface MetaProvider {
   pickBoss(bossId: string): Promise<string | null>;
   /** 初回オンボーディング完了。ログインボーナスがあれば返す */
   completeOnboarding(): Promise<LoginBonus | null>;
+  /** 百鬼夜行(連戦・上級)の対局開始申告(doc 21)。オフライン版は null */
+  hyakkiStart(): Promise<HyakkiProgress | null>;
+  /** 百鬼夜行の結果申告。オフライン版は null */
+  hyakkiResult(win: boolean): Promise<HyakkiProgress | null>;
+  /** 百鬼夜行 週間ランキング取得。オフライン版は null */
+  hyakkiRanking(): Promise<HyakkiRanking | null>;
 }
 
 /* ---------- data から導出する同期ヘルパ(両実装共通) ---------- */

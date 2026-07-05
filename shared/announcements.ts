@@ -13,6 +13,14 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-07-05-hyakki-weekly-ranking',
+    type: 'update',
+    title: '百鬼夜行の週間連勝ランキングが始まりました',
+    body: 'ソロ対戦の連戦モード（難易度・上級）で、週間ベスト連勝数のオンラインランキングを開始しました。連勝はサーバーに記録され、途中でページを閉じても続きから挑戦できます。ランキングは毎週月曜4:00にリセットされ、先週のTOP3はソロ対戦画面に掲示されます。名を刻む前にプレイヤーネームの設定をお忘れなく！',
+    publishedAt: '2026-07-05T00:00:00+09:00',
+    priority: 'high',
+  },
+  {
     id: '2026-07-04-hyakki-nurarihyon-event',
     type: 'campaign',
     title: '毎週土曜の逢魔が時に限定妖怪が登場',

@@ -8,7 +8,7 @@ import { validateDisplayName, validateFormation } from '../../../shared/validate
 import { ApiClient, ApiError } from './client';
 import { ownedSet } from './types';
 import type { GachaResult } from './types';
-import type { LoginBonus, MetaProvider, MetaState } from './types';
+import type { HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
 import { getTurnstileToken } from '../turnstile';
 
 interface MeResponse {
@@ -107,6 +107,20 @@ export class ApiMeta implements MetaProvider {
       if (e instanceof ApiError && e.code === 'VALIDATION') return e.message;
       throw e;
     }
+  }
+
+  /* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
+
+  hyakkiStart(): Promise<HyakkiProgress | null> {
+    return this.client.post2<HyakkiProgress>('/v1/solo/hyakki/start', {});
+  }
+
+  hyakkiResult(win: boolean): Promise<HyakkiProgress | null> {
+    return this.client.post2<HyakkiProgress>('/v1/solo/hyakki/result', { win });
+  }
+
+  hyakkiRanking(): Promise<HyakkiRanking | null> {
+    return this.client.get<HyakkiRanking>('/v1/rankings/hyakki');
   }
 
   async recordSoloWin(): Promise<number> {

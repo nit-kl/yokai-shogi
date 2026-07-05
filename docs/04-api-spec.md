@@ -81,6 +81,16 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 | GET | /matches/:id/replay | actionログ(リプレイ用イベント列) |
 | GET | /ranking | レートランキング上位(シーズン導入後) |
 
+### 百鬼夜行 週間連勝ランキング(doc 21)
+
+| メソッド | パス | 認証 | 内容 |
+|---|---|---|---|
+| POST | /solo/hyakki/start | 必須 | 連戦(上級)の対局開始申告。`{ currentStreak, bestStreak, rank }` |
+| POST | /solo/hyakki/result | 必須 | `{ "win": true }`。連勝を更新し `{ currentStreak, bestStreak, rank }` |
+| GET | /rankings/hyakki | 不要 | `{ week, top, lastWeek, me }`。Authorizationがあれば `me` に自分の順位。60秒キャッシュ |
+
+型・定数は `shared/hyakki.ts` が正。
+
 ## WebSocket プロトコル
 
 - エンドポイント: `wss://api.<domain>/v1/battle?token=<アクセストークン>`
