@@ -79,6 +79,17 @@ type StoredOnlineMatch = {
 const COLORS_P = ['#ffd24a', '#ff9a3c', '#fff6d8', '#ffe9a0'];
 const COLORS_E = ['#ff5d5d', '#c84aff', '#ffd0d0', '#ff9a8a'];
 
+/* ガチャ産SSR・異装の専用演出色 [light, primary, accent]。
+   デフォルト大将(九尾・酒呑)は全員が持つため対象外 */
+const SSR_FX_COLORS = ['#fff6d8', '#ffd24a', '#ff9a3c'] as const;
+function specialFxColors(id: string): readonly string[] | null {
+  const def = YOKAI[id];
+  if (!def) return null;
+  if (def.variantOf) return def.summonColors ?? SSR_FX_COLORS;
+  if (def.rarity === 'SSR' && (def.gachaOnly || def.limited)) return SSR_FX_COLORS;
+  return null;
+}
+
 /* ============================== 起動 ============================== */
 window.addEventListener('DOMContentLoaded', () => {
   trackLandingEventOnce('app_loaded', 'app_loaded');
@@ -594,6 +605,14 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     busy = G.turn !== 'p';
     setOnlineConnection('接続済み');
     setOnlineTurnTimer(message.remainMs);
+    if (entering) {
+      summonAnnounced.clear();
+      void (async () => {
+        busy = true;
+        await playOpeningSummons();
+        if (G && !G.winner) busy = G.turn !== 'p';
+      })();
+    }
   } else if (message.t === 'events') {
     if (!onlineSide) return;
     busy = true;
@@ -767,7 +786,8 @@ function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement 
   const el = document.createElement('div');
   el.className = `piece owner-${pc.owner}`
     + (YOKAI[pc.id].type === 'boss' ? ' boss-piece' : '')
-    + (YOKAI[pc.id].variantOf ? ' special-piece' : '');
+    + (YOKAI[pc.id].variantOf ? ' special-piece' : '')
+    + (YOKAI[pc.id].rarity === 'SSR' && !YOKAI[pc.id].variantOf ? ' ssr-piece' : '');
   const specialColors = YOKAI[pc.id].summonColors;
   if (specialColors) {
     el.style.setProperty('--special-light', specialColors[0]);
@@ -935,6 +955,44 @@ function onHandClick(id: string) {
 }
 
 /* ============================== 対局進行 ============================== */
+/* SSR・異装の初見参演出(1対局につき駒種ごとに1回) */
+const summonAnnounced = new Set<string>();
+
+async function summonCutin(id: string, at?: Pos) {
+  const colors = specialFxColors(id);
+  if (!colors || summonAnnounced.has(id)) return;
+  summonAnnounced.add(id);
+  const def = YOKAI[id];
+  FX.flash(`color-mix(in srgb, ${colors[1]} 45%, transparent)`, 260);
+  await FX.cutin(def.img, def.name, def.summonTitle || 'SSR妖怪 見参', 'summon', colors);
+  if (at) {
+    const c = cellCenter(at.x, at.y);
+    AudioSys.play('bighit');
+    FX.burst(c.x, c.y, [...colors], 60, 8.5);
+    FX.ring(c.x, c.y, colors[1], 20, 90);
+    FX.shockwave(c.x, c.y, colors[1], 16);
+    FX.flash(`color-mix(in srgb, ${colors[0]} 30%, transparent)`, 200);
+    FX.shake(true);
+    FX.zoomPunch(true);
+    await sleep(480);
+  }
+}
+
+/* 開始配置に含まれるSSR・異装を順に見参(自分側から) */
+async function playOpeningSummons() {
+  if (!G) return;
+  const found: { id: string; at: Pos; owner: Side }[] = [];
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const pc = G.board[y][x];
+      if (!pc || summonAnnounced.has(pc.id) || found.some(f => f.id === pc.id)) continue;
+      if (specialFxColors(pc.id)) found.push({ id: pc.id, at: { x, y }, owner: pc.owner });
+    }
+  }
+  found.sort((a, b) => (a.owner === b.owner ? 0 : a.owner === 'p' ? -1 : 1));
+  for (const f of found) await summonCutin(f.id, f.at);
+}
+
 function startBattle() {
   trackLandingEvent('solo_battle_start', {
     mode: soloMode,
@@ -977,6 +1035,12 @@ function startBattle() {
   AudioSys.init();
   AudioSys.startBattleBgm();
   showBanner('p');
+  summonAnnounced.clear();
+  void (async () => {
+    busy = true;
+    await playOpeningSummons();
+    busy = false;
+  })();
 }
 
 async function doAction(action: Action) {
@@ -1025,28 +1089,39 @@ async function animEvent(ev: GameEvent) {
         const from = cellCenter(ev.from.x, ev.from.y);
         const to = cellCenter(ev.to.x, ev.to.y);
         const isPlayer = el.classList.contains('owner-p');
+        const movedPc = G!.board[ev.to.y][ev.to.x] ?? G!.board[ev.from.y][ev.from.x];
+        const special = movedPc ? specialFxColors(movedPc.id) : null;
         spawnGhost(el, ev.from.x, ev.from.y);
         FX.trail(from.x, from.y, to.x, to.y,
-          isPlayer ? ['rgba(140,190,255,0.85)', 'rgba(200,230,255,0.7)'] : ['rgba(255,130,120,0.85)', 'rgba(255,200,180,0.7)']);
+          special ? [...special]
+            : isPlayer ? ['rgba(140,190,255,0.85)', 'rgba(200,230,255,0.7)'] : ['rgba(255,130,120,0.85)', 'rgba(255,200,180,0.7)']);
         el.classList.add('moving');
         positionPiece(el, ev.to.x, ev.to.y);
         AudioSys.play('move');
         await sleep(290);
         el.classList.remove('moving');
         el.classList.add('landed');
-        FX.shockwave(to.x, to.y, isPlayer ? 'rgba(150,195,255,0.55)' : 'rgba(255,140,130,0.55)', 3.5);
+        FX.shockwave(to.x, to.y,
+          special ? special[1] : isPlayer ? 'rgba(150,195,255,0.55)' : 'rgba(255,140,130,0.55)',
+          special ? 6 : 3.5);
+        if (special) FX.burst(to.x, to.y, [...special], 14, 3.2);
         setTimeout(() => el.classList.remove('landed'), 260);
       }
       break;
     }
     case 'drop': {
       const pc = G!.board[ev.to.y][ev.to.x]!;
+      await summonCutin(pc.id, ev.to); // SSR・異装は初回のみ見参カットイン
       const el = makePieceEl(pc);
       positionPiece(el, ev.to.x, ev.to.y);
       el.classList.add('dropping');
       AudioSys.play('drop');
       const c = cellCenter(ev.to.x, ev.to.y);
-      FX.ring(c.x, c.y, ev.owner === 'p' ? 'rgba(140,190,255,0.9)' : 'rgba(255,120,120,0.9)', 14, 46);
+      const special = specialFxColors(pc.id);
+      FX.ring(c.x, c.y,
+        special ? special[1] : ev.owner === 'p' ? 'rgba(140,190,255,0.9)' : 'rgba(255,120,120,0.9)',
+        special ? 22 : 14, special ? 70 : 46);
+      if (special) FX.burst(c.x, c.y, [...special], 26, 5);
       await sleep(380);
       el.classList.remove('dropping');
       renderHand(ev.owner);
@@ -1070,7 +1145,8 @@ async function animEvent(ev: GameEvent) {
 async function animCapture(ev: CaptureEvent) {
   const c = cellCenter(ev.at.x, ev.at.y);
   const isPlayer = ev.attacker.owner === 'p';
-  const colors = isPlayer ? COLORS_P : COLORS_E;
+  const special = specialFxColors(ev.attacker.id);
+  const colors = special ? [...special] : isPlayer ? COLORS_P : COLORS_E;
   const aDef = YOKAI[ev.attacker.id];
 
   /* スキル発動カットイン */
@@ -1098,8 +1174,10 @@ async function animCapture(ev: CaptureEvent) {
   }
 
   if (big) FX.flash('rgba(255,240,205,0.6)', 200);
-  FX.burst(c.x, c.y, colors, big ? 54 : 30, big ? 8.5 : 6);
+  else if (special) FX.flash(`color-mix(in srgb, ${special[1]} 30%, transparent)`, 180);
+  FX.burst(c.x, c.y, colors, (big ? 54 : 30) + (special ? 18 : 0), big ? 8.5 : 6);
   FX.ring(c.x, c.y, colors[0], 16, big ? 80 : 55);
+  if (special) FX.ring(c.x, c.y, special[2], 18, big ? 100 : 70);
   FX.shockwave(c.x, c.y, colors[0], big ? 16 : 9);
   FX.shake(big);
   FX.zoomPunch(big);
