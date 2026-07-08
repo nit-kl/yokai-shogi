@@ -136,8 +136,8 @@ export const FX = {
     }
   },
 
-  /* 成り:金の柱 */
-  pillar(x: number, y: number) {
+  /* 立ち昇る光の柱(既定は成りの金色。colors指定でスキル演出に流用) */
+  pillar(x: number, y: number, colors: readonly string[] = ['#ffe9a0', '#ffd24a', '#fff6d8', '#f0a830']) {
     for (let i = 0; i < 36; i++) {
       this.parts.push({
         kind: Math.random() < 0.5 ? 'spark' : 'glow',
@@ -148,7 +148,27 @@ export const FX = {
         size: 1.4 + Math.random() * 2.4,
         life: 1, decay: 0.014 + Math.random() * 0.014,
         drag: 0.985,
-        color: ['#ffe9a0', '#ffd24a', '#fff6d8', '#f0a830'][Math.floor(Math.random() * 4)],
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  },
+
+  /* 葉吹雪(化け狸の葉隠れ) */
+  leaves(x: number, y: number) {
+    const cs = ['#7cf2a4', '#4caf50', '#a8e063', '#8d6e63'];
+    for (let i = 0; i < 30; i++) {
+      const ang = Math.random() * 6.28318;
+      const v = 2 + Math.random() * 4.5;
+      this.parts.push({
+        kind: 'petal',
+        x, y,
+        vx: Math.cos(ang) * v,
+        vy: Math.sin(ang) * v - 2,
+        size: 2.6 + Math.random() * 3,
+        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.3,
+        life: 1, decay: 0.008 + Math.random() * 0.006,
+        grav: 0.06, drag: 0.985,
+        color: cs[Math.floor(Math.random() * cs.length)],
       });
     }
   },
@@ -170,20 +190,41 @@ export const FX = {
     }
   },
 
-  /* 移動の軌跡: 2点間に光の粒を撒く */
-  trail(x1: number, y1: number, x2: number, y2: number, colors: string[]) {
-    const steps = 14;
+  /* 移動の軌跡: 2点間に光の粒を撒く(strong: SSR・異装用の火花混じり高密度版) */
+  trail(x1: number, y1: number, x2: number, y2: number, colors: string[], strong = false) {
+    const steps = strong ? 32 : 14;
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
       this.parts.push({
-        kind: 'glow',
-        x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * 8,
-        y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * 8,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: -(0.2 + Math.random() * 0.6),
-        size: 1.5 + Math.random() * 1.8,
-        life: 0.85 - t * 0.3, decay: 0.028 + Math.random() * 0.02,
+        kind: strong && Math.random() < 0.45 ? 'spark' : 'glow',
+        x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * (strong ? 14 : 8),
+        y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * (strong ? 14 : 8),
+        vx: (Math.random() - 0.5) * (strong ? 1.4 : 0.5),
+        vy: -(0.2 + Math.random() * (strong ? 1.2 : 0.6)),
+        size: (strong ? 2 : 1.5) + Math.random() * (strong ? 2.6 : 1.8),
+        life: (strong ? 1 : 0.85) - t * (strong ? 0.2 : 0.3),
+        decay: (strong ? 0.02 : 0.028) + Math.random() * (strong ? 0.015 : 0.02),
+        drag: strong ? 0.97 : undefined,
         color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  },
+
+  /* 収束: 円周から中心へ光が吸い込まれる(溜め演出) */
+  converge(x: number, y: number, color: string, count = 18, radius = 60) {
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * 6.28318;
+      const r = radius * (0.7 + Math.random() * 0.6);
+      const speed = r / 11;
+      this.parts.push({
+        kind: Math.random() < 0.5 ? 'spark' : 'glow',
+        x: x + Math.cos(ang) * r,
+        y: y + Math.sin(ang) * r,
+        vx: -Math.cos(ang) * speed,
+        vy: -Math.sin(ang) * speed,
+        size: 1.4 + Math.random() * 2,
+        life: 0.9, decay: 0.055 + Math.random() * 0.03,
+        color,
       });
     }
   },
@@ -197,6 +238,18 @@ export const FX = {
     el.style.animationDuration = dur + 'ms';
     document.getElementById('fx-layer')!.appendChild(el);
     setTimeout(() => el.remove(), dur + 80);
+  },
+
+  /* 暗転スポットライト: 画面を落として1点だけ照らす(スキル発動の"タメ") */
+  spotlight(x: number, y: number, color = '#ffd24a', dur = 1600) {
+    const el = document.createElement('div');
+    el.className = 'fx-spotlight';
+    el.style.background =
+      `radial-gradient(circle at ${x}px ${y}px, transparent 46px, ` +
+      `color-mix(in srgb, ${color} 10%, rgba(8, 5, 14, 0.86)) 220px)`;
+    el.style.animationDuration = dur + 'ms';
+    document.getElementById('fx-layer')!.appendChild(el);
+    setTimeout(() => el.remove(), dur + 120);
   },
 
   /* 広がる衝撃波リング */
@@ -239,10 +292,17 @@ export const FX = {
     setTimeout(() => el.classList.remove(cls), big ? 360 : 260);
   },
 
-  damageNumber(x: number, y: number, value: number | string, kind = 'normal') {
+  /* sub: 数字の右肩に添える倍率表示(例 "×2!") */
+  damageNumber(x: number, y: number, value: number | string, kind = 'normal', sub?: string) {
     const el = document.createElement('div');
     el.className = `dmg-num dmg-${kind}`;
     el.textContent = String(value);
+    if (sub) {
+      const s = document.createElement('span');
+      s.className = 'dmg-sub';
+      s.textContent = sub;
+      el.appendChild(s);
+    }
     el.style.left = x + 'px';
     el.style.top = y + 'px';
     document.getElementById('fx-layer')!.appendChild(el);
@@ -272,11 +332,14 @@ export const FX = {
   },
 
   /* ---------- カットイン ---------- */
-  /* colors: [light, primary, accent] 指定時は style-summon 等でCSS変数として参照される */
-  cutin(imgSrc: string, name: string, sub?: string, style = 'skill', colors?: readonly string[]): Promise<void> {
+  /* colors: [light, primary, accent] 指定時はCSS変数で帯・名前が染まる。
+     tier: レアリティ段階(0-3)。帯の高さ・イラストの迫力が変わる */
+  cutin(imgSrc: string, name: string, sub?: string, style = 'skill', colors?: readonly string[], tier?: number): Promise<void> {
     return new Promise(resolve => {
       const root = document.getElementById('cutin')!;
-      root.className = `style-${style}`;
+      root.className = `style-${style}`
+        + (colors && colors.length >= 3 ? ' has-colors' : '')
+        + (tier != null ? ` tier-${tier}` : '');
       if (colors && colors.length >= 3) {
         root.style.setProperty('--cutin-light', colors[0]);
         root.style.setProperty('--cutin-primary', colors[1]);

@@ -807,6 +807,24 @@ html, body {
   filter: blur(1px) brightness(1.7);
 }
 @keyframes ghostFade { to { opacity: 0; transform: scale(0.92); } }
+/* SSR・異装の移動:溜め→疾走 */
+.piece.charging { z-index: 5; }
+.piece.charging img { animation: pieceCharge 0.18s ease-in forwards; }
+@keyframes pieceCharge {
+  40% { transform: translateY(4%) scale(0.88); filter: brightness(1.3); }
+  100% {
+    transform: translateY(-2%) scale(1.1);
+    filter: brightness(2) drop-shadow(0 0 14px var(--special-primary, #ffd24a));
+  }
+}
+.piece-ghost.ghost-special { animation: ghostFadeSpecial 0.5s ease-out forwards; }
+.piece-ghost.ghost-special img {
+  opacity: 0.8;
+  filter: brightness(1.9)
+    drop-shadow(0 0 10px var(--ghost-c, #ffd24a))
+    drop-shadow(0 0 24px var(--ghost-c, #ffd24a));
+}
+@keyframes ghostFadeSpecial { to { opacity: 0; transform: scale(1.14); } }
 .piece-base {
   position: absolute; left: 10%; right: 10%; bottom: 2%; height: 26%;
   border-radius: 50%;
@@ -1048,6 +1066,40 @@ html, body {
   letter-spacing: 0.4em;
   text-shadow: 0 0 14px var(--cutin-primary, #ffaa28);
 }
+/* スキル系統色カットイン(--cutin-* はJS側でSKILL_KIND_FXから設定) */
+#cutin.has-colors:not(.style-summon) .cutin-bg {
+  background: linear-gradient(100deg, rgba(10, 6, 18, 0.96) 30%,
+    color-mix(in srgb, var(--cutin-primary, #ff8a3c) 34%, rgba(16, 8, 10, 0.96)) 72%);
+  border-top-color: var(--cutin-light, #ffe2b8);
+  border-bottom-color: var(--cutin-light, #ffe2b8);
+  box-shadow: 0 0 60px color-mix(in srgb, var(--cutin-primary, #ff8a3c) 50%, transparent);
+}
+#cutin.has-colors:not(.style-summon) .cutin-lines {
+  background: repeating-linear-gradient(100deg, transparent 0 26px,
+    color-mix(in srgb, var(--cutin-light, #fff) 10%, transparent) 26px 30px);
+}
+#cutin.has-colors:not(.style-summon) #cutin-name {
+  background: linear-gradient(175deg, var(--cutin-light, #fff8e0) 20%, var(--cutin-primary, #ffd76a) 55%, var(--cutin-accent, #c98a18) 90%);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px var(--cutin-primary, #ffaa28));
+}
+#cutin.has-colors:not(.style-summon) #cutin-img {
+  filter: drop-shadow(0 0 24px color-mix(in srgb, var(--cutin-primary, #ffaa28) 70%, transparent))
+    drop-shadow(0 0 10px rgba(0, 0, 0, 0.9));
+}
+/* レアリティ格差: N/Rは帯が細く控えめ、SSR・異装は特大の帯+強い発光 */
+#cutin.tier-0 .cutin-bg, #cutin.tier-0 .cutin-lines,
+#cutin.tier-1 .cutin-bg, #cutin.tier-1 .cutin-lines { height: min(34vh, 250px); }
+#cutin.tier-0 #cutin-img, #cutin.tier-1 #cutin-img { height: min(48vh, 360px); }
+#cutin.tier-0 #cutin-name, #cutin.tier-1 #cutin-name { font-size: clamp(1.4rem, 5vw, 2.6rem); }
+#cutin.tier-3 .cutin-bg, #cutin.tier-3 .cutin-lines { height: min(52vh, 400px); }
+#cutin.tier-3 .cutin-bg {
+  border-top-width: 3px;
+  border-bottom-width: 3px;
+  box-shadow: 0 0 90px color-mix(in srgb, var(--cutin-primary, #ffd24a) 65%, transparent),
+    inset 0 0 70px color-mix(in srgb, var(--cutin-primary, #ffd24a) 20%, transparent);
+}
+#cutin.tier-3 #cutin-img { height: min(70vh, 520px); }
 @keyframes cutinBg {
   0% { transform: translateY(-50%) scaleY(0); }
   12% { transform: translateY(-50%) scaleY(1); }
@@ -1135,6 +1187,19 @@ html, body {
 }
 @keyframes fxFlash { from { opacity: 1; } to { opacity: 0; } }
 
+/* 暗転スポットライト(スキル発動のタメ) */
+.fx-spotlight {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  animation: fxSpot ease-in-out forwards;
+}
+@keyframes fxSpot {
+  from { opacity: 0; }
+  12% { opacity: 1; }
+  78% { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* 衝撃波リング */
 .fx-shockwave {
   position: fixed;
@@ -1184,6 +1249,21 @@ html, body {
 .dmg-num.dmg-big { font-size: clamp(2.4rem, 9vw, 4rem); color: #ff7a3c; text-shadow: 0 0 16px rgba(255, 80, 0, 1), 0 4px 3px rgba(0,0,0,0.9), -2px 0 2px rgba(0,0,0,0.8), 2px 0 2px rgba(0,0,0,0.8); }
 .dmg-num.dmg-counter { font-size: clamp(1.9rem, 7vw, 3rem); color: #c88aff; text-shadow: 0 0 14px rgba(160, 60, 255, 1), 0 3px 2px rgba(0,0,0,0.9); }
 .dmg-num.dmg-heal { font-size: clamp(1.6rem, 5.5vw, 2.4rem); color: #7cf2a4; text-shadow: 0 0 12px rgba(40, 220, 120, 0.9), 0 3px 2px rgba(0,0,0,0.9); }
+/* 会心(crit/rush発動): 最大サイズ+倍率の右肩表示 */
+.dmg-num.dmg-crit {
+  font-size: clamp(2.9rem, 11vw, 4.8rem);
+  color: #ffd24a;
+  text-shadow: 0 0 22px rgba(255, 60, 0, 1), 0 0 40px rgba(255, 120, 0, 0.7),
+    0 4px 3px rgba(0,0,0,0.95), -2px 0 2px rgba(0,0,0,0.8), 2px 0 2px rgba(0,0,0,0.8);
+}
+.dmg-num .dmg-sub {
+  position: absolute;
+  top: -0.5em; right: -0.35em;
+  font-size: 0.42em;
+  color: #fff;
+  text-shadow: 0 0 10px #ff5d2c, 0 2px 2px rgba(0,0,0,0.9);
+  transform: rotate(8deg);
+}
 @keyframes dmgFloat {
   0% { opacity: 0; transform: translate(-50%, -30%) scale(2.1); }
   14% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
