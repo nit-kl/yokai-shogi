@@ -170,20 +170,41 @@ export const FX = {
     }
   },
 
-  /* 移動の軌跡: 2点間に光の粒を撒く */
-  trail(x1: number, y1: number, x2: number, y2: number, colors: string[]) {
-    const steps = 14;
+  /* 移動の軌跡: 2点間に光の粒を撒く(strong: SSR・異装用の火花混じり高密度版) */
+  trail(x1: number, y1: number, x2: number, y2: number, colors: string[], strong = false) {
+    const steps = strong ? 32 : 14;
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
       this.parts.push({
-        kind: 'glow',
-        x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * 8,
-        y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * 8,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: -(0.2 + Math.random() * 0.6),
-        size: 1.5 + Math.random() * 1.8,
-        life: 0.85 - t * 0.3, decay: 0.028 + Math.random() * 0.02,
+        kind: strong && Math.random() < 0.45 ? 'spark' : 'glow',
+        x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * (strong ? 14 : 8),
+        y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * (strong ? 14 : 8),
+        vx: (Math.random() - 0.5) * (strong ? 1.4 : 0.5),
+        vy: -(0.2 + Math.random() * (strong ? 1.2 : 0.6)),
+        size: (strong ? 2 : 1.5) + Math.random() * (strong ? 2.6 : 1.8),
+        life: (strong ? 1 : 0.85) - t * (strong ? 0.2 : 0.3),
+        decay: (strong ? 0.02 : 0.028) + Math.random() * (strong ? 0.015 : 0.02),
+        drag: strong ? 0.97 : undefined,
         color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  },
+
+  /* 収束: 円周から中心へ光が吸い込まれる(溜め演出) */
+  converge(x: number, y: number, color: string, count = 18, radius = 60) {
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * 6.28318;
+      const r = radius * (0.7 + Math.random() * 0.6);
+      const speed = r / 11;
+      this.parts.push({
+        kind: Math.random() < 0.5 ? 'spark' : 'glow',
+        x: x + Math.cos(ang) * r,
+        y: y + Math.sin(ang) * r,
+        vx: -Math.cos(ang) * speed,
+        vy: -Math.sin(ang) * speed,
+        size: 1.4 + Math.random() * 2,
+        life: 0.9, decay: 0.055 + Math.random() * 0.03,
+        color,
       });
     }
   },

@@ -605,14 +605,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     busy = G.turn !== 'p';
     setOnlineConnection('接続済み');
     setOnlineTurnTimer(message.remainMs);
-    if (entering) {
-      summonAnnounced.clear();
-      void (async () => {
-        busy = true;
-        await playOpeningSummons();
-        if (G && !G.winner) busy = G.turn !== 'p';
-      })();
-    }
+    if (entering) summonAnnounced.clear();
   } else if (message.t === 'events') {
     if (!onlineSide) return;
     busy = true;
@@ -800,16 +793,20 @@ function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement 
   return el;
 }
 
-/* 移動時の残像 */
-function spawnGhost(el: HTMLElement, x: number, y: number) {
+/* 移動時の残像(color指定でSSR・異装用の発光残像) */
+function spawnGhost(el: HTMLElement, x: number, y: number, color?: string) {
   const img = el.querySelector('img');
   if (!img) return;
   const g = document.createElement('div');
   g.className = 'piece-ghost';
+  if (color) {
+    g.classList.add('ghost-special');
+    g.style.setProperty('--ghost-c', color);
+  }
   g.appendChild(img.cloneNode() as HTMLElement);
   positionPiece(g, x, y);
   $('board-pieces').appendChild(g);
-  setTimeout(() => g.remove(), 420);
+  setTimeout(() => g.remove(), color ? 520 : 420);
 }
 
 function setPromoted(el: HTMLElement) {
@@ -955,7 +952,7 @@ function onHandClick(id: string) {
 }
 
 /* ============================== 対局進行 ============================== */
-/* SSR・異装の初見参演出(1対局につき駒種ごとに1回) */
+/* SSR・異装を打った時の初見参演出(1対局につき駒種ごとに1回) */
 const summonAnnounced = new Set<string>();
 
 async function summonCutin(id: string, at?: Pos) {
@@ -976,21 +973,6 @@ async function summonCutin(id: string, at?: Pos) {
     FX.zoomPunch(true);
     await sleep(480);
   }
-}
-
-/* 開始配置に含まれるSSR・異装を順に見参(自分側から) */
-async function playOpeningSummons() {
-  if (!G) return;
-  const found: { id: string; at: Pos; owner: Side }[] = [];
-  for (let y = 0; y < ROWS; y++) {
-    for (let x = 0; x < COLS; x++) {
-      const pc = G.board[y][x];
-      if (!pc || summonAnnounced.has(pc.id) || found.some(f => f.id === pc.id)) continue;
-      if (specialFxColors(pc.id)) found.push({ id: pc.id, at: { x, y }, owner: pc.owner });
-    }
-  }
-  found.sort((a, b) => (a.owner === b.owner ? 0 : a.owner === 'p' ? -1 : 1));
-  for (const f of found) await summonCutin(f.id, f.at);
 }
 
 function startBattle() {
@@ -1036,11 +1018,6 @@ function startBattle() {
   AudioSys.startBattleBgm();
   showBanner('p');
   summonAnnounced.clear();
-  void (async () => {
-    busy = true;
-    await playOpeningSummons();
-    busy = false;
-  })();
 }
 
 async function doAction(action: Action) {
@@ -1080,21 +1057,61 @@ async function doAction(action: Action) {
   }
 }
 
+/* SSR・異装の移動:溜め→残像疾走→着地衝撃 */
+async function playSpecialMove(el: HTMLElement, fromPos: Pos, toPos: Pos, colors: string[]) {
+  const from = cellCenter(fromPos.x, fromPos.y);
+  const to = cellCenter(toPos.x, toPos.y);
+  el.style.setProperty('--special-primary', colors[1]);
+  /* 溜め:光を吸い込みながら身をかがめる */
+  el.classList.add('charging');
+  FX.converge(from.x, from.y, colors[1], 20, 64);
+  await sleep(180);
+  el.classList.remove('charging');
+  /* 疾走:多段残像+火花の奔流 */
+  el.classList.add('moving');
+  positionPiece(el, toPos.x, toPos.y);
+  AudioSys.play('move');
+  FX.trail(from.x, from.y, to.x, to.y, colors, true);
+  spawnGhost(el, fromPos.x, fromPos.y, colors[1]);
+  for (let i = 1; i <= 2; i++) {
+    const t = i / 3;
+    setTimeout(() => spawnGhost(el,
+      fromPos.x + (toPos.x - fromPos.x) * t,
+      fromPos.y + (toPos.y - fromPos.y) * t, colors[1]), i * 75);
+  }
+  await sleep(290);
+  el.classList.remove('moving');
+  /* 着地:専用色の衝撃 */
+  el.classList.add('landed');
+  AudioSys.play('bighit');
+  FX.burst(to.x, to.y, colors, 44, 7);
+  FX.ring(to.x, to.y, colors[1], 22, 90);
+  FX.shockwave(to.x, to.y, colors[1], 12);
+  FX.flash(`color-mix(in srgb, ${colors[0]} 22%, transparent)`, 160);
+  FX.shake(false);
+  FX.zoomPunch(false);
+  setTimeout(() => el.classList.remove('landed'), 260);
+  await sleep(120);
+}
+
 /* ---------- イベント演出 ---------- */
 async function animEvent(ev: GameEvent) {
   switch (ev.t) {
     case 'move': {
       const el = pieceEls.get(ev.uid);
       if (el) {
+        const movedPc = G!.board[ev.to.y][ev.to.x] ?? G!.board[ev.from.y][ev.from.x];
+        const special = movedPc ? specialFxColors(movedPc.id) : null;
+        if (special) {
+          await playSpecialMove(el, ev.from, ev.to, [...special]);
+          break;
+        }
         const from = cellCenter(ev.from.x, ev.from.y);
         const to = cellCenter(ev.to.x, ev.to.y);
         const isPlayer = el.classList.contains('owner-p');
-        const movedPc = G!.board[ev.to.y][ev.to.x] ?? G!.board[ev.from.y][ev.from.x];
-        const special = movedPc ? specialFxColors(movedPc.id) : null;
         spawnGhost(el, ev.from.x, ev.from.y);
         FX.trail(from.x, from.y, to.x, to.y,
-          special ? [...special]
-            : isPlayer ? ['rgba(140,190,255,0.85)', 'rgba(200,230,255,0.7)'] : ['rgba(255,130,120,0.85)', 'rgba(255,200,180,0.7)']);
+          isPlayer ? ['rgba(140,190,255,0.85)', 'rgba(200,230,255,0.7)'] : ['rgba(255,130,120,0.85)', 'rgba(255,200,180,0.7)']);
         el.classList.add('moving');
         positionPiece(el, ev.to.x, ev.to.y);
         AudioSys.play('move');
@@ -1102,9 +1119,7 @@ async function animEvent(ev: GameEvent) {
         el.classList.remove('moving');
         el.classList.add('landed');
         FX.shockwave(to.x, to.y,
-          special ? special[1] : isPlayer ? 'rgba(150,195,255,0.55)' : 'rgba(255,140,130,0.55)',
-          special ? 6 : 3.5);
-        if (special) FX.burst(to.x, to.y, [...special], 14, 3.2);
+          isPlayer ? 'rgba(150,195,255,0.55)' : 'rgba(255,140,130,0.55)', 3.5);
         setTimeout(() => el.classList.remove('landed'), 260);
       }
       break;
