@@ -79,13 +79,18 @@ type StoredOnlineMatch = {
 const COLORS_P = ['#ffd24a', '#ff9a3c', '#fff6d8', '#ffe9a0'];
 const COLORS_E = ['#ff5d5d', '#c84aff', '#ffd0d0', '#ff9a8a'];
 
-/* ガチャ産SSR・異装の専用演出色 [light, primary, accent]。
-   デフォルト大将(九尾・酒呑)は全員が持つため対象外 */
+/* SSR・異装・大将の専用演出色 [light, primary, accent] */
 const SSR_FX_COLORS = ['#fff6d8', '#ffd24a', '#ff9a3c'] as const;
+/* デフォルト大将はsummonColorsを持たないためここで定義(九尾=業火、酒呑=鬼の緋) */
+const BOSS_FX_COLORS: Record<string, readonly string[]> = {
+  kyubi: ['#fff1d0', '#ff9d3c', '#ff4b2e'],
+  shuten: ['#ffd8d8', '#ff4d4d', '#a12828'],
+};
 function specialFxColors(id: string): readonly string[] | null {
   const def = YOKAI[id];
   if (!def) return null;
   if (def.variantOf) return def.summonColors ?? SSR_FX_COLORS;
+  if (def.type === 'boss') return def.summonColors ?? BOSS_FX_COLORS[id] ?? SSR_FX_COLORS;
   if (def.rarity === 'SSR' && (def.gachaOnly || def.limited)) return SSR_FX_COLORS;
   return null;
 }
