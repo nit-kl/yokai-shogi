@@ -272,10 +272,20 @@ export const FX = {
   },
 
   /* ---------- カットイン ---------- */
-  cutin(imgSrc: string, name: string, sub?: string, style = 'skill'): Promise<void> {
+  /* colors: [light, primary, accent] 指定時は style-summon 等でCSS変数として参照される */
+  cutin(imgSrc: string, name: string, sub?: string, style = 'skill', colors?: readonly string[]): Promise<void> {
     return new Promise(resolve => {
       const root = document.getElementById('cutin')!;
       root.className = `style-${style}`;
+      if (colors && colors.length >= 3) {
+        root.style.setProperty('--cutin-light', colors[0]);
+        root.style.setProperty('--cutin-primary', colors[1]);
+        root.style.setProperty('--cutin-accent', colors[2]);
+      } else {
+        root.style.removeProperty('--cutin-light');
+        root.style.removeProperty('--cutin-primary');
+        root.style.removeProperty('--cutin-accent');
+      }
       (document.getElementById('cutin-img') as HTMLImageElement).src = imgSrc;
       document.getElementById('cutin-name')!.textContent = name;
       document.getElementById('cutin-sub')!.textContent = sub || '';
