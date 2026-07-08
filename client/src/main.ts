@@ -95,6 +95,27 @@ function specialFxColors(id: string): readonly string[] | null {
   return null;
 }
 
+/* スキル系統ごとの演出色 [light, primary, accent]。
+   crit=炎 / rush=疾風 / zone=突撃の藍 / heal=緑 / counter=呪詛の紫 / decoy=木の葉 / explode=爆炎 */
+const SKILL_KIND_FX: Record<string, readonly string[]> = {
+  crit: ['#ffe2b8', '#ff8a3c', '#ff3c2e'],
+  rush: ['#e8fffb', '#8ff0e0', '#2ea8a0'],
+  zone: ['#dce8ff', '#7fa8ff', '#4055ff'],
+  heal: ['#eafff2', '#7cf2a4', '#2ecc71'],
+  counter: ['#e8d0ff', '#c88aff', '#8a4aff'],
+  decoy: ['#eaffd0', '#a8e063', '#4caf50'],
+  explode: ['#ffd24a', '#ff9a3c', '#ff5d5d'],
+};
+
+/* レアリティ段階(演出の格): N=0, R=1, SR=2, SSR・異装=3 */
+function rarityTier(id: string): 0 | 1 | 2 | 3 {
+  const def = YOKAI[id];
+  if (!def) return 0;
+  if (def.variantOf || def.rarity === 'SSR') return 3;
+  return def.rarity === 'SR' ? 2 : def.rarity === 'R' ? 1 : 0;
+}
+const TIER_SCALE = [0.75, 1, 1.3, 1.6] as const;
+
 /* ============================== 起動 ============================== */
 window.addEventListener('DOMContentLoaded', () => {
   trackLandingEventOnce('app_loaded', 'app_loaded');
@@ -974,8 +995,6 @@ async function summonCutin(id: string, at?: Pos) {
     FX.ring(c.x, c.y, colors[1], 20, 90);
     FX.shockwave(c.x, c.y, colors[1], 16);
     FX.flash(`color-mix(in srgb, ${colors[0]} 30%, transparent)`, 200);
-    FX.shake(true);
-    FX.zoomPunch(true);
     await sleep(480);
   }
 }
@@ -1092,9 +1111,6 @@ async function playSpecialMove(el: HTMLElement, fromPos: Pos, toPos: Pos, colors
   FX.burst(to.x, to.y, colors, 44, 7);
   FX.ring(to.x, to.y, colors[1], 22, 90);
   FX.shockwave(to.x, to.y, colors[1], 12);
-  FX.flash(`color-mix(in srgb, ${colors[0]} 22%, transparent)`, 160);
-  FX.shake(false);
-  FX.zoomPunch(false);
   setTimeout(() => el.classList.remove('landed'), 260);
   await sleep(120);
 }
@@ -1168,15 +1184,44 @@ async function animCapture(ev: CaptureEvent) {
   const special = specialFxColors(ev.attacker.id);
   const colors = special ? [...special] : isPlayer ? COLORS_P : COLORS_E;
   const aDef = YOKAI[ev.attacker.id];
+  const aSkill = aDef.skill;
+  const kindFx = SKILL_KIND_FX[aSkill.kind] ?? SSR_FX_COLORS;
+  const tier = rarityTier(ev.attacker.id);
+  const scale = TIER_SCALE[tier];
+  const vTier = rarityTier(ev.victim.id);
+  const vScale = TIER_SCALE[vTier];
+  /* 会心系(crit/rush)の発動 = "当たり"。procsは攻撃駒のスキル1件のみ入る */
+  const jackpot = ev.procs.length > 0 && (aSkill.kind === 'crit' || aSkill.kind === 'rush');
+  const multSub = ev.procs.length === 0 ? undefined
+    : (aSkill.kind === 'crit' || aSkill.kind === 'rush') ? `×${aSkill.mult}`
+    : aSkill.kind === 'zone' ? `+${aSkill.bonus}` : undefined;
 
-  /* スキル発動カットイン */
+  /* スキル発動カットイン(系統別の前置き演出+系統色・レアリティ格のカットイン) */
   for (const proc of ev.procs) {
-    await FX.cutin(proc.img, proc.name, proc.text, aDef.type === 'boss' ? 'boss' : 'skill');
+    if (jackpot) {
+      /* 当たり: 暗転スポットライト+吸い込み(レアリティが高いほど長く・濃く) */
+      FX.spotlight(c.x, c.y, kindFx[1], 1700 + tier * 200);
+      FX.converge(c.x, c.y, kindFx[1], Math.round(20 * scale), 90 + tier * 15);
+      if (tier === 3) FX.converge(c.x, c.y, kindFx[0], 14, 150);
+      await sleep(330);
+    } else if (aSkill.kind === 'zone') {
+      /* 敵陣強襲: 藍の衝撃波(高頻度なのでタメなし) */
+      FX.ring(c.x, c.y, kindFx[1], Math.round(16 * scale), 70);
+      FX.shockwave(c.x, c.y, kindFx[1], 8 + 2 * tier);
+    } else if (aSkill.kind === 'heal') {
+      /* 福招き: 緑の光が集まる */
+      FX.converge(c.x, c.y, kindFx[1], Math.round(16 * scale), 80);
+    }
+    await FX.cutin(proc.img, proc.name, proc.text,
+      aDef.type === 'boss' ? 'boss' : 'skill', kindFx, tier);
   }
 
-  /* 化け狸: 葉隠れ */
+  /* 化け狸: 葉隠れ(葉吹雪と共に) */
   if (ev.decoy) {
-    await FX.cutin(ev.decoy.img, ev.decoy.name, 'ダメージ半減! 駒は葉っぱに化けていた', 'counter');
+    FX.leaves(c.x, c.y);
+    await FX.cutin(ev.decoy.img, ev.decoy.name, 'ダメージ半減! 駒は葉っぱに化けていた', 'counter',
+      SKILL_KIND_FX.decoy, vTier);
+    FX.leaves(c.x, c.y);
   }
 
   /* 撃破演出: 斬撃 → ヒットストップ(一瞬静止) → 爆発 */
@@ -1186,7 +1231,7 @@ async function animCapture(ev: CaptureEvent) {
   AudioSys.play(big ? 'bighit' : 'capture');
   FX.slash(c.x, c.y, big);
   if (victimEl) victimEl.classList.add('hitflash');
-  await sleep(big ? 150 : 100); // ヒットストップ
+  await sleep(jackpot ? 260 : big ? 150 : 100); // ヒットストップ(当たりは長めに溜める)
 
   if (victimEl) {
     victimEl.classList.add('dying');
@@ -1199,12 +1244,29 @@ async function animCapture(ev: CaptureEvent) {
   FX.ring(c.x, c.y, colors[0], 16, big ? 80 : 55);
   if (special) FX.ring(c.x, c.y, special[2], 18, big ? 100 : 70);
   FX.shockwave(c.x, c.y, colors[0], big ? 16 : 9);
-  FX.shake(big);
-  FX.zoomPunch(big);
-  FX.damageNumber(c.x, c.y - 14, ev.damage, big ? 'big' : 'normal');
+  /* 系統ごとの署名エフェクト(撃破に重ねる。量はレアリティでスケール) */
+  if (ev.procs.length > 0) {
+    if (aSkill.kind === 'crit') {
+      /* 炎: 立ち昇る火柱+火の粉 */
+      FX.pillar(c.x, c.y, kindFx);
+      if (tier >= 2) setTimeout(() => FX.pillar(c.x, c.y, kindFx), 140);
+      FX.ring(c.x, c.y, kindFx[2], Math.round(18 * scale), 110);
+      setTimeout(() => FX.burst(c.x, c.y, [...kindFx], Math.round(26 * scale), 9), 120);
+    } else if (aSkill.kind === 'rush') {
+      /* 疾風: 風の斬撃+水平に走る翠の奔流 */
+      FX.slash(c.x, c.y, true);
+      FX.trail(c.x - 140, c.y, c.x + 140, c.y, [...kindFx], true);
+      FX.burst(c.x, c.y, [...kindFx], Math.round(24 * scale), 9.5);
+      if (tier >= 2) FX.ring(c.x, c.y, kindFx[1], 18, 100);
+    } else if (aSkill.kind === 'zone') {
+      FX.burst(c.x, c.y, [...kindFx], Math.round(20 * scale), 7);
+    }
+  }
+  FX.damageNumber(c.x, c.y - 14, ev.damage, jackpot ? 'crit' : big ? 'big' : 'normal', multSub);
 
-  /* 座敷童子: 回復 */
+  /* 座敷童子: 回復(緑の光柱) */
   if (ev.heal > 0) {
+    FX.pillar(c.x, c.y, SKILL_KIND_FX.heal);
     FX.damageNumber(c.x, c.y - 64, `+${ev.heal}`, 'heal');
   }
 
@@ -1217,36 +1279,50 @@ async function animCapture(ev: CaptureEvent) {
   updateCombo(ev.attacker.owner);
   await sleep(big ? 600 : 480);
 
-  /* 罠の反撃 */
+  /* 罠の反撃(1対局1回級: 暗転→呪詛の大爆発) */
   if (ev.counter) {
-    await FX.cutin(ev.counter.img, ev.counter.name, `反撃ダメージ ${ev.counter.dmg}!`, 'counter');
-    FX.burst(c.x, c.y, ['#c88aff', '#8a4aff', '#e8d0ff'], 36, 6.5);
-    FX.shockwave(c.x, c.y, '#c88aff', 14);
-    FX.flash('rgba(200,140,255,0.4)', 180);
-    FX.shake(true);
-    FX.zoomPunch(true);
+    FX.spotlight(c.x, c.y, '#c88aff', 1800 + vTier * 200);
+    FX.converge(c.x, c.y, '#c88aff', Math.round(20 * vScale), 100);
+    await sleep(330);
+    await FX.cutin(ev.counter.img, ev.counter.name, `反撃ダメージ ${ev.counter.dmg}!`, 'counter',
+      SKILL_KIND_FX.counter, vTier);
+    FX.burst(c.x, c.y, ['#c88aff', '#8a4aff', '#e8d0ff'], Math.round(42 * vScale), 8.5);
+    FX.ring(c.x, c.y, '#e8d0ff', 18, 80);
+    FX.ring(c.x, c.y, '#8a4aff', 22, 120);
+    FX.pillar(c.x, c.y, ['#e8d0ff', '#c88aff', '#8a4aff']);
+    FX.shockwave(c.x, c.y, '#c88aff', 18);
+    FX.flash('rgba(200,140,255,0.5)', 220);
     AudioSys.play('bighit');
     FX.damageNumber(c.x, c.y - 14, ev.counter.dmg, 'counter');
     updateHP(ev.counter.hp);
-    await sleep(640);
+    await sleep(700);
   }
 
-  /* 鬼火の道連れ */
+  /* 鬼火の道連れ(最大級: 暗転→白閃光→特大二段爆発) */
   if (ev.explode) {
-    await FX.cutin(ev.explode.img, ev.explode.name, '取った駒を道連れに爆散!', 'counter');
+    FX.spotlight(c.x, c.y, '#ff9a3c', 2000);
+    FX.converge(c.x, c.y, '#ff6b3c', 30, 110);
+    await sleep(330);
+    await FX.cutin(ev.explode.img, ev.explode.name, '取った駒を道連れに爆散!', 'counter',
+      SKILL_KIND_FX.explode, vTier);
     const aEl = pieceEls.get(ev.explode.uid);
     if (aEl) {
       aEl.classList.add('dying');
       setTimeout(() => { aEl.remove(); pieceEls.delete(ev.explode!.uid); }, 420);
     }
-    FX.burst(c.x, c.y, ['#ff9a3c', '#ff5d5d', '#ffd24a'], 42, 7.2);
-    FX.ring(c.x, c.y, '#ff9a3c', 16, 80);
-    FX.shockwave(c.x, c.y, '#ff9a3c', 15);
-    FX.flash('rgba(255,160,80,0.45)', 200);
-    FX.shake(true);
-    FX.zoomPunch(true);
+    FX.flash('rgba(255,255,255,0.85)', 130);
+    FX.burst(c.x, c.y, ['#ff9a3c', '#ff5d5d', '#ffd24a'], 70, 10);
+    FX.ring(c.x, c.y, '#ffd24a', 18, 90);
+    FX.ring(c.x, c.y, '#ff9a3c', 22, 130);
+    FX.pillar(c.x, c.y, ['#ffd24a', '#ff9a3c', '#ff5d5d']);
+    FX.shockwave(c.x, c.y, '#ff9a3c', 20);
+    setTimeout(() => {
+      FX.flash('rgba(255,160,80,0.5)', 220);
+      FX.burst(c.x, c.y, ['#ff9a3c', '#ffd24a'], 36, 7);
+      FX.shockwave(c.x, c.y, '#ffd24a', 14);
+    }, 150);
     AudioSys.play('bighit');
-    await sleep(680);
+    await sleep(760);
   }
 }
 
