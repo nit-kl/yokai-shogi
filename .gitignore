@@ -29,3 +29,6 @@ Desktop.ini
 # エディタ
 .vscode/
 .idea/
+
+# Claude Code 個人設定(チーム共有する設定は .claude/settings.json に置く)
+.claude/settings.local.json
