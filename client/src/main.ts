@@ -238,6 +238,7 @@ function preloadImages(): Promise<void> {
 
 function enterTitle() {
   stopOnlineTimer();
+  $('combo-vignette').className = '';
   if (!Meta.isOnboardingDone()) {
     trackLandingEventOnce('onboarding_start', 'onboarding_start', { online: Meta.online });
     void Onboarding.start();
@@ -764,6 +765,11 @@ function startOnlineBattle() {
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
   AudioSys.startBattleBgm();
+  /* 開幕VS演出(オンラインはタイマーが進むため入力はロックせず、オーバーレイ表示のみ) */
+  void playVsIntro(
+    { bossId: onlineMatch?.opponentBossId || ENEMY_BOSS, label: onlineMatch?.opponentName || '対戦相手' },
+    'オンライン対戦',
+  );
 }
 
 /* ============================== 盤の構築 ============================== */
@@ -905,6 +911,29 @@ function updateCombo(side: Side) {
   } else {
     badge.classList.remove('show');
   }
+  updateComboHeat();
+}
+
+/* コンボ段階に応じて画面全体を加熱する(縁のビネット+漂う魂火の増量)。
+   コンボが切れると静かな基本状態に戻る */
+const AMBIENT_BASE: [string, string] = ['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'];
+function updateComboHeat() {
+  const el = $('combo-vignette');
+  if (!G || !$('screen-battle').classList.contains('active')) { el.className = ''; return; }
+  const p = G.combo.p, e = G.combo.e;
+  const n = Math.max(p, e);
+  const side: Side = p >= e ? 'p' : 'e';
+  const flame = side === 'p' ? 'rgba(140,200,255,0.6)' : 'rgba(255,120,110,0.6)';
+  if (n >= 4) {
+    el.className = `lv2 side-${side}`;
+    FX.setAmbient([...AMBIENT_BASE, flame, 'rgba(255,215,120,0.55)'], 0.16);
+  } else if (n >= 3) {
+    el.className = `lv1 side-${side}`;
+    FX.setAmbient([...AMBIENT_BASE, flame], 0.08);
+  } else {
+    el.className = '';
+    FX.setAmbient(AMBIENT_BASE, 0.025);
+  }
 }
 
 /* ---------- 駒情報パネル ---------- */
@@ -999,7 +1028,37 @@ async function summonCutin(id: string, at?: Pos) {
   }
 }
 
-function startBattle() {
+/* ---------- 開幕VS演出 ---------- */
+/* 両大将が斜め分割の構図で見得を切り、「開戦」の帯とともに盤面へ。
+   タイミング(0.55s=VS着地 / 1.62s=開戦の帯)はCSSアニメの遅延と同期 */
+async function playVsIntro(enemy: { bossId: string; label: string }, stageLabel: string) {
+  const root = $('vs-intro');
+  const boss = YOKAI[Meta.bossId()];
+  $<HTMLImageElement>('vs-img-p').src = boss.img;
+  $('vs-label-p').textContent = Meta.data.name;
+  $('vs-name-p').textContent = boss.name;
+  $<HTMLImageElement>('vs-img-e').src = YOKAI[enemy.bossId].img;
+  $('vs-label-e').textContent = enemy.label;
+  $('vs-name-e').textContent = YOKAI[enemy.bossId].name;
+  $('vs-stage').textContent = stageLabel;
+  root.classList.remove('hidden', 'vs-out');
+  // 再戦時にアニメを再始動
+  root.querySelectorAll('.vs-bg, .vs-side, .vs-emblem, .vs-stage, .vs-kaisen, .vs-flash').forEach(el => {
+    (el as HTMLElement).style.animation = 'none';
+    void (el as HTMLElement).offsetWidth;
+    (el as HTMLElement).style.animation = '';
+  });
+  AudioSys.play('summon');
+  const t1 = setTimeout(() => AudioSys.play('bighit'), 580);   // VS着地
+  const t2 = setTimeout(() => AudioSys.play('capture'), 1640); // 開戦の帯
+  await sleep(2500);
+  clearTimeout(t1); clearTimeout(t2);
+  root.classList.add('vs-out');
+  await sleep(400);
+  root.classList.add('hidden');
+}
+
+async function startBattle() {
   trackLandingEvent('solo_battle_start', {
     mode: soloMode,
     stage: soloMode === 'streak' ? 'hyakki' : soloStageId,
@@ -1022,7 +1081,7 @@ function startBattle() {
   stopOnlineTimer();
   $('online-status').classList.add('hidden');
   G = Game.newState(Meta.formationRows(), stage.enemyRows);
-  busy = false;
+  busy = true; // 開幕演出中は入力ロック
   sel = null;
   pieceEls.forEach(el => el.remove());
   pieceEls.clear();
@@ -1040,8 +1099,13 @@ function startBattle() {
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
   AudioSys.startBattleBgm();
-  showBanner('p');
   summonAnnounced.clear();
+  await playVsIntro(
+    { bossId: stage.bossId, label: '敵将' },
+    soloMode === 'streak' ? `百鬼夜行 ${soloStreak + 1}戦目` : stage.name,
+  );
+  showBanner('p');
+  busy = false;
 }
 
 async function doAction(action: Action) {
@@ -1166,12 +1230,37 @@ async function animEvent(ev: GameEvent) {
     case 'capture': await animCapture(ev); break;
     case 'promote': {
       const c = cellCenter(ev.to.x, ev.to.y);
-      AudioSys.play('promote');
-      FX.pillar(c.x, c.y);
-      FX.floatLabel(c.x, c.y - 30, '成 !', '#ffd76a');
+      const pc = G!.board[ev.to.y][ev.to.x];
       const el = pieceEls.get(ev.uid);
-      if (el) setPromoted(el);
-      await sleep(620);
+      const special = pc ? specialFxColors(pc.id) : null;
+      /* タメ: 周囲を落として金の光を吸い込みながら白熱 */
+      FX.spotlight(c.x, c.y, '#ffd24a', special ? 2600 : 1300);
+      FX.converge(c.x, c.y, '#ffd24a', 24, 84);
+      el?.classList.add('awakening');
+      await sleep(360);
+      /* SSR・異装は覚醒カットインを挟む */
+      if (special && pc) {
+        const def = YOKAI[pc.id];
+        await FX.cutin(def.img, `${def.name}【成】`, '覚醒 ― 真の力、解放', 'summon', special, 3);
+      }
+      /* 金屏風の帯が横一閃 → 閃光とともに覚醒 */
+      FX.promoteBand(c.y);
+      await sleep(220);
+      AudioSys.play('promote');
+      FX.flash('rgba(255, 230, 160, 0.55)', 220);
+      FX.pillar(c.x, c.y);
+      setTimeout(() => FX.pillar(c.x, c.y), 140);
+      FX.ring(c.x, c.y, '#ffd24a', 20, 95);
+      FX.burst(c.x, c.y, ['#fff6d8', '#ffd24a', '#ffe9a0', '#f0a830'], 34, 7);
+      FX.shockwave(c.x, c.y, '#ffd24a', 11);
+      FX.kanjiStamp(c.x, c.y - 12, '成');
+      if (el) {
+        el.classList.remove('awakening');
+        setPromoted(el);
+        el.classList.add('promoted-burst');
+        setTimeout(() => el.classList.remove('promoted-burst'), 520);
+      }
+      await sleep(700);
       break;
     }
     case 'gameover': break; // doAction側で処理
@@ -1224,9 +1313,9 @@ async function animCapture(ev: CaptureEvent) {
     FX.leaves(c.x, c.y);
   }
 
-  /* 撃破演出: 斬撃 → ヒットストップ(一瞬静止) → 爆発 */
+  /* 撃破演出: 斬撃 → ヒットストップ(一瞬静止) → 爆発(高コンボ中は常に大) */
   const victimEl = pieceEls.get(ev.victim.uid);
-  const big = ev.damage >= 450 || ev.procs.length > 0;
+  const big = ev.damage >= 450 || ev.procs.length > 0 || ev.combo >= 3;
 
   AudioSys.play(big ? 'bighit' : 'capture');
   FX.slash(c.x, c.y, big);
@@ -1270,9 +1359,11 @@ async function animCapture(ev: CaptureEvent) {
     FX.damageNumber(c.x, c.y - 64, `+${ev.heal}`, 'heal');
   }
 
-  /* コンボ表示 */
+  /* コンボ表示: 数が伸びるほど表示・音・画面が段階的に加熱する */
   if (ev.combo >= 2) {
-    FX.floatLabel(c.x, c.y - 70, `${ev.combo} COMBO!`, isPlayer ? '#6bd6ff' : '#ff8a8a');
+    FX.comboLabel(c.x, c.y - 74, ev.combo, isPlayer);
+    AudioSys.playCombo(ev.combo);
+    if (ev.combo >= 3) FX.shake(ev.combo >= 4);
   }
 
   updateHP(ev.hp);
@@ -1374,6 +1465,7 @@ function showBanner(side: Side) {
 function showResult() {
   busy = true;
   AudioSys.stopBgm();
+  $('combo-vignette').className = '';
   const draw = onlineEndReason === 'draw';
   const win = G!.winner === 'p';
   trackLandingEvent('result_view', {

@@ -49,7 +49,12 @@ await page.locator('.solo-difficulty').nth(2).click();
 await page.click('#btn-solo-battle');
 await page.waitForSelector('#screen-battle.active');
 if (await page.locator('#enemy-name').textContent() !== '九尾の狐') errors.push('選択したソロステージの敵大将が反映されていない');
-await page.waitForTimeout(1400);
+// 開幕VS演出を撮ってから、終了(入力ロック解除)を待つ
+await page.waitForTimeout(900);
+await page.screenshot({ path: path.join(dir, 'shot-2-vs-intro.png') });
+if (await page.locator('#vs-label-p').textContent() !== '九尾使い') errors.push('開幕VS演出にプレイヤーネームが表示されていない');
+await page.waitForSelector('#vs-intro.hidden', { state: 'attached', timeout: 10000 });
+await page.waitForTimeout(500);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 
 // 小鬼(x=1,y=4)を選択 → 移動ハイライト確認
