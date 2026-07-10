@@ -73,24 +73,91 @@ AdSense は「中身のある公開サイト」を見る。申し込み前に揃
 
 公式: [https://www.google.com/adsense/](https://www.google.com/adsense/)
 
+> **重要:** AdSense 初回登録のサイト URL は **サブドメイン不可**。  
+> `yokai-shogi.nit-games.com` は弾かれ、`nit-games.com`(ルート)が必要。  
+> ルートにポータルが無い間は、下の **B-0** でゲームへリダイレクトする。
+
+#### B-0. `nit-games.com` → ゲームへリダイレクト(Cloudflare・暫定)
+
+目的: `https://nit-games.com` を開くと `https://yokai-shogi.nit-games.com` へ飛ぶようにする。  
+将来ポータルを置くときは、この Redirect Rule を止めてポータル配信に切り替える。
+
+**1. DNS(プロキシ必須)**
+
+Cloudflare Dashboard → ドメイン `nit-games.com` → **DNS** → **Records**
+
+1. [ ] ルート `@` (または名前欄が空 / `nit-games.com`) の **A** レコードを追加  
+   - IPv4: `192.0.2.1`(Cloudflare 公式の「オリジン無しリダイレクト用」ダミー)  
+   - **Proxy status: Proxied**(オレンジ雲)  
+   - 既存の競合する `@` レコードがあれば整理する
+2. [ ] `www` も同様に **A** `192.0.2.1` + Proxied(または `@` への CNAME + Proxied)
+
+> プロキシがグレー(DNS only)だと Redirect Rule が効かない。必ずオレンジ雲。
+
+**2. Redirect Rule**
+
+Cloudflare Dashboard → `nit-games.com` → **Rules** → **Overview** → **Create rule** → **Redirect Rule**
+
+1. [ ] Rule name 例: `apex-to-yokai-shogi`
+2. [ ] When incoming requests match → **Custom filter expression**(または Hostname 条件が使える UI)
+3. [ ] 条件(どちらか一方でよい):
+
+```text
+(http.host eq "nit-games.com") or (http.host eq "www.nit-games.com")
+```
+
+4. [ ] Then → URL redirect  
+   - Type: **Dynamic**  
+   - Expression: `concat("https://yokai-shogi.nit-games.com", http.request.uri.path)`  
+   - Status code: **301**  
+   - Preserve query string: **On**
+5. [ ] **Deploy**
+
+静的でよければ Type: **Static** / Target: `https://yokai-shogi.nit-games.com/` / 301 でも可(パスは引き継がれない)。
+
+**3. 確認**
+
+```powershell
+# ブラウザでも可。301 で yokai-shogi に飛ぶこと
+Invoke-WebRequest https://nit-games.com/ -MaximumRedirection 0 -ErrorAction SilentlyContinue | Select-Object StatusCode, Headers
+Invoke-WebRequest https://www.nit-games.com/ -MaximumRedirection 0 -ErrorAction SilentlyContinue | Select-Object StatusCode, Headers
+```
+
+1. [ ] `https://nit-games.com` がゲーム(またはその URL)へリダイレクトされる
+2. [ ] `https://www.nit-games.com` も同様
+3. [ ] リダイレクト先でゲーム・規約・プライバシーが開ける
+
 #### B-1. 申し込み
 
 1. [ ] AdSense 用に使う **Google アカウント**を決める(運営の nit 用。後から GAM も同じアカウント推奨)
 2. [ ] [AdSense](https://www.google.com/adsense/) で「使ってみる / 始めましょう」から申し込み
-3. [ ] サイトの URL に本番を入れる: `https://yokai-shogi.nit-games.com`
+3. [ ] サイトの URL にルートを入れる: **`https://nit-games.com`**(サブドメインは不可)
 4. [ ] 国/地域: **日本**
 5. [ ] 支払い情報・税務情報は案内に従い入力(後回し可能な項目もあるが、入金には必須)
 6. [ ] 利用規約に同意して送信
+7. [ ] 承認後、AdSense 管理画面からサイト追加で `https://yokai-shogi.nit-games.com` も登録する(任意だが推奨)
 
 #### B-2. サイトへの接続確認(審査でよく求められる)
 
-AdSense 管理画面の指示に従う。代表的なものは次のいずれか。
+AdSense 管理画面の指示に従う。代表的なものは次のいずれか(**画面で選んだ方式だけ**でよい)。
 
-1. [ ] **ads.txt** をサイト直下に置く  
+1. [ ] **AdSense コード スニペット**(現行で選択中の例)  
+   - `<head>` に次を追加済み: `client/index.html`  
+   - `ca-pub-3213980817040193`(公開パブリッシャーID)  
+   - **本番デプロイ後**に「コードを配置しました」→「確認」→「審査をリクエスト」
+2. [ ] **ads.txt** をサイト直下に置く  
    - 例: AdSense が表示する行を `client/public/ads.txt` に書いてデプロイ  
-   - 公開 URL: `https://yokai-shogi.nit-games.com/ads.txt`
-2. [ ] または **サイト認証用メタタグ / AdSense コード**を HTML に追加(管理画面の指示どおり)
-3. [ ] デプロイ後、ブラウザで ads.txt / メタタグが取得できることを確認
+   - 公開 URL: `https://yokai-shogi.nit-games.com/ads.txt`  
+   - ルート経由: `https://nit-games.com/ads.txt` でも中身に辿れること
+3. [ ] **メタタグ**を HTML に追加(管理画面の指示どおり)
+
+確認手順:
+
+1. [ ] main へマージ / Pages 本番デプロイが完了している
+2. [ ] ブラウザのページソースで `ca-pub-3213980817040193` が見える  
+   (`https://yokai-shogi.nit-games.com/` およびリダイレクト後の `https://nit-games.com/`)
+3. [ ] AdSense で「コードを配置しました」にチェック → **確認**
+4. [ ] 成功したら **審査をリクエスト**(グレー解除後)
 
 > `client/public/` に置いたファイルは Pages のルートに出る。  
 > ads.txt の中身は **AdSense / 後の GAM が提示する行を正**とする(手書きで推測しない)。
