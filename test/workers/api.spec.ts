@@ -510,15 +510,33 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-05-hyakki-weekly-ranking',
+      id: '2026-07-10-rules-guide-refresh',
       type: 'update',
       priority: 'high',
-      title: '百鬼夜行の週間連勝ランキングが始まりました',
+      title: '遊び方を現在のルールに合わせて更新しました',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: '2026-07-05-hyakki-weekly-ranking',
+        type: 'update',
+        priority: 'high',
+        title: '百鬼夜行の週間連勝ランキングが始まりました',
+      }),
       expect.objectContaining({ id: '2026-07-04-hyakki-nurarihyon-event' }),
       expect.objectContaining({ id: '2026-06-28-new-pieces-c93015c' }),
     ]));
+  });
+
+  it('お知らせ一覧は公開中のものを新しい順で返す', async () => {
+    const r = await api('/v1/announcements');
+    expect(r.status).toBe(200);
+    expect(r.body.announcements[0]).toMatchObject({
+      id: '2026-07-10-rules-guide-refresh',
+      type: 'update',
+      priority: 'high',
+    });
+    const timestamps = r.body.announcements.map((item: { publishedAt: string }) => Date.parse(item.publishedAt));
+    expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
   });
 });
 
