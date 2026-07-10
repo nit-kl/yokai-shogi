@@ -86,6 +86,10 @@ Cloudflareが `nit-games.com` のDNSを管理していれば、PagesとWorkers�
 DNSレコードだけを手動追加せず、必ずPagesのCustom domains画面から関連付ける。
 `nit-games.com` 自体は妖怪将棋Pagesへ割り当てず、ゲーム一覧ポータル用として残す。
 
+一時的に AdSense 審査用へルートをゲームへ向ける場合は、Pages に apex を載せず、Cloudflare の **Redirect Rule** で
+`nit-games.com` / `www` → `https://yokai-shogi.nit-games.com` とする(手順の正本は doc 22 の B-0)。
+ポータル公開時は Redirect を外す。
+
 ### 3. Workers APIへカスタムドメインを追加
 
 `server/wrangler.jsonc` の `env.production` に以下を追加する。
