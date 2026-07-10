@@ -24,7 +24,8 @@
     "db:migrate:staging": "wrangler d1 migrations apply yokai-shogi-db-staging --config server/wrangler.jsonc --env staging --remote",
     "db:migrate:prod": "wrangler d1 migrations apply yokai-shogi-db --config server/wrangler.jsonc --env production --remote",
     "pages:deploy": "npm run build:online && wrangler pages deploy client/dist --project-name=yokai-shogi --branch=main --commit-dirty=true",
-    "pages:deploy:staging": "npm run build:staging && wrangler pages deploy client/dist --project-name=yokai-shogi-staging --branch=main --commit-dirty=true"
+    "pages:deploy:staging": "npm run build:staging && wrangler pages deploy client/dist --project-name=yokai-shogi-staging --branch=main --commit-dirty=true",
+    "apex:deploy": "wrangler deploy --config ops/wrangler.jsonc"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.15",
