@@ -1,21 +1,22 @@
 # 10. テスト戦略
 
-## 現有テスト資産(プロトタイプで構築済み)
+## 現有テスト資産
 
-| テスト | 内容 | オンライン化後の位置づけ |
-|---|---|---|
-| prototype/test/engine-test.js | ランダム自己対局200局の整合性 | **サーバーの対局エンジン検証**としてそのまま昇格(共有コードのため) |
-| prototype/test/skills-test.js | 妨・援・化・爆スキルの決定的検証 | 同上。新スキル追加時の回帰テスト |
-| prototype/test/meta-test.js | ガチャ排出率・ログボ・編成・セーブ | 抽選ロジックのサーバー移植後も同じ検証を流用 |
-| prototype/test/ui-shot / ui-gacha / ui-skills / ui-fx | playwright実ブラウザ検証 | クライアントの回帰テスト |
+| テスト | 内容 |
+|---|---|
+| `test/engine.test.ts` | エンジンの合法手、終局、ランダム自己対局の整合性 |
+| `test/skills.test.ts` / `test/new-pieces.test.ts` | スキル、SSR体験、追加駒の回帰テスト |
+| `test/meta.test.ts` / `test/api-meta.test.ts` | ローカル/APIメタ進行、ガチャ、ログボ、編成 |
+| `test/workers/*.spec.ts` | Workersランタイム上のAPI・D1・DO統合テスト |
+| `test/e2e/*.mjs` | Playwright実ブラウザ検証 |
 
 > 設計上の利点: エンジン・抽選ロジックが純粋関数的でNode上で完結するため、**最重要ロジックのテストが既に高速・決定的**。この性質(Web標準APIのみ・Node API非依存)を壊さないことをレビュー基準にする(Workersで動く条件でもある)。
 
 ## テスト基盤(TypeScript化後)
 
-- ユニット/統合: **vitest**。既存の `vm.runInNewContext` 方式は `import` に置き換え、アサーション内容はそのまま移植
+- ユニット/統合: **vitest**
 - Workersランタイム上のテスト: **@cloudflare/vitest-pool-workers**(API・DOをminiflare相当の実環境で実行。D1・DOストレージ・アラームも再現)
-- 型チェック: `tsc --noEmit` をCI必須(プロトコル型 `shared/` のずれはここで検出される)
+- 型チェック: `npm run typecheck` をCI必須(クライアント、サーバー、workersテスト用tsconfig)
 - ブラウザE2E: playwright(既存資産を継続)
 
 ## テストピラミッド(リリース版)
@@ -54,11 +55,11 @@ nodeから素のWSクライアント2本を張り、シナリオを自動実行:
 - currency_logs と残高の整合(doc 08 不変条件)を毎テスト後にアサート
 
 ### 4. クライアント・サーバー版ずれ
-- 旧クライアント(前バージョンのプロトコル)からの接続 → バージョンエラーで更新誘導が出ること
+- 未対応のWSバージョンで接続した場合にハンドシェイクが拒否されること
 
-## 負荷試験(Phase 2では実施しない)
+## 負荷試験
 
-- Cloudflare無料枠を保護するため、Phase 2では自動負荷試験を実施しない
+- Cloudflare無料枠を保護するため、常時の自動負荷試験は実施しない
 - stagingで2局同時成立・再接続・完走の接続スモークテストを行う
 - 利用者増加またはPaidプラン移行を判断した時点で、予算上限を決めて負荷試験を再計画する
 
@@ -74,10 +75,10 @@ nodeから素のWSクライアント2本を張り、シナリオを自動実行:
 - 乱数を使うテストは必ずシード固定 or 統計的検定(現 meta-test の排出率検定方式を踏襲)
 - playwrightテストは `data-testid` ではなく現行のid属性ベースを継続(小規模のため)
 
-## リリース前チェックリスト(抜粋・doc 01のGo/No-Goと連動)
+## リリース前チェックリスト
 
-- [ ] 全自動テスト green(CI)
-- [ ] 少人数接続スモークテスト完了
+- [ ] CI green(typecheck / unit / workers / build / e2e)
+- [ ] staging接続スモークテスト完了
 - [ ] チート手動検証: DevToolsからのWSメッセージ偽造で不正が通らないこと(doc 07の手口リストを順に試す)
 - [ ] 実機マトリクス: iOS Safari / Android Chrome / PC各ブラウザで1局完走
 - [ ] 障害Runbookのドライラン(ロールバック実演1回)

@@ -3,8 +3,8 @@
 ## 設計方針
 
 1. **登録なしで遊べる**(ゲスト即時発行)。カジュアルゲームで登録フォームは最大の離脱要因
-2. ゲストはいつでも**正式アカウントに昇格**できる(データそのまま)
-3. パスワードは持たない(漏洩リスクと運用コストを避ける)。**パスキー(WebAuthn)を第一候補**、補助としてOAuth(Google)
+2. ゲストは**引き継ぎコード**を発行すると別端末で復元できる
+3. パスワードは持たない(漏洩リスクと運用コストを避ける)。パスキー(WebAuthn)やOAuthは将来候補
 
 ## アカウント状態遷移
 
@@ -14,9 +14,9 @@
    ▼
 [ゲスト] ── デバイスのlocalStorageにrefreshトークン保持
    │  ※端末・ブラウザデータ消去でロスト(画面上で明示警告)
-   │ POST /auth/link(パスキー登録 or Google連携)
+   │ POST /auth/link-code(引き継ぎコード発行)
    ▼
-[連携済み] ── 任意の端末から POST /auth/login で復元可能
+[復元可能] ── 任意の端末から POST /auth/login/link-code で復元可能
 ```
 
 ## トークン設計
@@ -36,41 +36,41 @@
 ### ゲスト発行
 ```
 POST /auth/guest
-→ users行作成(is_guest=true)、user_profiles初期化(チケット10・既定編成・基本8種+九尾付与)
+→ users行作成(is_guest=true)、user_profiles初期化(チケット10・空編成・オンボーディング未完了)
 → { userId, accessToken, refreshToken }
 ```
-- 乱用対策: **Turnstile必須**(ゲスト発行時にトークン検証。Cloudflare採用の利点が最も出る箇所)+ IP単位レート制限(5/min)+ 1日上限。大量ゲスト生成によるログボ・初回チケット稼ぎは doc 08 の獲得上限と合わせて実害を抑える
+- 乱用対策: 本番では Turnstile をゲスト発行時に検証する。`TURNSTILE_SECRET_KEY` 未設定のローカル/CIではスキップする。加えてIP単位レート制限(5/min)を行う。
 
-### パスキー連携(推奨経路)
+### 引き継ぎコード(現行実装)
 ```
-POST /auth/link/passkey/options   → チャレンジ発行(WebAuthn registration options)
-POST /auth/link/passkey/verify    → 公開鍵を auth_identities に保存、is_guest=false
-ログイン: POST /auth/login/passkey/options → assertion検証 → トークン発行
+POST /auth/link-code        → ランダムなコードを発行し、SHA-256を auth_identities(provider='link_code') に保存
+POST /auth/login/link-code  → コードを検証して新しいトークンを発行
 ```
+コード発行済みユーザーは休眠ゲスト削除の対象外にする。
 
-### Google OAuth(補助経路)
-- Authorization Code + PKCE。`auth_identities(provider='google', subject=sub)` に紐付け
-- 取得スコープは `openid` のみ(メールも保持しない。個人情報を最小化 → doc 11)
+### パスキー/OAuth(将来候補)
+
+現時点では未実装。実装する場合は `auth_identities` に `provider='passkey'` または `provider='google'` を追加し、既存のゲスト/引き継ぎコードと併存させる。
 
 ### auth_identities テーブル
 ```sql
 CREATE TABLE auth_identities (
-  id         BIGSERIAL PRIMARY KEY,
-  user_id    UUID NOT NULL REFERENCES users(id),
-  provider   TEXT NOT NULL,           -- 'passkey' / 'google'
-  subject    TEXT NOT NULL,           -- credential ID / OAuth sub
-  public_key BYTEA,                   -- パスキー用
-  counter    BIGINT,                  -- パスキー署名カウンタ(クローン検知)
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    TEXT NOT NULL REFERENCES users(id),
+  provider   TEXT NOT NULL,           -- 'link_code' / 'passkey' / 'google'
+  subject    TEXT NOT NULL,           -- 引き継ぎコードSHA-256 / credential ID / OAuth sub
+  public_key BLOB,
+  counter    INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (provider, subject)
 );
 
 CREATE TABLE refresh_tokens (
   token_hash TEXT PRIMARY KEY,        -- SHA-256
-  user_id    UUID NOT NULL REFERENCES users(id),
-  family_id  UUID NOT NULL,           -- ローテーション系列(再利用検知用)
-  expires_at TIMESTAMPTZ NOT NULL,
-  used_at    TIMESTAMPTZ              -- 使用済みマーク
+  user_id    TEXT NOT NULL REFERENCES users(id),
+  family_id  TEXT NOT NULL,           -- ローテーション系列(再利用検知用)
+  expires_at TEXT NOT NULL,
+  used_at    TEXT                     -- 使用済みマーク
 );
 ```
 
@@ -87,7 +87,7 @@ CREATE TABLE refresh_tokens (
 ## アカウント削除・引き継ぎ
 
 - 退会: アプリ内から申請 → 即時ログイン不可 → 90日後に物理削除(誤操作の復元猶予)
-- 機種変更: 連携済みなら新端末でログインするだけ。ゲストのまま消えるリスクは設定画面とガチャ画面に常時警告を出す
+- 機種変更: 引き継ぎコードを発行し、新端末で入力する。ゲストのまま消えるリスクはデータ引き継ぎ導線で案内する
 
 ## 想定脅威と対策(認証まわり)
 
@@ -96,4 +96,4 @@ CREATE TABLE refresh_tokens (
 | リフレッシュトークン窃取 | ローテーション+再利用検知で系列ごと失効 |
 | ゲスト大量生成によるリソース枯渇 | IPレート制限・休眠ゲスト(30日未アクセス・連携なし)の自動削除 |
 | トークン総当たり | 128bit乱数・失敗レート制限 |
-| WebAuthnチャレンジ再利用 | チャレンジは一回限り・5分失効 |
+| 引き継ぎコード総当たり | 十分な桁数のランダムコード、ハッシュ保存、IPレート制限 |

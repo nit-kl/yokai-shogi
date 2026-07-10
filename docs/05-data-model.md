@@ -1,6 +1,6 @@
 # 05. データモデル設計
 
-Cloudflare **D1(SQLite)** 想定。
+Cloudflare **D1(SQLite)**。実際の正本は `server/migrations/` のSQL。
 ID はアプリ側で `crypto.randomUUID()` を生成して TEXT 格納、日時は ISO8601 文字列、JSONは TEXT(JSON文字列)で持つ。
 
 ## D1の制約と設計パターン(最重要)
@@ -20,10 +20,11 @@ D1には**インタラクティブトランザクションがない**(`BEGIN`し
 ## ER概観
 
 ```
-users 1─1 user_profiles(通貨・編成・レート)
+users 1─1 user_profiles(通貨・編成・レート・オンボーディング・百鬼夜行進行)
 users 1─n user_yokai(所持) / auth_identities(doc 06) / refresh_tokens
 users 1─n gacha_logs / currency_logs / login_bonus_logs
 matches n─2 users、matches 1─n match_actions(リプレイ)
+users 1─n participation_logs / hyakki_weekly
 ```
 
 ## テーブル定義(D1マイグレーション形式)
@@ -44,8 +45,8 @@ CREATE TABLE users (
 CREATE TABLE user_profiles (
   user_id       TEXT PRIMARY KEY REFERENCES users(id),
   name          TEXT NOT NULL DEFAULT 'プレイヤー',
-  tickets       INTEGER NOT NULL DEFAULT 10 CHECK (tickets >= 0),
-  yoryoku       INTEGER NOT NULL DEFAULT 0  CHECK (yoryoku >= 0),
+  tickets       INTEGER NOT NULL DEFAULT 0 CHECK (tickets >= 0 AND tickets <= 999),
+  yoryoku       INTEGER NOT NULL DEFAULT 0 CHECK (yoryoku >= 0 AND yoryoku <= 99999),
   formation     TEXT NOT NULL,                 -- JSON: [[5列],[5列]] 保存時にサーバー検証済み
   rating        INTEGER NOT NULL DEFAULT 1500,
   rating_dev    REAL NOT NULL DEFAULT 350,     -- Glicko-2用
@@ -54,9 +55,15 @@ CREATE TABLE user_profiles (
   last_login_date TEXT,                        -- 'YYYY-MM-DD'(JST基準: doc 08)
   login_streak  INTEGER NOT NULL DEFAULT 0,
   daily_win_reward_count INTEGER NOT NULL DEFAULT 0,
-  daily_reset_date TEXT
+  daily_reset_date TEXT,
+  online_win_reward_count INTEGER NOT NULL DEFAULT 0,
+  onboarding_done INTEGER NOT NULL DEFAULT 0,
+  hyakki_streak INTEGER NOT NULL DEFAULT 0,
+  hyakki_week TEXT,
+  hyakki_pending_at TEXT
 );
 ```
+初回10枚は `POST /auth/guest` の作成処理で `FIRST_BONUS` として付与し、`currency_logs(reason='initial')` に記録する。大将と編成はオンボーディングで確定する。
 
 ### user_yokai(所持コレクション)
 ```sql
@@ -75,6 +82,7 @@ CREATE TABLE gacha_logs (
   user_id         TEXT NOT NULL REFERENCES users(id),
   idempotency_key TEXT NOT NULL,
   count           INTEGER NOT NULL,
+  new_count       INTEGER NOT NULL DEFAULT 0,
   results         TEXT NOT NULL,               -- JSON: [{id, rarity, isNew, yoryoku}]
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (user_id, idempotency_key)            -- 二重引き防止の正本
@@ -89,7 +97,7 @@ CREATE TABLE currency_logs (
   currency   TEXT NOT NULL,                    -- 'tickets' / 'yoryoku'
   delta      INTEGER NOT NULL,
   balance    INTEGER NOT NULL,                 -- 増減後残高(整合性検証用)
-  reason     TEXT NOT NULL,                    -- 'login_bonus'/'win_reward'/'gacha'/'exchange'/'admin'/'compensation'
+  reason     TEXT NOT NULL,                    -- 'initial'/'login_bonus'/'win_reward'/'gacha'/'exchange'/'event_participation'/'admin'/'compensation'
   ref_id     TEXT,                             -- 対局ID・ガチャログID等への参照
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -101,9 +109,9 @@ CREATE INDEX idx_currency_logs_user ON currency_logs(user_id, id);
 ```sql
 CREATE TABLE matches (
   id          TEXT PRIMARY KEY,                -- BattleRoom DOのID由来
-  mode        TEXT NOT NULL,                   -- 'random' / 'friend' / 'solo'
-  p_user_id   TEXT REFERENCES users(id),
-  e_user_id   TEXT REFERENCES users(id),       -- soloはNULL
+  mode        TEXT NOT NULL,                   -- 'random' / 'friend'
+  p_user_id   TEXT NOT NULL REFERENCES users(id),
+  e_user_id   TEXT NOT NULL REFERENCES users(id),
   p_formation TEXT NOT NULL,                   -- JSON
   e_formation TEXT NOT NULL,                   -- JSON
   winner      TEXT,                            -- 'p' / 'e' / 'draw'
@@ -139,6 +147,35 @@ CREATE TABLE login_bonus_logs (
 );
 ```
 
+### participation_logs
+逢魔が時・土曜対戦会の完走参加報酬を1日1回に制限する。
+
+```sql
+CREATE TABLE participation_logs (
+  user_id    TEXT NOT NULL REFERENCES users(id),
+  date       TEXT NOT NULL,
+  tickets    INTEGER NOT NULL,
+  yokai_id   TEXT,
+  yokai_new  INTEGER NOT NULL DEFAULT 0,
+  match_id   TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, date)
+);
+```
+
+### hyakki_weekly
+百鬼夜行(ソロ連戦・上級)の週間ベスト連勝数。
+
+```sql
+CREATE TABLE hyakki_weekly (
+  user_id     TEXT NOT NULL REFERENCES users(id),
+  week        TEXT NOT NULL,
+  best_streak INTEGER NOT NULL CHECK (best_streak > 0),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, week)
+);
+```
+
 ## BattleRoom DOストレージのキー設計(対局中の正本)
 
 ```
@@ -151,7 +188,7 @@ flushed     : D1反映済みフラグ(立つまでDO側を保持・再試行)
 
 - 妖怪定義(`YOKAI`・排出率・レート)は**コード(shared/data.ts)を正**とし、DBには持たない
   - エンジンと不可分(moves/skill)であり、コードと同時にデプロイされるべきもの
-  - 新妖怪追加=デプロイ。「デプロイなし配信」が必要になったらKV配信化を検討(doc 12 Phase 4)
+  - 新妖怪追加=デプロイ。「デプロイなし配信」が必要になったら設定ストア配信化を検討
 - バランス調整の互換性: `matches.rule_version` で対局時点の版を記録。リプレイは同版の挙動で再生(互換が壊れた旧対局のリプレイは非対応と割り切る)
 
 ## 既存localStorageデータの扱い(移行方針)
@@ -159,7 +196,7 @@ flushed     : D1反映済みフラグ(立つまでDO側を保持・再試行)
 **引き継がない(フレッシュスタート)+ リリース記念配布で補償**を推奨する。
 
 - 理由: localStorageは自由に改ざんできるため、申告ベースの引き継ぎは「全所持・チケット大量」の偽装を防げない
-- 代替: リリース時に全ユーザーへチケット20枚(10連2回分)等の記念配布。プロトタイプ利用者への告知をゲーム内に掲示
+- 代替: 必要であれば全ユーザーへチケット配布などで補償する。告知はゲーム内お知らせに掲示する
 - ローカル版メタ進行はソロ・オフライン用として残るが、オンライン機能はサーバーデータのみを参照する
 
 ## バックアップ・保持期間

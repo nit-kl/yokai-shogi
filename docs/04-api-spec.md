@@ -23,10 +23,11 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 
 | メソッド | パス | 内容 |
 |---|---|---|
-| POST | /auth/guest | ゲストアカウント作成。`{ userId, accessToken, refreshToken }` |
+| GET | /auth/config | Turnstile要否とサイトキー取得 |
+| POST | /auth/guest | ゲストアカウント作成。`{ userId, accessToken, refreshToken, expiresIn }` |
 | POST | /auth/refresh | トークン更新 |
-| POST | /auth/link | ゲスト→正式アカウント連携(パスキー/OAuth) |
-| POST | /auth/login | 連携済みアカウントでのログイン |
+| POST | /auth/link-code | 引き継ぎコード発行。発行時にゲスト扱いから外れる |
+| POST | /auth/login/link-code | 引き継ぎコードでログイン |
 
 ### プロフィール・進行
 
@@ -37,10 +38,13 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 {
   "userId": "u_xxx", "name": "プレイヤー名",
   "tickets": 12, "yoryoku": 350,
+  "onboardingDone": true,
   "loginBonus": { "day": 3, "tickets": 1 },   // 付与があった時のみ
   "rating": 1500, "wins": 10, "losses": 4
 }
 ```
+
+ログインボーナスはオンボーディング完了後のみ付与する。
 
 #### GET /me/collection
 ```json
@@ -52,6 +56,16 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 { "rows": [["raiju", null, "...", "ibaraki"], ["daitengu", "...", "hitouban"]] }
 ```
 PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジックを共有コードで実行): 2×5構造 / 全駒所持済み / 種別重複なし / 大将ちょうど1体。違反は `INVALID_FORMATION`。
+
+#### PUT /me/name
+表示名を更新する。検証は `shared/validate.ts` が正本。
+
+### オンボーディング
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| POST | /onboarding/boss | 初回大将を `kyubi` / `shuten` / `nurarihyon` から選び、初期編成へ反映 |
+| POST | /onboarding/complete | 初回オンボーディング完了フラグを立てる |
 
 ### ガチャ
 
@@ -79,7 +93,9 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 |---|---|---|
 | GET | /matches?limit=20 | 自分の対局履歴(相手・勝敗・理由・日時) |
 | GET | /matches/:id/replay | actionログ(リプレイ用イベント列) |
-| GET | /ranking | レートランキング上位(シーズン導入後) |
+| POST | /solo/win | ソロ勝利報酬申告。日次上限あり |
+| GET | /stats/players | 登録/オンボーディング人数の公開統計 |
+| GET | /announcements | ゲーム内お知らせ |
 
 ### 百鬼夜行 週間連勝ランキング(doc 21)
 
@@ -93,7 +109,7 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 
 ## WebSocket プロトコル
 
-- エンドポイント: `wss://api.<domain>/v1/battle?token=<アクセストークン>`
+- エンドポイント: `wss://api.<domain>/v1/battle?v=1&token=<アクセストークン>`
   - Workerが認証・ルーティングし、Matchmaker DO(待機中)または BattleRoom DO(対局中)へWSをフォワードする
 - メッセージはJSON: `{ "t": "<type>", ...payload }`
 - ハートビート: WebSocket Hibernation API の自動 ping/pong 応答を利用(DO休止中もプラットフォームが応答。アプリ実装は欠落検知のみ)
@@ -103,12 +119,11 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 | t | payload | 説明 |
 |---|---|---|
 | join_queue | `{}` | ランダムマッチ待機 |
-| leave_queue | `{ reason?: "cancel" | "timeout" }` | 待機解除。timeoutは20秒後のAI戦切替 |
+| leave_queue | `{ reason?: "cancel" | "timeout" }` | 待機解除 |
 | create_room | `{}` | フレンドマッチ用ルーム作成 → `room_created {code}` |
 | join_room | `{ code }` | コードで参加 |
-| action | `{ kind:'move', from:{x,y}, to:{x,y} }` または `{ kind:'drop', id, to:{x,y} }` | 現エンジンのaction形式そのまま |
+| action | `{ kind:'move', from:{x,y}, to:{x,y} }` / `{ kind:'drop', id, to:{x,y} }` / `{ kind:'awaken', to:{x,y} }` | 現エンジンのaction形式そのまま |
 | resign | `{}` | 投了 |
-| rematch | `{}` | 再戦希望 |
 | reconnect | `{ matchId, token }` | 再接続 |
 
 ### サーバー → クライアント
@@ -133,5 +148,4 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 ## バージョニング
 
 - REST: パスの `/v1`
-- WS: 接続時クエリ `?v=1`。サーバーは非互換時に `error {code:'VERSION'}` を返し、クライアントはリロード(=最新クライアント取得)を促す
-- クライアントは静的配信のため、**デプロイでクライアントとサーバーの版ずれが起き得る**。WSハンドシェイクでビルドハッシュを照合し、不一致なら更新を促す設計とする
+- WS: 接続時クエリ `?v=1`。未対応バージョンはハンドシェイク時に拒否する
