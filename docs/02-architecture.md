@@ -27,25 +27,25 @@ HTTPS│     HTTPS│                 WSS│
             ┌─────────────────────────────────┐
             │ D1(SQLite): ユーザー・通貨・ガチャ・戦績     │
             └─────────────────────────────────┘
-   補助: KV(メンテフラグ・お知らせ) / Cron Triggers(日次バッチ)
-        / Turnstile(bot対策) / R2(DBエクスポート退避)
+   補助: Cron Triggers(日次バッチ) / Turnstile(bot対策)
+        / Analytics Engine(指標) / Sentry(クライアントエラー)
 ```
 
 ## 技術選定
 
 | レイヤ | 採用 | 理由 / 注意点 |
 |---|---|---|
-| 言語 | **TypeScript で統一**(client / server / shared) | Phase 0の構造改修と同時に全面移行するのが最安。WSプロトコル・DB境界の型安全が最も効く。エンジンは約700行で移植コスト小、既存テスト資産が挙動の同一性を保証する |
+| 言語 | **TypeScript で統一**(client / server / shared) | WSプロトコル・DB境界の型安全が効く。共有エンジンをクライアント/サーバーで同一利用する |
 | クライアント | Vite + TypeScript(フレームワークなし) | 現UIはバニラで完成度が高く、書き換えリスクに見合わないため構成は維持。Viteはビルド・型・ESM共有のためだけに使う |
 | 静的配信 | Cloudflare Pages | 無料・PRごとのプレビューデプロイがレビューに効く |
 | REST API | Cloudflare Workers + **Hono** | FastifyはWorkersで動かない。HonoはWorkers最適化・軽量・型フレンドリー |
 | リアルタイム対戦 | **Durable Objects + WebSocket(Hibernation API)** | 「1対局=1オブジェクト」がターン制と完全に一致。状態の置き場所・スケール・地域分散が設計不要になる。Hibernationでアイドル接続のコストも抑制 |
 | DB | **D1(SQLite)** | 本ゲームの規模・コストに最適。**制約: インタラクティブトランザクションなし** → 通貨処理は条件付きUPDATE+`batch()`の原子性で設計(doc 05) |
 | バッチ | Cron Triggers | 日次の経済整合チェック・休眠ゲスト削除など |
-| 設定・フラグ | KV | メンテモード・ゲーム内お知らせJSON |
+| 設定・フラグ | wrangler vars / コード内定義 | メンテモードは `MAINTENANCE`、お知らせは `shared/announcements.ts` が現行実装 |
 | bot対策 | Turnstile | ゲストアカウント発行時の検証(doc 06) |
 | 監視 | Workers Logs / Analytics Engine + Sentry(クライアント) | doc 09 |
-| ローカル開発 | wrangler dev(miniflare)+ Vite | D1・DO・KVをローカル再現できる |
+| ローカル開発 | wrangler dev(miniflare)+ Vite | D1・DOをローカル再現できる |
 
 ### Workers採用に伴う制約(設計に織り込む)
 
@@ -55,25 +55,26 @@ HTTPS│     HTTPS│                 WSS│
 
 ## エンジン共有戦略(最重要)
 
-現状 `prototype/js/game.js` / `prototype/js/data.js` はグローバル定義のJS。Phase 0で **TypeScript ESMモジュール**に移植する。
+ルールエンジンと駒マスタは `shared/` の TypeScript ESM モジュールを正本とする。
 
 ```
 shared/             ← クライアント・Workers・DOの全てから import
   data.ts           (妖怪マスタ・型定義: YokaiDef, Skill, Rarity ...)
   game.ts           (エンジン: GameState, Action, GameEvent の型と純粋ロジック)
   validate.ts       (編成検証などクライアント/サーバー共用の検証)
-client/             ← 現 prototype/js/(main, menu, effects, audio, ai)をTS化
+client/             ← UI・ソロAI・演出・メタ進行
 server/
-  api/              (Hono: 認証・ガチャ・編成・戦績)
-  do/               (BattleRoom / Matchmaker Durable Objects)
-  db/               (D1マイグレーション・クエリ)
+  src/routes/       (Hono: 認証・ガチャ・編成・戦績)
+  src/do/           (BattleRoom / Matchmaker Durable Objects)
+  migrations/       (D1マイグレーション)
 test/
 ```
 
-**移植時のエンジン改修(挙動は変えない)**:
-1. `applyAction(s, action, opts)` の乱数を**注入式**にする(`opts.rand?: () => number`)。サーバーは対局シード由来のPRNG、クライアント(ソロ)は従来通り
-2. `Game._uid` のようなモジュール内可変状態を `GameState` 側へ移す(1プロセス/1DOで複数対局を扱えるように)
-3. 型付け: `GameState` / `Action` / `GameEvent` を定義し、**この型がそのままWSプロトコルの型になる**(doc 04)。`shared/` の型をクライアント・サーバー双方が参照することで、プロトコル乖離をコンパイルエラーで検出できる
+実装済みのエンジン共有ポイント:
+
+1. `applyAction(s, action, opts)` は乱数注入式(`opts.rand?: () => number`)。サーバーは対局シード由来のPRNG、クライアント(ソロ)はローカル乱数を使う。
+2. uid採番は `GameState.nextUid` が持ち、1プロセス/1DOで複数対局を扱える。
+3. `GameState` / `Action` / `GameEvent` を共有型として扱い、WSプロトコルとクライアント演出の乖離を抑える。
 
 ## コード構成の原則(アーキテクチャスタイル)
 
@@ -85,7 +86,7 @@ test/
     │
 [ユースケース]   server/api のハンドラ(ガチャ・ログボ等のフロー)、BattleRoom DO の対局進行
     │
-[インフラ・UI]   Honoルーティング・D1クエリ・DOストレージ・KV / クライアントUI(main, menu, effects)
+[インフラ・UI]   Honoルーティング・D1クエリ・DOストレージ / クライアントUI(main, menu, effects)
 ```
 
 ### 守るルール(絶対)
@@ -129,6 +130,6 @@ test/
 
 ## クライアントの変更方針
 
-- 画面遷移: タイトルに「オンライン対戦」を追加(ルーム作成/コード入力/ランダムマッチ)
-- `main.ts` の対局進行を「ローカルエンジン直叩き(ソロ)」と「サーバーイベント受信(オンライン)」の2モードに分ける。**演出層(`animEvent`)はエンジンのイベント列をそのまま食べる設計が既にできている**ため、DOから同形式のイベントを送れば演出コードは共通化できる
-- `meta.ts` は「ローカル版(ソロ用フォールバック)」と「API版」の同一インターフェース2実装にする(TSのinterfaceで強制)
+- 画面遷移にはソロ、オンライン対戦、ガチャ、編成、ランキング、駒一覧、サポート、初回オンボーディングを持つ。
+- `main.ts` の対局進行は「ローカルエンジン直叩き(ソロ)」と「サーバーイベント受信(オンライン)」の2モード。
+- `client/src/meta/` はローカル版とAPI版の同一インターフェース2実装。API未設定または不達時はローカル版へフォールバックする。

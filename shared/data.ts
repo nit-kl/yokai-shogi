@@ -29,7 +29,11 @@ export type Skill =
   | { kind: 'heal'; name: string; desc: string; amount: number }
   | { kind: 'counter'; name: string; desc: string; dmg: number }
   | { kind: 'decoy'; name: string; desc: string }
-  | { kind: 'explode'; name: string; desc: string };
+  | { kind: 'explode'; name: string; desc: string }
+  /* SSR専用スキル(会心の「運任せ」を「狙って出す」に置き換える: doc 08) */
+  | { kind: 'moon'; name: string; desc: string; mult: number }                // 満月の手番は会心確定(それ以外は不発)
+  | { kind: 'heads'; name: string; desc: string; step: number; max: number }  // この駒の撃破数だけ与ダメ成長
+  | { kind: 'legion'; name: string; desc: string; per: number; cap: number }; // 盤上の味方数で与ダメ加算
 
 export interface YokaiDef {
   id: string;
@@ -49,6 +53,7 @@ export interface YokaiDef {
   variantOf?: string;
   summonTitle?: string;
   summonColors?: readonly [string, string, string];
+  awakenName?: string; // SSRの覚醒必殺技名(覚醒ゲージ: shared/game.ts)
 }
 
 export const COLS = 5;
@@ -89,8 +94,9 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'kyubi', name: '九尾の狐', type: 'boss', atk: 400, rarity: 'SSR',
     img: img('kyubi'), imgSm: imgSm('kyubi'),
     moveText: '全方向に1マス',
-    skill: { kind: 'crit', name: '妖狐の業火', desc: '駒を取った時、20%で狐火が燃え上がりダメージ2倍', chance: 0.2, mult: 2 },
+    skill: { kind: 'moon', name: '妖狐の業火', desc: '満月の夜に駒を取ると、狐火が燃え上がり必ずダメージ2倍(月齢は盤の脇に表示)', mult: 2 },
     moves: { steps: STEPS_ALL8 },
+    awakenName: '九尾開眼',
   },
   shuten: {
     id: 'shuten', name: '酒呑童子', type: 'boss', atk: 400, rarity: 'SSR',
@@ -98,6 +104,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     moveText: '全方向に1マス',
     skill: { kind: 'crit', name: '鬼神の剛腕', desc: '駒を取った時、20%で剛腕が唸りダメージ2倍', chance: 0.2, mult: 2 },
     moves: { steps: STEPS_ALL8 },
+    awakenName: '鬼神羅刹',
   },
 
   /* ---------- 攻タイプ ---------- */
@@ -248,13 +255,15 @@ export const YOKAI: Record<string, YokaiDef> = {
     skill: { kind: 'crit', name: '夜叉の腕', desc: '駒を取った時、30%で熔岩の鬼腕が唸りダメージ2倍', chance: 0.3, mult: 2 },
     moves: { steps: STEPS_GOLD },
     promoted: { steps: STEPS_ALL8 },
+    awakenName: '羅生門の腕',
   },
   tamamo: {
     id: 'tamamo', name: '玉藻前', type: 'attack', atk: 450, rarity: 'SSR', gachaOnly: true,
     img: img('tamamo'), imgSm: imgSm('tamamo'),
     moveText: '全方向に1マス',
-    skill: { kind: 'crit', name: '傾国の妖炎', desc: '駒を取った時、25%で九尾の狐火が舞いダメージ2.2倍', chance: 0.25, mult: 2.2 },
+    skill: { kind: 'moon', name: '傾国の妖炎', desc: '満月の夜に駒を取ると、九尾の狐火が舞い必ずダメージ2.2倍(月齢は盤の脇に表示)', mult: 2.2 },
     moves: { steps: STEPS_ALL8 },
+    awakenName: '傾国乱世',
   },
 
   /* ---------- 妨タイプ(敵軍を弱体化) ---------- */
@@ -262,7 +271,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'sunakake', name: '砂かけ婆', type: 'debuff', atk: 120, rarity: 'N', gachaOnly: true,
     img: img('sunakake'), imgSm: imgSm('sunakake'),
     moveText: '前と斜め前に1マス(成:金の動き)',
-    skill: { kind: 'jam', name: '目つぶしの砂', desc: '盤上にいる間、敵の会心スキルを封じる' },
+    skill: { kind: 'jam', name: '目つぶしの砂', desc: '盤上にいる間、敵の会心系スキル(確率会心・満月会心・八岐の首)を封じる' },
     moves: { steps: [[0,-1],[1,-1],[-1,-1]] },
     promoted: { steps: STEPS_GOLD },
   },
@@ -318,8 +327,9 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'nurarihyon', name: 'ぬらりひょん', type: 'boss', atk: 430, rarity: 'SSR', gachaOnly: true,
     img: img('nurarihyon'), imgSm: imgSm('nurarihyon'),
     moveText: '全方向に1マス',
-    skill: { kind: 'crit', name: '百鬼夜行の総帥', desc: '駒を取った時、30%で百鬼が応えダメージ1.8倍', chance: 0.3, mult: 1.8 },
+    skill: { kind: 'legion', name: '百鬼夜行の総帥', desc: '盤上の味方1体につき与えるダメージ+5%(最大+40%)。軍勢を率いるほど強くなる', per: 0.05, cap: 0.4 },
     moves: { steps: STEPS_ALL8 },
+    awakenName: '百鬼夜行・真',
   },
 
   /* ---------- 新規追加妖怪 ---------- */
@@ -351,12 +361,13 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'yamata', name: '八岐大蛇', type: 'attack', atk: 420, rarity: 'SSR', gachaOnly: true,
     img: img('yamata'), imgSm: imgSm('yamata'),
     moveText: '前3方向と横2方向、後ろ1マス',
-    skill: { kind: 'crit', name: '八岐の暴虐', desc: '駒を取った時、30%で八岐の暴虐が発動しダメージ2.2倍', chance: 0.3, mult: 2.2 },
+    skill: { kind: 'heads', name: '八岐の暴虐', desc: 'この駒が駒を取るたび次の首が目覚め、与えるダメージ+30%ずつ増える(最大+90%)', step: 0.3, max: 3 },
     moves: { steps: [[0,-1], [1,-1], [-1,-1], [1,0], [-1,0], [0,1]] },
+    awakenName: '八岐咆哮',
   },
 };
 
-/* ---------- SSR異装（性能は通常版と同一） ---------- */
+/* ---------- SSR異装（性能は通常版と同一。覚醒技名のみ専用） ---------- */
 YOKAI.kyubi_eclipse = {
   ...YOKAI.kyubi,
   id: 'kyubi_eclipse',
@@ -367,6 +378,7 @@ YOKAI.kyubi_eclipse = {
   variantOf: 'kyubi',
   summonTitle: '神妖 顕現',
   summonColors: ['#fff8df', '#e32f3f', '#d9b75c'],
+  awakenName: '月蝕開眼',
 };
 YOKAI.shuten_kishin = {
   ...YOKAI.shuten,
@@ -378,6 +390,7 @@ YOKAI.shuten_kishin = {
   variantOf: 'shuten',
   summonTitle: '鬼神 覚醒',
   summonColors: ['#ffdbc2', '#c51c2b', '#8d47d6'],
+  awakenName: '鬼神羅刹・極',
 };
 YOKAI.ibaraki_rashomon = {
   ...YOKAI.ibaraki,
@@ -388,6 +401,7 @@ YOKAI.ibaraki_rashomon = {
   variantOf: 'ibaraki',
   summonTitle: '羅生門 顕現',
   summonColors: ['#ff555f', '#8d47d6', '#211326'],
+  awakenName: '羅生門・真打',
 };
 YOKAI.tamamo_keikoku = {
   ...YOKAI.tamamo,
@@ -398,6 +412,7 @@ YOKAI.tamamo_keikoku = {
   variantOf: 'tamamo',
   summonTitle: '傾国 降臨',
   summonColors: ['#fff8df', '#d9b75c', '#b21f32'],
+  awakenName: '傾国乱世・極',
 };
 YOKAI.nurarihyon_hyakki = {
   ...YOKAI.nurarihyon,
@@ -409,7 +424,34 @@ YOKAI.nurarihyon_hyakki = {
   variantOf: 'nurarihyon',
   summonTitle: '百鬼夜行 開幕',
   summonColors: ['#dbe7ff', '#6157a8', '#d98945'],
+  awakenName: '百鬼夜行・大団円',
 };
+
+/* ---------- 因縁共鳴(伝承ベースのペア。異装は variantOf 経由で同一扱い) ---------- */
+export interface Resonance {
+  pair: readonly [string, string]; // baseId(variantOf解決後)のペア
+  name: string;
+  desc: string;
+  effect: 'oniFeast' | 'foxBond';
+  colors: readonly [string, string, string];
+}
+export const RESONANCES: readonly Resonance[] = [
+  {
+    pair: ['shuten', 'ibaraki'], name: '鬼の宴', effect: 'oniFeast',
+    desc: '酒呑童子と茨木童子が共に盤上にいる間、互いの会心率+15%',
+    colors: ['#ffdbc2', '#ff4d4d', '#8d47d6'],
+  },
+  {
+    pair: ['kyubi', 'tamamo'], name: '妖狐相伝', effect: 'foxBond',
+    desc: '九尾の狐と玉藻前: 片方が取られると残った方が激怒し、次の攻撃が確定会心になる',
+    colors: ['#fff8df', '#ff9d3c', '#b21f32'],
+  },
+];
+/* 異装を通常版に正規化(共鳴・図鑑グルーピング用) */
+export const baseIdOf = (id: string): string => YOKAI[id]?.variantOf ?? id;
+
+/* 月齢(moonスキル): 1夜=1往復(2手)、4夜周期で満月が巡る */
+export const MOON_PHASES = ['新月', '三日月', '半月', '満月'] as const;
 
 /* ガチャ排出対象(limited=イベント限定を除く全妖怪) */
 export const GACHA_POOL: string[] = Object.keys(YOKAI).filter(id => !YOKAI[id].limited);

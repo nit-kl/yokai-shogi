@@ -309,6 +309,43 @@ export const FX = {
     setTimeout(() => el.remove(), 1250);
   },
 
+  /* 成り: 金屏風の帯が指定Y座標を横一閃する */
+  promoteBand(y: number) {
+    const el = document.createElement('div');
+    el.className = 'fx-promote-band';
+    el.style.top = y + 'px';
+    document.getElementById('fx-layer')!.appendChild(el);
+    setTimeout(() => el.remove(), 820);
+  },
+
+  /* 大書き漢字スタンプ(「成」など) */
+  kanjiStamp(x: number, y: number, char: string) {
+    const el = document.createElement('div');
+    el.className = 'fx-kanji-stamp';
+    el.textContent = char;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    document.getElementById('fx-layer')!.appendChild(el);
+    setTimeout(() => el.remove(), 1120);
+  },
+
+  /* コンボ表示: 数が伸びるほど大きく・派手に。4コンボ以上は画面も揺らす */
+  comboLabel(x: number, y: number, n: number, isPlayer: boolean) {
+    const tier = n >= 5 ? 3 : n >= 4 ? 2 : n >= 3 ? 1 : 0;
+    const el = document.createElement('div');
+    el.className = `fx-combo tier-${tier} ${isPlayer ? 'side-p' : 'side-e'}`;
+    const num = document.createElement('b');
+    num.textContent = String(n);
+    const label = document.createElement('i');
+    label.textContent = 'COMBO';
+    el.append(num, label);
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    document.getElementById('fx-layer')!.appendChild(el);
+    if (tier >= 2) this.zoomPunch(tier >= 3);
+    setTimeout(() => el.remove(), 1350);
+  },
+
   floatLabel(x: number, y: number, text: string, color?: string) {
     const el = document.createElement('div');
     el.className = 'float-label';

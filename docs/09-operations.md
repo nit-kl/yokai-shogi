@@ -6,17 +6,15 @@ Cloudflareプラットフォームに統一し、個人運用で回り続ける�
 
 | 環境 | 用途 | 実体 |
 |---|---|---|
-| local | 開発 | `wrangler dev`(miniflareがD1/DO/KVをローカル再現)+ `vite dev` |
+| local | 開発 | `wrangler dev`(D1/DOをローカル再現)+ `vite dev` |
 | staging | リリース前検証・接続スモークテスト | wrangler environment `staging`(別Worker・別D1・別DOネームスペース)+ Pagesプレビュー |
 | production | 本番 | wrangler environment `production` |
 
 ```toml
-# wrangler.toml(イメージ)
-[env.staging]
-d1_databases = [{ binding = "DB", database_name = "yokai-staging" }]
-durable_objects.bindings = [{ name = "BATTLE", class_name = "BattleRoom" }, ...]
-[env.production]
-...
+# server/wrangler.jsonc が正本
+npm run api:dev
+npm run api:deploy:staging
+npm run api:deploy
 ```
 
 ### 本番構成と費用(月額目安: 5〜10ドル)
@@ -26,26 +24,27 @@ durable_objects.bindings = [{ name = "BATTLE", class_name = "BattleRoom" }, ...]
 | Workers Paid プラン | API + Durable Objects + Cron | $5/月(DO・D1の十分な無料枠込み) |
 | Pages | クライアント静的配信(グローバルCDN) | 無料 |
 | D1 | DB(Time Travel 30日込み) | 無料枠内(超過しても従量で微小) |
-| KV / R2 / Turnstile | フラグ・バックアップ退避・bot対策 | 無料枠内 |
+| Turnstile | bot対策 | 無料枠内 |
 | Sentry(クライアント) | エラートラッキング | 無料枠 |
 | UptimeRobot | 外形監視 | 無料 |
 
-- 駒画像は計5MB超(512px PNG ×30枚)。**WebP変換+複数サイズ生成**をアセットパイプライン(`prototype/test/process-images.js` 系列)に追加し、Pagesの長期キャッシュで配信(初回ロード改善はリリース必須タスク)
+- 駒画像は WebP 512px と小サイズ160pxを `client/public/assets/pieces/` に配置する。再生成は `npm run images`(`scripts/optimize-images.mjs`)で行う。
 
 ## CI/CD(GitHub Actions)
 
 ```
 PR時:
-  - tsc --noEmit(型チェック)+ eslint
-  - vitest: shared/エンジン・抽選・レーティングのユニットテスト
+  - npm run typecheck
+  - npm run test
   - vitest(@cloudflare/vitest-pool-workers): API・DOのWorkersランタイムテスト
-  - playwright UIテスト(ui-shot / ui-gacha / ui-skills / ui-fx)
-  - Pagesプレビューデプロイ(PRごとのURLでUI確認)
+  - npm run build
+  - npm run test:e2e
+  - Cloudflare Secrets がある場合のみ Pagesプレビューデプロイ
 main マージ時:
   - 上記テスト全部
   - 本番D1マイグレーション → API/DOデプロイ → healthz確認 → Pagesデプロイを自動実行
 本番リリース:
-  - mainへのマージで自動実行。stagingは必要なタイミングで手動実行(doc 13 / 15)
+  - mainへのpushで自動実行。stagingは必要なタイミングで手動実行(doc 13)
 ```
 
 ### デプロイと対局の継続性
@@ -73,8 +72,8 @@ main マージ時:
 ## バックアップ・障害復旧
 
 - **D1 Time Travel**: Freeプランは過去7日、Paidプランは過去30日の任意時点へ復元可能(標準機能)
-- 加えて週次 `wrangler d1 export` でSQLダンプをR2へ退避(Time Travel外の保険・ローカル検証用)
-- Runbook(docs/runbooks/ に配置)最低限:
+- 必要に応じて `wrangler d1 export` でSQLダンプを取得し、Cloudflare外の保管先へ退避する。
+- 障害対応の最低限:
   1. API異常 → `wrangler rollback`(直前バージョンへ即戻し)
   2. データ破損 → Time Travelで時点復元(直近データ損失をユーザーに告知+一律補償)
   3. 不正アクセス疑い → 全リフレッシュトークン失効 → 調査(currency_logs / gacha_logs)
@@ -82,8 +81,8 @@ main マージ時:
 
 ## 告知・コミュニケーション手段
 
-- ゲーム内お知らせ: KVに置いたJSONをクライアントが起動時取得(メンテ予告・障害報告・アップデート情報)
-- メンテモード: 現状はAPI環境変数+再デプロイ。将来はKV即時切替+タイトルバナーを検討
+- ゲーム内お知らせ: `shared/announcements.ts` を更新してデプロイする。
+- メンテモード: 現状はAPI環境変数 `MAINTENANCE=1` + 再デプロイ。将来は即時切替できる設定ストアを検討する。
 - 外部: X(Twitter)アカウント等を1つ用意(ゲーム外の告知経路)。有料集客の手順は [doc 17](17-x-ads-guide.md)
 
 ## 定常運用タスク
@@ -91,6 +90,6 @@ main マージ時:
 | 頻度 | タスク |
 |---|---|
 | 毎日(Cron自動) | 経済不変条件チェック、休眠ゲスト削除、日次集計 |
-| 毎週 | 妖怪採用率・勝率集計の確認、Sentry/Workers Logsレビュー、Dependabot PR確認、R2へのD1エクスポート確認 |
+| 毎週 | 妖怪採用率・勝率集計の確認、Sentry/Workers Logsレビュー、Dependabot PR確認、必要に応じたD1エクスポート |
 | 毎月 | 費用確認(Workersダッシュボード)、容量・負荷トレンド確認 |
 | シーズンごと | バランス調整・新コンテンツ・レートリセット(doc 08) |

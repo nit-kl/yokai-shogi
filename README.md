@@ -3,15 +3,14 @@
 駒取りで相手の魂力を削るバトルシステムを将棋に融合させたWebゲーム。
 **駒を取ると、取った駒の攻撃力ぶん相手の「魂力(HP)」にダメージ**が入る。
 
-## リポジトリ構成(Phase 0 完了後)
+## リポジトリ構成
 
 ```
 shared/      ルールエンジン+駒マスタ(TypeScript・依存ゼロ。クライアント/サーバー共用)
 client/      ゲーム本体(Vite + TypeScript。UI・AI・メタ進行・演出)
-server/      Cloudflare Workers API の雛形(実装は Phase 1 から)
+server/      Cloudflare Workers API + Durable Objects + D1
 test/        vitest ユニットテスト + playwright e2e テスト
 scripts/     画像最適化などの開発スクリプト
-prototype/   旧ローカル1人用プロトタイプ(移植元。挙動比較のため保存)
 docs/        オンライン対戦版リリースに向けた設計・計画ドキュメント
 ```
 
@@ -21,8 +20,6 @@ docs/        オンライン対戦版リリースに向けた設計・計画ド�
 npm install
 npm run dev          # http://localhost:5173
 ```
-
-旧プロトタイプは従来どおり `prototype/index.html` をブラウザで開くだけでも遊べます。
 
 ### ルール概要
 
@@ -48,14 +45,16 @@ npm run dev          # http://localhost:5173
 
 ### ガチャ・編成(課金なし)
 
-- **ガチャチケット**の入手手段は2つだけ(課金なし)。
+- **ガチャチケット**は課金なしで入手できます。
   - **ログインボーナス**: 1日1枚。7日連続ログインごとに3枚。
-  - **勝利報酬**: 1勝につき1枚。初回起動時に10枚プレゼント。
+  - **勝利報酬**: ソロ勝利・オンライン勝利で付与(日次上限あり)。
+  - **逢魔が時参加報酬**: ランダムマッチ完走で1日1回付与。土曜対戦会は報酬増加と限定妖怪の初回入手があります。
+  - 初回起動時に10枚プレゼント。
 - **妖怪ガチャ**: 1回1枚 / 10連10枚(SR以上1枠確定)。排出率 N 40% / R 40% / SR 16% / SSR 4%。
 - **ガチャ限定妖怪**: 青鬼・火車・鎌鼬・飛頭蛮・水虎・大入道・大天狗・雷獣に加え、新タイプの雪女・土蜘蛛・砂かけ婆(妨)、座敷童子(援)、化け狸(化)、鬼火(爆)。SSRは茨木童子・**玉藻前**に加え、大将として使える **ぬらりひょん**。
 - **被り**は「妖力」に自動変換され、妖力300でチケット1枚と交換できる。
 - **編成**: タイトルの「編成」から、所持妖怪で自軍2段(10マス)を自由に配置。大将1体が必須。
-- 進行データの保存先は2系統(Phase 1):
+- 進行データの保存先は2系統:
   - **オンライン(サーバー権威)**: ゲスト自動発行 → サーバー(Cloudflare Workers + D1)で管理。タイトルの「データ引き継ぎ」で別端末へ移行可能
   - **オフライン(ローカル)**: API未接続時は `localStorage` に保存して単体で動作(ソロのフォールバック)
 
@@ -71,7 +70,7 @@ client/src/menu.ts         ガチャ・編成・ログボ・データ引き継�
 client/src/meta/           メタ進行: MetaProvider 抽象 + ローカル版/API版の2実装 + ファサード
 client/src/ai.ts           敵AI(期待値評価+脅威差し引きの貪欲法)
 client/src/audio.ts        WebAudio合成のSE/BGM / effects.ts 演出
-client/public/assets/      最適化済み駒画像(WebP 512px + 小160px)
+client/public/assets/      最適化済み駒画像(WebP 512px + 小160px)。pieces/stock は今後のラインナップ候補置き場
 server/src/index.ts        Workers API エントリ(Hono)。/v1 配下に認証・ガチャ・編成・ソロ報酬
 server/src/routes/         auth(ゲスト/更新/引き継ぎ)・me(プロフィール/ログボ/編成)・gacha・solo
 server/src/cron.ts         日次バッチ(経済整合チェック・休眠ゲスト削除)
@@ -92,8 +91,9 @@ server/wrangler.jsonc      wrangler 設定(staging / production・D1バインデ
 npm run dev            # 開発サーバー(Vite)。API未接続=ローカルメタで動作
 npm run build          # オフライン版ビルド(ローカルメタ。e2e用)→ client/dist
 npm run build:online   # 本番API接続版ビルド(Pages配信用)
+npm run build:staging  # staging API接続版ビルド(Pages staging配信用)
 npm run preview        # ビルド成果物の確認サーバー(port 4173)
-npm run images         # prototype の駒画像から WebP を再生成
+npm run images         # 入力素材から駒画像WebPを再生成(入力元は scripts/optimize-images.mjs を参照)
 
 # サーバー(Cloudflare Workers + D1)
 npm run api:dev            # Workers API をローカル起動(wrangler dev)。要 server/.dev.vars(JWT_SECRET)
@@ -103,6 +103,7 @@ npm run db:migrate:prod    # production のリモートD1に適用
 npm run api:deploy:staging # staging へデプロイ
 npm run api:deploy         # production へデプロイ
 npm run pages:deploy       # クライアント(本番API接続版)を Cloudflare Pages へデプロイ
+npm run pages:deploy:staging # クライアント(staging API接続版)を Cloudflare Pages staging へデプロイ
 
 # テスト・検査
 npm run typecheck      # tsc(client) + tsc(server)
@@ -115,6 +116,4 @@ API接続先は `vite.config.ts` の define で注入する(`build:online`=本�
 Sentryは `VITE_SENTRY_DSN` が設定されているときだけ有効(`client/src/sentry.ts`)。
 ローカルでサーバーを使う初回は `cp server/.dev.vars.example server/.dev.vars`(JWT_SECRET設定)→ `npm run db:migrate:local` → `npm run api:dev`。
 
-CI(GitHub Actions)は push / PR ごとに typecheck + vitest + test:workers + build + e2e を実行し、Cloudflare Secrets 設定時はPagesへデプロイする(docs/13)。
-
-旧プロトタイプの画像生成スクリプト(`prototype/test/process-images.js` など)はそのまま残してある。
+CI(GitHub Actions)は push / PR ごとに typecheck + vitest + test:workers + build + e2e を実行し、PRではPagesプレビュー、mainではD1マイグレーション→API→Pagesの順で本番へデプロイする(docs/13)。

@@ -8,9 +8,11 @@ const flipPos = (pos: Pos): Pos => ({ x: COLS - 1 - pos.x, y: ROWS - 1 - pos.y }
 
 export function actionToServer(action: Action, side: Side): Action {
   if (side === 'p') return action;
-  return action.kind === 'move'
-    ? { kind: 'move', from: flipPos(action.from), to: flipPos(action.to) }
-    : { kind: 'drop', id: action.id, to: flipPos(action.to) };
+  switch (action.kind) {
+    case 'move': return { kind: 'move', from: flipPos(action.from), to: flipPos(action.to) };
+    case 'drop': return { kind: 'drop', id: action.id, to: flipPos(action.to) };
+    case 'awaken': return { kind: 'awaken', to: flipPos(action.to) };
+  }
 }
 
 export function stateForView(state: GameState, side: Side): GameState {
@@ -25,6 +27,9 @@ export function stateForView(state: GameState, side: Side): GameState {
     combo: { p: state.combo.e, e: state.combo.p },
     winner: state.winner ? flipSide(state.winner) : null,
     lastMove: state.lastMove ? { to: flipPos(state.lastMove.to) } : null,
+    awaken: state.awaken
+      ? { p: { ...state.awaken.e }, e: { ...state.awaken.p } }
+      : { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } },
   };
 }
 
@@ -35,6 +40,7 @@ export function eventsForView(events: GameEvent[], side: Side): GameEvent[] {
       case 'move': return { ...event, from: flipPos(event.from), to: flipPos(event.to) };
       case 'drop': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
       case 'promote': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
+      case 'awaken': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
       case 'gameover': return { ...event, winner: flipSide(event.winner) };
       case 'capture':
         return {
@@ -43,11 +49,13 @@ export function eventsForView(events: GameEvent[], side: Side): GameEvent[] {
           victim: { ...event.victim, owner: flipSide(event.victim.owner) },
           at: flipPos(event.at),
           procs: event.procs.map(p => ({ ...p, owner: flipSide(p.owner) })),
+          effects: event.effects?.map(p => ({ ...p, owner: flipSide(p.owner) })),
           counter: event.counter ? {
             ...event.counter, owner: flipSide(event.counter.owner),
             hp: { p: event.counter.hp.e, e: event.counter.hp.p },
           } : null,
           hp: { p: event.hp.e, e: event.hp.p },
+          enrage: event.enrage ? { ...event.enrage, owner: flipSide(event.enrage.owner) } : event.enrage,
         };
     }
   });

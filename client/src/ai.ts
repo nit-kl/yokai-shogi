@@ -20,6 +20,7 @@ export const AI = {
     if (def.skill.kind === 'heal') v += 90;
     if (def.skill.kind === 'counter') v += 60;
     if (def.skill.kind === 'explode') v += 50;   // 取られても道連れにできる
+    if (def.skill.kind === 'heads') v += (pc.kills ?? 0) * 80; // 育った首は失いたくない
     return v;
   },
 
@@ -62,6 +63,10 @@ export const AI = {
       /* 相手(プレイヤー)の最善応手の脅威を差し引く */
       score -= this.bestThreat(sim, 'p') * threatWeight;
 
+      /* 覚醒: 即時ダメージはないが3手番のATK1.5倍を先行投資として評価。
+         盤面が追い込まれている(脅威が大きい)ほど自然に選ばれなくなる */
+      if (act.kind === 'awaken') score += 70;
+
       /* 位置評価 */
       score += this.positionBonus(state, sim, act);
 
@@ -96,6 +101,7 @@ export const AI = {
   },
 
   positionBonus(before: GameState, after: GameState, act: Action): number {
+    if (act.kind === 'awaken') return 0;
     let b = 0;
     const def = YOKAI[act.kind === 'drop' ? act.id : before.board[act.from.y][act.from.x]!.id];
 

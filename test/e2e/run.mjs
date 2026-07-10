@@ -10,7 +10,7 @@ const root = path.join(dir, '..', '..');
 const PORT = 4173;
 const BASE_URL = `http://localhost:${PORT}/`;
 
-const SCRIPTS = ['ui-shot.mjs', 'ui-gacha.mjs', 'ui-skills.mjs', 'ui-fx.mjs'];
+const SCRIPTS = ['ui-shot.mjs', 'ui-gacha.mjs', 'ui-skills.mjs', 'ui-fx.mjs', 'ui-ssr.mjs'];
 
 /* vite preview を起動(node直接起動: killを確実にするため) */
 const viteBin = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js');

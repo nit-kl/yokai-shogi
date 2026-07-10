@@ -129,6 +129,17 @@ export const AudioSys = {
     this._osc('sine', freq * 0.5, t0, 0.6, vol * 0.25, d);
   },
 
+  /* コンボ音: 数が伸びるほど音程が上がる */
+  playCombo(n: number) {
+    if (!this.ctx || !this.enabled) return;
+    this.resume();
+    const t = this.ctx.currentTime + 0.01;
+    const base = 520 * Math.pow(1.12, Math.min(n, 8) - 2);
+    this._osc('triangle', base, t, 0.18, 0.28);
+    this._osc('sine', base * 1.5, t + 0.06, 0.22, 0.2);
+    if (n >= 4) this._osc('sine', base * 2, t + 0.12, 0.26, 0.16);
+  },
+
   /* ---------- SE ---------- */
   play(name: string) {
     if (!this.ctx || !this.enabled) return;

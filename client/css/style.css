@@ -682,6 +682,7 @@ html, body {
   opacity: 0.55;
   pointer-events: none;
 }
+
 @keyframes stageSpin {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to { transform: translate(-50%, -50%) rotate(360deg); }
@@ -1275,9 +1276,16 @@ html, body {
   transform: translate(-50%, -50%);
   font-family: "Yu Mincho", serif;
   font-weight: bold;
-  font-size: clamp(1rem, 3.6vw, 1.5rem);
-  letter-spacing: 0.25em;
+  max-width: min(72vw, 420px);
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(10, 7, 20, 0.62);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: clamp(0.75rem, 2.6vw, 1.15rem);
+  letter-spacing: 0.08em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   animation: labelFloat 1.2s ease-out forwards;
 }
 @keyframes labelFloat {
@@ -1467,7 +1475,7 @@ html, body {
 #pieces-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  grid-auto-rows: minmax(142px, auto);
+  grid-auto-rows: minmax(154px, auto);
   align-content: start;
   gap: 12px;
   flex: 1;
@@ -1482,7 +1490,7 @@ html, body {
   display: grid;
   grid-template-rows: 82px 1fr;
   min-width: 0;
-  min-height: 142px;
+  min-height: 154px;
   height: 100%;
   overflow: hidden;
   border-radius: 8px;
@@ -2262,3 +2270,455 @@ html, body {
   .title-center { transform: scale(0.88); }
   .title-foot { display: none; }
 }
+
+/* ============================================================
+   開幕VS演出
+   ============================================================ */
+#vs-intro {
+  position: fixed; inset: 0;
+  z-index: 190;
+  overflow: hidden;
+  transition: opacity 0.4s ease;
+}
+#vs-intro.vs-out { opacity: 0; }
+/* 斜め二分割の背景(自軍=藍 / 敵軍=緋、境界に金の刃) */
+#vs-intro .vs-bg {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(104deg,
+      rgba(10, 20, 52, 0.98) 0 49.4%,
+      rgba(255, 232, 170, 0.95) 49.4% 50.6%,
+      rgba(58, 8, 18, 0.98) 50.6% 100%);
+  animation: vsBgIn 0.35s ease-out both;
+}
+@keyframes vsBgIn { from { opacity: 0; } to { opacity: 1; } }
+#vs-intro .vs-side {
+  position: absolute; top: 0; bottom: 0;
+  width: 58%;
+  display: flex; align-items: center; justify-content: center;
+}
+#vs-intro .vs-side img {
+  height: min(62vh, 470px);
+  max-width: 44vw;
+  object-fit: contain;
+}
+#vs-intro .vs-p { left: -3%; animation: vsInL 0.55s cubic-bezier(0.15, 0.9, 0.25, 1) 0.12s both; }
+#vs-intro .vs-e { right: -3%; animation: vsInR 0.55s cubic-bezier(0.15, 0.9, 0.25, 1) 0.12s both; }
+#vs-intro .vs-p img { filter: drop-shadow(0 0 26px rgba(90, 160, 255, 0.55)) drop-shadow(0 0 8px rgba(0, 0, 0, 0.9)); }
+#vs-intro .vs-e img { filter: drop-shadow(0 0 26px rgba(255, 80, 80, 0.55)) drop-shadow(0 0 8px rgba(0, 0, 0, 0.9)); }
+@keyframes vsInL {
+  0% { transform: translateX(-70vw) skewX(6deg); opacity: 0; }
+  70% { transform: translateX(1.6vw); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes vsInR {
+  0% { transform: translateX(70vw) skewX(6deg); opacity: 0; }
+  70% { transform: translateX(-1.6vw); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+/* 見切れ防止: .vs-side は画面外へ3%はみ出すため、その分を足して内側へ寄せる */
+#vs-intro .vs-texts { position: absolute; z-index: 2; max-width: 80vw; }
+#vs-intro .vs-p .vs-texts { left: 7vw; bottom: 6%; text-align: left; }
+#vs-intro .vs-e .vs-texts { right: 7vw; top: 6%; text-align: right; }
+#vs-intro .vs-label {
+  color: var(--gold);
+  font-size: clamp(0.72rem, 2.4vw, 1rem);
+  letter-spacing: 0.3em;
+  text-shadow: 0 0 10px rgba(232, 196, 106, 0.7), 0 2px 2px rgba(0, 0, 0, 0.9);
+  margin-bottom: 0.25em;
+}
+#vs-intro .vs-name {
+  font-family: "Yu Mincho", serif;
+  font-weight: bold;
+  font-size: clamp(1.4rem, 5.6vw, 2.8rem);
+  letter-spacing: 0.12em;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+#vs-intro .vs-p .vs-name {
+  background-image: linear-gradient(175deg, #eaf4ff 20%, #8cbeff 60%, #3a6ecc 95%);
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(90, 160, 255, 0.6));
+}
+#vs-intro .vs-e .vs-name {
+  background-image: linear-gradient(175deg, #ffe8e0 20%, #ff8a7a 60%, #c22e3a 95%);
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(255, 90, 80, 0.6));
+}
+/* 中央VSエンブレム: 叩きつけ→衝撃リング */
+#vs-intro .vs-emblem {
+  position: absolute; left: 50%; top: 44%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  animation: vsEmblem 0.4s cubic-bezier(0.2, 1.35, 0.35, 1) 0.55s both;
+}
+#vs-intro .vs-emblem span {
+  font-family: "Yu Mincho", serif;
+  font-weight: bold; font-style: italic;
+  font-size: clamp(3.6rem, 16vw, 7.5rem);
+  letter-spacing: 0.04em;
+  background: linear-gradient(175deg, #fff8e0 15%, #ffd76a 55%, #b8791a 90%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 30px rgba(255, 190, 60, 0.75));
+}
+@keyframes vsEmblem {
+  from { transform: translate(-50%, -50%) scale(3.2); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+#vs-intro .vs-emblem::after {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 233, 160, 0.95);
+  box-shadow: 0 0 22px rgba(255, 210, 90, 0.9), inset 0 0 12px rgba(255, 210, 90, 0.9);
+  transform: translate(-50%, -50%) scale(0);
+  animation: vsRing 0.55s cubic-bezier(0.1, 0.8, 0.3, 1) 0.62s both;
+}
+@keyframes vsRing {
+  to { transform: translate(-50%, -50%) scale(24); border-width: 1px; opacity: 0; }
+}
+/* VS着地の白閃光 */
+#vs-intro .vs-flash {
+  position: absolute; inset: 0;
+  background: #fff;
+  opacity: 0;
+  animation: vsFlash 0.4s ease-out 0.58s both;
+  pointer-events: none;
+}
+@keyframes vsFlash { 0% { opacity: 0; } 12% { opacity: 0.8; } 100% { opacity: 0; } }
+/* ステージ名(上部) */
+#vs-intro .vs-stage {
+  position: absolute; left: 50%; top: 7%;
+  transform: translateX(-50%);
+  color: #d8cfee;
+  font-family: "Yu Mincho", serif;
+  font-size: clamp(0.8rem, 2.8vw, 1.15rem);
+  letter-spacing: 0.5em; text-indent: 0.5em;
+  white-space: nowrap;
+  padding: 0.4em 1.6em;
+  border-top: 1px solid rgba(232, 196, 106, 0.5);
+  border-bottom: 1px solid rgba(232, 196, 106, 0.5);
+  text-shadow: 0 0 12px rgba(150, 120, 255, 0.6), 0 2px 2px rgba(0, 0, 0, 0.9);
+  animation: vsStage 0.5s ease-out 0.8s both;
+}
+@keyframes vsStage { from { opacity: 0; letter-spacing: 0.9em; } to { opacity: 1; letter-spacing: 0.5em; } }
+/* 「開戦」の帯が横一閃 */
+#vs-intro .vs-kaisen {
+  position: absolute; left: 0; right: 0; top: 72%;
+  transform: translateY(-50%) scaleX(0);
+  text-align: center;
+  font-family: "Yu Mincho", serif;
+  font-weight: bold;
+  font-size: clamp(1.9rem, 8.5vw, 3.4rem);
+  letter-spacing: 0.9em; text-indent: 0.9em;
+  color: #fff3d8;
+  padding: 0.14em 0;
+  background: linear-gradient(90deg, transparent, rgba(110, 16, 26, 0.92) 22% 78%, transparent);
+  border-top: 1px solid rgba(255, 210, 110, 0.7);
+  border-bottom: 1px solid rgba(255, 210, 110, 0.7);
+  text-shadow: 0 0 20px rgba(255, 170, 60, 0.95), 0 3px 3px rgba(0, 0, 0, 0.9);
+  z-index: 4;
+  animation: vsKaisen 0.32s cubic-bezier(0.2, 1.2, 0.4, 1) 1.62s both;
+}
+@keyframes vsKaisen {
+  from { transform: translateY(-50%) scaleX(0); opacity: 0; }
+  to { transform: translateY(-50%) scaleX(1); opacity: 1; }
+}
+
+/* ============================================================
+   成り(覚醒)演出
+   ============================================================ */
+/* 金屏風の帯が駒の高さを横一閃する */
+.fx-promote-band {
+  position: absolute; left: 0; right: 0;
+  height: clamp(64px, 12vh, 110px);
+  transform: translateY(-50%) scaleX(0);
+  background:
+    repeating-linear-gradient(100deg, rgba(255, 224, 130, 0.2) 0 22px, rgba(255, 246, 216, 0.06) 22px 44px),
+    linear-gradient(90deg, transparent, rgba(66, 44, 8, 0.94) 12% 88%, transparent);
+  border-top: 2px solid rgba(255, 226, 130, 0.9);
+  border-bottom: 2px solid rgba(255, 226, 130, 0.9);
+  box-shadow: 0 0 44px rgba(255, 200, 80, 0.55);
+  pointer-events: none;
+  animation: fxPromoteBand 0.75s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+@keyframes fxPromoteBand {
+  0% { transform: translateY(-50%) scaleX(0); opacity: 1; }
+  22% { transform: translateY(-50%) scaleX(1); opacity: 1; }
+  78% { transform: translateY(-50%) scaleX(1); opacity: 1; }
+  100% { transform: translateY(-50%) scaleX(1); opacity: 0; }
+}
+/* 大書き漢字スタンプ(「成」) */
+.fx-kanji-stamp {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: "Yu Mincho", serif;
+  font-weight: bold;
+  white-space: nowrap;
+  font-size: clamp(3rem, 12vw, 5rem);
+  background: linear-gradient(175deg, #fff8e0 15%, #ffd76a 55%, #c98a18 90%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 26px rgba(255, 190, 60, 0.85));
+  pointer-events: none;
+  animation: fxKanjiStamp 1.05s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+@keyframes fxKanjiStamp {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(2.6) rotate(-8deg); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  28% { transform: translate(-50%, -50%) scale(1.1); }
+  40% { transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -66%) scale(0.95); }
+}
+/* 覚醒のタメ: 光を溜めて白熱していく */
+.piece.awakening { z-index: 5; }
+.piece.awakening img { animation: pieceAwaken 0.6s ease-in forwards; }
+@keyframes pieceAwaken {
+  to {
+    transform: translateY(-8%) scale(1.12);
+    filter: brightness(2.4) saturate(0.5) drop-shadow(0 0 18px rgba(255, 210, 74, 0.95));
+  }
+}
+/* 覚醒の解放: 閃光から実体へ戻る */
+.piece.promoted-burst { z-index: 5; }
+.piece.promoted-burst img { animation: pieceAwakenBurst 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes pieceAwakenBurst {
+  0% { transform: scale(1.4); filter: brightness(3) drop-shadow(0 0 28px rgba(255, 246, 216, 1)); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================================
+   コンボ・エスカレーション
+   ============================================================ */
+/* 画面縁の炎ビネット(3コンボ=lv1 / 4コンボ以上=lv2) */
+#combo-vignette {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 120;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+#combo-vignette.lv1, #combo-vignette.lv2 { opacity: 1; }
+#combo-vignette::before {
+  content: "";
+  position: absolute; inset: 0;
+  animation: comboVigPulse 1.4s ease-in-out infinite alternate;
+}
+#combo-vignette.side-p::before {
+  box-shadow: inset 0 0 90px 22px rgba(80, 150, 255, 0.3), inset 0 0 30px rgba(160, 215, 255, 0.22);
+}
+#combo-vignette.side-e::before {
+  box-shadow: inset 0 0 90px 22px rgba(255, 70, 60, 0.3), inset 0 0 30px rgba(255, 160, 120, 0.2);
+}
+#combo-vignette.lv2::before { animation-duration: 0.8s; }
+#combo-vignette.lv2.side-p::before {
+  box-shadow: inset 0 0 140px 46px rgba(90, 160, 255, 0.45), inset 0 0 54px rgba(190, 230, 255, 0.32);
+}
+#combo-vignette.lv2.side-e::before {
+  box-shadow: inset 0 0 140px 46px rgba(255, 80, 60, 0.45), inset 0 0 54px rgba(255, 190, 130, 0.32);
+}
+@keyframes comboVigPulse { from { opacity: 0.5; } to { opacity: 1; } }
+/* コンボ数表示: 数が伸びるほど大きく・派手に */
+.fx-combo {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: baseline; gap: 0.16em;
+  font-family: "Yu Mincho", serif;
+  font-weight: bold;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: comboFloat 1.3s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+.fx-combo b {
+  font-family: "Arial Black", "Yu Gothic", sans-serif;
+  font-weight: 900;
+  font-size: 1.75em;
+  line-height: 1;
+}
+.fx-combo i {
+  font-style: normal;
+  letter-spacing: 0.18em;
+}
+.fx-combo.side-p { color: #9fdcff; text-shadow: 0 0 12px rgba(70, 170, 255, 0.95), 0 2px 3px rgba(0, 0, 0, 0.9); }
+.fx-combo.side-e { color: #ffb0a0; text-shadow: 0 0 12px rgba(255, 90, 70, 0.95), 0 2px 3px rgba(0, 0, 0, 0.9); }
+.fx-combo.tier-0 { font-size: clamp(0.9rem, 3vw, 1.25rem); }
+.fx-combo.tier-1 { font-size: clamp(1.15rem, 4vw, 1.7rem); }
+.fx-combo.tier-2 { font-size: clamp(1.5rem, 5.4vw, 2.3rem); }
+.fx-combo.tier-3 { font-size: clamp(1.9rem, 7vw, 3rem); }
+/* 高コンボは炎色の白熱ナンバー */
+.fx-combo.tier-2 b, .fx-combo.tier-3 b {
+  background: linear-gradient(175deg, #fff8e0 15%, #ffd24a 50%, #ff6b2e 90%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 14px rgba(255, 140, 30, 0.95)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
+}
+.fx-combo.tier-3 { animation: comboFloatBig 1.3s cubic-bezier(0.2, 0.8, 0.4, 1) forwards; }
+@keyframes comboFloat {
+  0% { opacity: 0; transform: translate(-50%, -44%) scale(2.2) rotate(-5deg); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  72% { opacity: 1; transform: translate(-50%, -74%); }
+  100% { opacity: 0; transform: translate(-50%, -108%) scale(0.94); }
+}
+@keyframes comboFloatBig {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(2.8) rotate(-7deg); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  18% { transform: translate(-48%, -51%) scale(1.05) rotate(1.5deg); }
+  24% { transform: translate(-52%, -49%) scale(1); }
+  72% { opacity: 1; transform: translate(-50%, -76%); }
+  100% { opacity: 0; transform: translate(-50%, -112%) scale(0.94); }
+}
+
+/* ============================================================
+   SSR体験改修: 月齢HUD・覚醒ゲージ・因縁共鳴(doc 08)
+   ============================================================ */
+
+/* ---------- 月齢HUD ---------- */
+#moon-hud {
+  position: absolute;
+  top: 4px; right: 6px;
+  z-index: 6;
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(28, 22, 52, 0.9), rgba(14, 10, 30, 0.9));
+  border: 1px solid rgba(185, 168, 255, 0.35);
+  font-family: "Yu Mincho", serif;
+  font-size: clamp(0.6rem, 1.6vh, 0.78rem);
+  letter-spacing: 0.08em;
+  color: #cfc6f2;
+  pointer-events: none;
+  transition: box-shadow 0.4s, border-color 0.4s;
+}
+#moon-icon { font-size: 1.15em; line-height: 1; filter: drop-shadow(0 0 4px rgba(185, 168, 255, 0.6)); }
+#moon-hud.full-moon {
+  color: #fff3c8;
+  border-color: rgba(255, 226, 150, 0.75);
+  box-shadow: 0 0 14px rgba(255, 220, 130, 0.45), inset 0 0 8px rgba(255, 220, 130, 0.18);
+  animation: fullMoonPulse 1.4s ease-in-out infinite alternate;
+}
+@keyframes fullMoonPulse {
+  from { box-shadow: 0 0 10px rgba(255, 220, 130, 0.35), inset 0 0 6px rgba(255, 220, 130, 0.12); }
+  to   { box-shadow: 0 0 22px rgba(255, 220, 130, 0.65), inset 0 0 12px rgba(255, 220, 130, 0.28); }
+}
+
+/* 満月の夜: 盤が月光に染まり、moon駒(九尾・玉藻前)が輝く */
+#board-frame.moonlit {
+  box-shadow: 0 0 34px rgba(154, 134, 255, 0.5), 0 0 90px rgba(120, 100, 230, 0.28);
+  transition: box-shadow 0.6s;
+}
+#board-frame.moonlit .moon-piece .piece-base {
+  background: radial-gradient(ellipse, rgba(242, 236, 255, 0.95) 0%, rgba(154, 134, 255, 0.5) 48%, transparent 76%);
+  animation: specialPieceAura 0.9s ease-in-out infinite alternate;
+}
+#board-frame.moonlit .moon-piece > img {
+  filter: drop-shadow(0 0 12px rgba(185, 168, 255, 0.95)) drop-shadow(0 0 5px rgba(242, 236, 255, 0.9));
+}
+
+/* ---------- 覚醒ゲージ ---------- */
+.awaken-row {
+  display: flex; align-items: center; gap: 6px;
+  min-height: 14px;
+}
+.awaken-label {
+  font-family: "Yu Mincho", serif;
+  font-size: 0.58rem; letter-spacing: 0.2em;
+  color: rgba(232, 196, 106, 0.75);
+  flex-shrink: 0;
+}
+.awaken-row.awaken-used .awaken-label { color: rgba(160, 150, 140, 0.55); }
+.awaken-pips { display: flex; gap: 4px; align-items: center; }
+.awaken-pip {
+  width: 9px; height: 9px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: rgba(60, 50, 90, 0.7);
+  border: 1px solid rgba(232, 196, 106, 0.3);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.awaken-pip.pip-filled {
+  background: linear-gradient(135deg, #ffe9a0, #e8a43c);
+  border-color: rgba(255, 226, 150, 0.9);
+  box-shadow: 0 0 6px rgba(255, 210, 90, 0.75);
+}
+.awaken-pip.pip-used {
+  background: rgba(90, 80, 70, 0.5);
+  border-color: rgba(150, 140, 120, 0.35);
+}
+.btn-awaken {
+  font-family: "Yu Mincho", serif;
+  font-size: 0.68rem; font-weight: bold;
+  letter-spacing: 0.18em; text-indent: 0.18em;
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 226, 150, 0.9);
+  color: #2a1c04;
+  background: linear-gradient(180deg, #ffe9a0, #e8a43c);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255, 210, 90, 0.65);
+  animation: awakenBtnPulse 1.1s ease-in-out infinite alternate;
+}
+.btn-awaken:active { transform: scale(0.95); }
+@keyframes awakenBtnPulse {
+  from { box-shadow: 0 0 8px rgba(255, 210, 90, 0.5); }
+  to   { box-shadow: 0 0 18px rgba(255, 210, 90, 0.95), 0 0 30px rgba(255, 170, 60, 0.4); }
+}
+
+/* 覚醒対象の選択ハイライト */
+.cell.hl-awaken .hl {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255, 226, 150, 0.5) 0%, rgba(232, 164, 60, 0.18) 60%, transparent 78%);
+  box-shadow: inset 0 0 0 3px rgba(255, 226, 150, 0.9), inset 0 0 20px rgba(255, 200, 80, 0.55);
+  animation: hlPulse 0.8s ease-in-out infinite;
+}
+
+/* ---------- 覚醒中・激怒・共鳴中の駒 ---------- */
+/* 覚醒中: 黄金の魂焔が立ち昇る */
+.piece.awakened::after {
+  content: "";
+  position: absolute; inset: -14% -8% -2% -8%;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 40% at 50% 92%, rgba(255, 210, 90, 0.55), transparent 70%),
+    radial-gradient(ellipse 40% 62% at 50% 68%, rgba(255, 236, 170, 0.42), transparent 72%);
+  filter: blur(1px);
+  animation: awakenedFlame 0.9s ease-in-out infinite alternate;
+}
+.piece.awakened > img {
+  filter: drop-shadow(0 0 12px rgba(255, 210, 74, 0.95)) drop-shadow(0 0 4px rgba(255, 246, 216, 0.9)) !important;
+}
+@keyframes awakenedFlame {
+  from { transform: scaleY(0.94); opacity: 0.8; }
+  to   { transform: scaleY(1.1) translateY(-3%); opacity: 1; }
+}
+
+/* 激怒(妖狐相伝): 緋色の怒気が脈打つ */
+.piece.enraged .piece-base {
+  background: radial-gradient(ellipse, rgba(255, 200, 170, 0.9) 0%, rgba(255, 70, 40, 0.55) 46%, transparent 76%);
+  animation: enragedPulse 0.55s ease-in-out infinite alternate;
+}
+.piece.enraged > img {
+  filter: drop-shadow(0 0 12px rgba(255, 90, 50, 0.95)) drop-shadow(0 0 4px rgba(255, 200, 170, 0.9)) !important;
+}
+@keyframes enragedPulse { to { transform: scale(1.22); filter: brightness(1.7); } }
+
+/* 因縁共鳴中: 対の証の淡い光輪 */
+.piece.resonating::after {
+  content: "";
+  position: absolute; inset: 4%;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1px solid rgba(216, 170, 255, 0.55);
+  box-shadow: 0 0 10px rgba(190, 140, 255, 0.45), inset 0 0 8px rgba(190, 140, 255, 0.3);
+  animation: resonateRing 2.2s ease-in-out infinite alternate;
+}
+@keyframes resonateRing { from { opacity: 0.35; } to { opacity: 0.9; } }
+/* 覚醒中は覚醒の魂焔を優先(::afterが競合するため) */
+.piece.awakened.resonating::after {
+  border: none;
+  box-shadow: none;
+}
+
+/* 図鑑詳細: 覚醒技・因縁・通算発動の複数行表示 */
+#piece-detail-skill-desc { white-space: pre-line; }

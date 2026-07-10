@@ -1,15 +1,15 @@
 # 妖怪将棋 開発ドキュメント
 
-プロトタイプ(ローカル1人用)からオンライン対戦対応の本格的なゲームとしてリリースするための設計・計画ドキュメント一式。
+オンライン対戦対応のWebゲームとして運用するための設計・計画ドキュメント一式。
 
 ## 前提
 
 - 個人〜少人数での開発・運用を想定し、低コストで始めて段階的にスケールできる構成を選ぶ
-- **課金機能は実装しない**方針を継続する(チケットはログインボーナス・勝利報酬のみ)
+- **課金機能は実装しない**方針を継続する(チケットはログインボーナス、勝利報酬、参加報酬、運営配布のみ)
 - Webブラウザ向けを先行し、ネイティブアプリは当面スコープ外(PWA対応で代替)
-- **インフラはCloudflareに統一**: Pages(配信)/ Workers(API)/ Durable Objects(対戦)/ D1(DB)/ KV・Cron・Turnstile(補助)
-- **言語はTypeScriptに統一**(client / server / shared)。Phase 0の構造改修と同時に移行する
-- 既存資産の最大活用: `prototype/js/game.js` のルールエンジンは依存ゼロのピュアJSであり、**クライアントとサーバーで同一コードを共有**できる。これが全設計の土台になる
+- **インフラはCloudflareに統一**: Pages(配信)/ Workers(API)/ Durable Objects(対戦)/ D1(DB)/ Cron・Turnstile・Analytics Engine(補助)
+- **言語はTypeScriptに統一**(client / server / shared)
+- ルールエンジンは `shared/game.ts`、駒マスタは `shared/data.ts` を正本とし、クライアントとサーバーで同一コードを共有する
 
 ## ドキュメント一覧
 
@@ -28,24 +28,24 @@
 | 11 | [法務・コンプライアンス](11-legal-compliance.md) | 利用規約・プライバシー・ガチャ表記・未成年配慮 |
 | 12 | [開発ロードマップ](12-roadmap.md) | フェーズ分割・マイルストーン・リリース判定基準 |
 | 13 | [GitHub連携デプロイ手順書](13-pages-github-deploy.md) | Pages自動デプロイの設定手順・料金・ロールバック |
-| 14 | [Phase 1 オーナー作業チェックリスト](14-phase1-owner-tasks.md) | 運営者が手で行う必要がある作業(コミット/本番切替/Turnstile/規約 等) |
-| 15 | [Phase 2 オーナー作業チェックリスト](15-phase2-owner-tasks.md) | staging/production反映・公開ブロッカー・監視・β完了条件 |
 | 16 | [独自ドメイン取得・移行手順](16-custom-domain.md) | Route 53で取得する`nit-games.com`のCloudflare委譲・サブドメイン運用・切替 |
 | 17 | [X広告 作成手順・運用ガイド](17-x-ads-guide.md) | 集客用X Adsの入稿設定・UTM・審査回避・運用・トラブルシュート |
 | 18 | [ランダムマッチ流動性戦略](18-matchmaking-liquidity-strategy.md) | 対戦時間帯への集約・対戦会・告知・KPI・段階的な実行計画 |
 | 19 | [Discordサーバー作成・運用手順](19-discord-server-setup.md) | サーバー新規作成から権限・チャンネル・安全設定・公開・定例運用までの実作業手順 |
 | 20 | [検索インデックス対応手順](20-search-indexing.md) | Google Search Console登録・sitemap送信・外部リンク整備など検索流入向けの運営作業 |
+| 21 | [百鬼夜行 週間連勝ランキング](21-hyakki-weekly-ranking.md) | ソロ連戦ランキングの仕様・DB・API・UI方針 |
+| - | [Analytics Engine 確認クエリ](analytics-queries.md) | 登録・オンボーディング・対戦・ランキングの確認用SQL |
 
 ## 読み方
 
 - 全体像を掴む: 01 → 02 → 12
-- サーバー実装に着手する前に: 03 → 04 → 05 → 07
-- リリース準備: 09 → 10 → 11
+- API/DB/対戦仕様を確認する: 03 → 04 → 05 → 07
+- 運用・リリース手順を確認する: 09 → 10 → 11 → 13
 
-## 現状コードベースの概要(2026-06時点・Phase 2 実装完了 / β検証待ち)
+## 現状コードベースの概要(2026-07時点)
 
 ```
-shared/data.ts          妖怪27種(8タイプ・4レアリティ)・初期配置・ガチャプール・型定義
+shared/data.ts          妖怪36種(8タイプ・4レアリティ)・初期配置・ガチャプール・型定義
 shared/game.ts          ルールエンジン(合法手・ダメージ・スキル8種・成り・持ち駒)
                         ※依存ゼロ・乱数注入対応(opts.rand)・uid採番は GameState.nextUid
 shared/gacha.ts         ガチャ抽選・10連確定枠・被り変換・排出率 ※クライアント/サーバー共用
@@ -54,14 +54,13 @@ client/src/ai.ts        ソロ用AI(期待値評価+脅威差し引き)
 client/src/meta/        メタ進行: MetaProvider 抽象 + ローカル版/API版2実装 + ファサード
 client/src/menu.ts      ガチャ・編成・ログボ・データ引き継ぎUI
 client/src/main.ts      対戦UIコントローラ(e2e用フック: window.yk)
-client/public/assets/   WebP最適化済み駒画像(512px + 小160px)
+client/public/assets/   WebP最適化済み駒画像(512px + 小160px)。pieces/stock は今後のラインナップ候補置き場
 server/src/             Workers API(Hono): routes(auth/me/gacha/solo)・cron・lib(jwt/crypto/time)
 server/migrations/      D1スキーマ / server/wrangler.jsonc  staging・production 環境定義
 test/*.test.ts          vitest(エンジン・スキル・メタ・APIクライアント配線)
 test/workers/*.spec.ts  vitest-pool-workers(実Workersランタイム+ローカルD1のAPI統合テスト)
-test/e2e/*.mjs          playwright e2e(オフライン4本 + オンライン2台同期 sync-online)
-prototype/              移植元プロトタイプ(挙動比較リファレンスとして保存)
+test/e2e/*.mjs          playwright e2e(オフライン経路 + オンライン同期/スモーク)
 ```
 
 - API稼働中: staging `yokai-shogi-api-staging` (`*.workers.dev`) / production `https://api.yokai-shogi.nit-games.com`
-- 本番クライアントをサーバー権威に切り替えるには `npm run pages:deploy`(オンライン版)。詳細は doc 12 の Phase 1 検証状況
+- main push のCIは本番D1マイグレーション、Worker API、Pagesを順に更新する。手動デプロイは doc 13 を参照

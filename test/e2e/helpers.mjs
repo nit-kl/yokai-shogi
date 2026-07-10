@@ -57,4 +57,6 @@ export async function startSoloBattle(page) {
   await page.waitForSelector('#screen-solo.active');
   await page.click('#btn-solo-battle');
   await page.waitForSelector('#screen-battle.active');
+  // 開幕VS演出(約2.9秒・入力ロック)の終了を待つ
+  await page.waitForSelector('#vs-intro.hidden', { state: 'attached', timeout: 10000 });
 }

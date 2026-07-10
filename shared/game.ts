@@ -5,8 +5,8 @@
    ※ このモジュールは Web標準APIのみ・I/Oなし を厳守する(doc 02)
    ============================================================ */
 
-import { COLS, ROWS, MAX_HP, ZONE_DEPTH, SETUP, YOKAI } from './data';
-import type { Side } from './data';
+import { COLS, ROWS, MAX_HP, ZONE_DEPTH, SETUP, YOKAI, RESONANCES, baseIdOf } from './data';
+import type { Side, Resonance } from './data';
 
 export type { Side };
 
@@ -17,10 +17,15 @@ export interface Piece {
   id: string;
   owner: Side;
   promoted: boolean;
+  kills?: number;       // heads(八岐の首): この駒の撃破数。取られて打ち直されるとリセット
+  awakenUntil?: number; // 覚醒の有効期限(この手数まで。plies基準)
+  enraged?: boolean;    // foxBond(妖狐相伝): 次の攻撃が確定会心
 }
 
 export type Hands = Record<string, number>;
 export type GameOverReason = 'boss' | 'hp' | 'explode' | 'nomoves' | 'resign';
+
+export interface AwakenState { gauge: number; used: boolean }
 
 export interface GameState {
   board: (Piece | null)[][];
@@ -32,15 +37,34 @@ export interface GameState {
   reason: GameOverReason | null;
   lastMove: { to: Pos } | null;
   nextUid: number; // 駒uid採番(モジュール変数ではなく状態側で持つ: 1プロセスで複数対局を扱うため)
+  plies: number;   // 適用済みの手数(月齢・覚醒期限の基準)
+  awaken: Record<Side, AwakenState>; // 覚醒ゲージ(SSR必殺技: 1局1回)
 }
+
+/* 覚醒(SSR必殺技): 駒の取り合いで両陣営に+1、満タンで手番を消費して自軍SSRを覚醒できる */
+export const AWAKEN_MAX = 6;   // ゲージ満タンに必要な取り合い回数
+export const AWAKEN_SPAN = 6;  // 発動から6手(自分の手番3回)有効
+export const AWAKEN_ATK = 1.5; // 覚醒中のATK倍率
+
+/* 月齢(moonスキル): 1夜=2手(両者1手ずつ)、4夜周期の4夜目が満月 */
+export const MOON_CYCLE = 4;
 
 export type Action =
   | { kind: 'move'; from: Pos; to: Pos }
-  | { kind: 'drop'; id: string; to: Pos };
+  | { kind: 'drop'; id: string; to: Pos }
+  | { kind: 'awaken'; to: Pos }; // 自軍SSR駒(to)を覚醒させる(手番を消費)
 
 export interface MoveTarget { x: number; y: number; capture: boolean; }
 
 export interface SkillProc { name: string; owner: Side; img: string; text: string; }
+export type SkillEffectKind = 'buff' | 'debuff' | 'defense' | 'combo' | 'status';
+export interface SkillEffect {
+  kind: SkillEffectKind;
+  name: string;
+  owner: Side;
+  img: string;
+  text: string;
+}
 export interface PieceRef { uid: number; id: string; owner: Side; promoted: boolean; }
 
 export interface CaptureEvent {
@@ -50,6 +74,7 @@ export interface CaptureEvent {
   at: Pos;
   damage: number;
   procs: SkillProc[];
+  effects?: SkillEffect[];
   counter: { dmg: number; name: string; img: string; owner: Side; hp: Record<Side, number> } | null;
   decoy: { name: string; img: string } | null;
   explode: { name: string; img: string; uid: number } | null;
@@ -57,12 +82,15 @@ export interface CaptureEvent {
   combo: number;
   comboMult: number;
   hp: Record<Side, number>;
+  /* foxBond(妖狐相伝): この捕獲で相方が激怒した(uid=激怒した駒) */
+  enrage?: { uid: number; id: string; owner: Side; name: string } | null;
 }
 
 export type GameEvent =
   | { t: 'move'; uid: number; from: Pos; to: Pos }
   | { t: 'drop'; uid: number; id: string; owner: Side; to: Pos }
   | { t: 'promote'; uid: number; to: Pos; id: string; owner: Side }
+  | { t: 'awaken'; uid: number; id: string; owner: Side; to: Pos; name: string; until: number }
   | CaptureEvent
   | { t: 'gameover'; winner: Side; reason: GameOverReason };
 
@@ -101,6 +129,8 @@ export const Game = {
       reason: null,
       lastMove: null,
       nextUid: uid,
+      plies: 0,
+      awaken: { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } },
     };
   },
 
@@ -115,7 +145,78 @@ export const Game = {
       reason: s.reason,
       lastMove: s.lastMove,
       nextUid: s.nextUid,
+      plies: s.plies ?? 0,
+      awaken: s.awaken
+        ? { p: { ...s.awaken.p }, e: { ...s.awaken.e } }
+        : { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } },
     };
+  },
+
+  /* 旧スナップショット(plies/awaken導入前)を正規化。復元された進行中対局との互換用 */
+  ensureMeta(s: GameState): void {
+    if (typeof s.plies !== 'number') s.plies = 0;
+    if (!s.awaken) s.awaken = { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } };
+  },
+
+  /* ---------- 月齢(moonスキル) ---------- */
+  /* ply(適用前の手数)が属する夜の月齢インデックス(0..MOON_CYCLE-1、最終値=満月) */
+  moonPhaseOfPly(ply: number): number { return Math.floor(ply / 2) % MOON_CYCLE; },
+  /* 次に指す手の月齢(HUD表示用) */
+  moonPhase(s: GameState): number { return this.moonPhaseOfPly(s.plies ?? 0); },
+  isFullMoonPly(ply: number): boolean { return this.moonPhaseOfPly(ply) === MOON_CYCLE - 1; },
+  /* 満月まであと何夜か(0=今が満月) */
+  nightsUntilFullMoon(s: GameState): number {
+    return (MOON_CYCLE - 1) - this.moonPhase(s);
+  },
+
+  /* ---------- 覚醒(SSR必殺技) ---------- */
+  awakenReady(s: GameState, side: Side): boolean {
+    const st = s.awaken?.[side];
+    return !!st && !st.used && st.gauge >= AWAKEN_MAX;
+  },
+  isAwakened(pc: Piece, ply: number): boolean {
+    return pc.awakenUntil !== undefined && ply <= pc.awakenUntil;
+  },
+  /* side の覚醒対象(盤上の自軍SSR)一覧 */
+  awakenTargets(s: GameState, side: Side): Pos[] {
+    const out: Pos[] = [];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const pc = s.board[y][x];
+        if (pc && pc.owner === side && YOKAI[pc.id].rarity === 'SSR' && pc.awakenUntil === undefined) {
+          out.push({ x, y });
+        }
+      }
+    }
+    return out;
+  },
+
+  /* ---------- 因縁共鳴 ---------- */
+  /* side の盤上で id の共鳴相方が生きていれば、その共鳴定義を返す */
+  activeResonance(s: GameState, side: Side, id: string): Resonance | null {
+    const base = baseIdOf(id);
+    for (const rs of RESONANCES) {
+      if (!rs.pair.includes(base)) continue;
+      const partner = rs.pair[0] === base ? rs.pair[1] : rs.pair[0];
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          const pc = s.board[y][x];
+          if (pc && pc.owner === side && baseIdOf(pc.id) === partner) return rs;
+        }
+      }
+    }
+    return null;
+  },
+  /* 盤上から相方の駒を探す(foxBondの激怒付与用) */
+  findPartnerPiece(s: GameState, side: Side, rs: Resonance, capturedBase: string): { pc: Piece; at: Pos } | null {
+    const partner = rs.pair[0] === capturedBase ? rs.pair[1] : rs.pair[0];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const pc = s.board[y][x];
+        if (pc && pc.owner === side && baseIdOf(pc.id) === partner) return { pc, at: { x, y } };
+      }
+    }
+    return null;
   },
 
   inBounds(x: number, y: number): boolean { return x >= 0 && x < COLS && y >= 0 && y < ROWS; },
@@ -191,6 +292,9 @@ export const Game = {
         acts.push({ kind: 'drop', id, to: { x: d.x, y: d.y } });
       }
     }
+    if (this.awakenReady(s, side)) {
+      for (const t of this.awakenTargets(s, side)) acts.push({ kind: 'awaken', to: t });
+    }
     return acts;
   },
 
@@ -206,6 +310,31 @@ export const Game = {
       }
     }
     return m;
+  },
+
+  activeSkillEffects(s: GameState, side: Side, kinds: readonly string[]): SkillEffect[] {
+    const effects: SkillEffect[] = [];
+    const seen = new Set<string>();
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const pc = s.board[y][x];
+        if (!pc || pc.owner !== side) continue;
+        const def = YOKAI[pc.id];
+        const sk = def.skill;
+        if (!kinds.includes(sk.kind) || seen.has(`${pc.uid}:${sk.kind}`)) continue;
+        seen.add(`${pc.uid}:${sk.kind}`);
+        if (sk.kind === 'aura') {
+          effects.push({ kind: 'defense', name: sk.name, owner: side, img: def.img, text: `被ダメージ-${Math.round(sk.reduce * 100)}%` });
+        } else if (sk.kind === 'weaken') {
+          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: `敵の与ダメージ-${Math.round(sk.reduce * 100)}%` });
+        } else if (sk.kind === 'jam') {
+          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: '会心・月齢・首成長を封じた' });
+        } else if (sk.kind === 'chill') {
+          effects.push({ kind: 'combo', name: sk.name, owner: side, img: def.img, text: '相手のコンボ倍率を無効化' });
+        }
+      }
+    }
+    return effects;
   },
 
   /* side 側の盤上に指定スキルの駒がいるか */
@@ -232,8 +361,22 @@ export const Game = {
     const events: GameEvent[] = [];
     const side = s.turn;
     const foe: Side = side === 'p' ? 'e' : 'p';
+    this.ensureMeta(s);
+    const ply = s.plies; // この手の手数(月齢・覚醒期限の基準)
+    s.plies++;
 
-    if (action.kind === 'drop') {
+    if (action.kind === 'awaken') {
+      const pc = s.board[action.to.y][action.to.x]!;
+      const st = s.awaken[side];
+      st.used = true;
+      st.gauge = 0;
+      pc.awakenUntil = ply + AWAKEN_SPAN;
+      s.combo[side] = 0;
+      events.push({
+        t: 'awaken', uid: pc.uid, id: pc.id, owner: side, to: { ...action.to },
+        name: YOKAI[pc.id].awakenName || '覚醒', until: pc.awakenUntil,
+      });
+    } else if (action.kind === 'drop') {
       const pc: Piece = { uid: ++s.nextUid, id: action.id, owner: side, promoted: false };
       s.board[action.to.y][action.to.x] = pc;
       s.hands[side][action.id]--;
@@ -249,7 +392,7 @@ export const Game = {
       events.push({ t: 'move', uid: pc.uid, from: { ...from }, to: { ...to } });
 
       if (victim) {
-        const ended = this._resolveCapture(s, pc, victim, from, to, side, foe, rng, rand, events);
+        const ended = this._resolveCapture(s, pc, victim, from, to, side, foe, ply, rng, rand, events);
         if (ended) return events; // 勝敗決定
       } else {
         s.combo[side] = 0;
@@ -279,25 +422,87 @@ export const Game = {
 
   _resolveCapture(
     s: GameState, attacker: Piece, victim: Piece, from: Pos, to: Pos,
-    side: Side, foe: Side, rng: boolean, rand: () => number, events: GameEvent[],
+    side: Side, foe: Side, ply: number, rng: boolean, rand: () => number, events: GameEvent[],
   ): boolean {
     const vDef = YOKAI[victim.id];
     const aDef = YOKAI[attacker.id];
     const procs: SkillProc[] = [];
+    const effects: SkillEffect[] = [];
 
     /* --- ダメージ計算 --- */
-    const base = this.atkOf(attacker);
+    let base = this.atkOf(attacker);
+    /* 覚醒中はATK1.5倍 */
+    if (this.isAwakened(attacker, ply)) {
+      base = Math.round(base * AWAKEN_ATK);
+      procs.push({
+        name: aDef.awakenName || '覚醒', owner: side, img: aDef.img,
+        text: `覚醒の力 ATK×${AWAKEN_ATK}!`,
+      });
+    }
     let mult = 1, bonus = 0;
     const sk = aDef.skill;
-    /* 妨(jam): 砂かけ婆がいる側への攻撃は会心スキルが封じられる */
-    if (sk.kind === 'crit' && !this.hasSkill(s, foe, 'jam')) {
+    /* 妨(jam): 砂かけ婆がいる側への攻撃は会心系スキル(crit/moon/heads)が封じられる */
+    const jammed = this.hasSkill(s, foe, 'jam');
+    if (jammed && (sk.kind === 'crit' || sk.kind === 'moon' || sk.kind === 'heads')) {
+      effects.push(...this.activeSkillEffects(s, foe, ['jam']));
+    }
+    /* foxBond(妖狐相伝): 激怒中は次の会心が確定(この攻撃で消費) */
+    const enraged = attacker.enraged === true;
+    if (attacker.enraged) delete attacker.enraged;
+
+    if (sk.kind === 'crit' && !jammed) {
+      /* oniFeast(鬼の宴): 相方が盤上にいる間、会心率+15% */
+      let chance = sk.chance;
+      const feast = this.activeResonance(s, side, attacker.id);
+      if (feast?.effect === 'oniFeast') chance = Math.min(1, chance + 0.15);
       if (rng) {
-        if (rand() < sk.chance) {
+        if (enraged || rand() < chance) {
           mult *= sk.mult;
           procs.push({ name: sk.name, owner: side, img: aDef.img, text: `ダメージ${sk.mult}倍!` });
+          if (feast?.effect === 'oniFeast') {
+            procs.push({ name: `共鳴【${feast.name}】`, owner: side, img: aDef.img, text: '鬼の血が滾る! 会心率上昇中' });
+          }
         }
       } else {
-        mult *= 1 + sk.chance * (sk.mult - 1); // 期待値
+        mult *= enraged ? sk.mult : 1 + chance * (sk.mult - 1); // 期待値
+      }
+    } else if (sk.kind === 'moon' && !jammed) {
+      /* 満月の夜(または激怒中)は会心確定。それ以外は不発 — 運でなく読みで出す */
+      if (this.isFullMoonPly(ply) || enraged) {
+        mult *= sk.mult;
+        if (rng) {
+          procs.push({
+            name: sk.name, owner: side, img: aDef.img,
+            text: enraged && !this.isFullMoonPly(ply) ? `相伝の怒り 確定会心 ×${sk.mult}!` : `満月の妖気 ×${sk.mult}!`,
+          });
+        }
+      }
+    } else if (sk.kind === 'heads') {
+      /* 撃破数だけ首が目覚めて成長(jamで封じられるが撃破数は貯まる) */
+      const lvl = Math.min(attacker.kills ?? 0, sk.max);
+      if (lvl > 0 && !jammed) {
+        const headsMult = 1 + sk.step * lvl;
+        mult *= headsMult;
+        if (rng) {
+          const label = ['', '二の首', '三の首', '四の首'][lvl] || `${lvl + 1}の首`;
+          procs.push({ name: sk.name, owner: side, img: aDef.img, text: `${label} 覚醒 ×${headsMult.toFixed(1)}!` });
+        }
+      }
+      attacker.kills = (attacker.kills ?? 0) + 1;
+    } else if (sk.kind === 'legion') {
+      /* 盤上の味方数(自身を除く)で与ダメ加算。妨害不能だが軍勢を削られると弱る */
+      let allies = -1; // 自身を除く
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          if (s.board[y][x]?.owner === side) allies++;
+        }
+      }
+      const legionMult = Math.min(sk.cap, sk.per * Math.max(0, allies));
+      if (legionMult > 0) {
+        mult *= 1 + legionMult;
+        if (rng) {
+          procs.push({ name: sk.name, owner: side, img: aDef.img, text: `百鬼の陣 +${Math.round(legionMult * 100)}%!` });
+        }
       }
     } else if (sk.kind === 'zone' && this.inZone(side, to.y)) {
       bonus += sk.bonus;
@@ -313,8 +518,12 @@ export const Game = {
     s.combo[side]++;
     let cMult = this.comboMult(s.combo[side]);
     /* 妨(chill): 雪女がいる側へのコンボ倍率は無効 */
-    if (cMult > 1 && this.hasSkill(s, foe, 'chill')) cMult = 1;
+    if (cMult > 1 && this.hasSkill(s, foe, 'chill')) {
+      cMult = 1;
+      effects.push(...this.activeSkillEffects(s, foe, ['chill']));
+    }
     const defMult = this.defenseMult(s, foe);
+    if (defMult < 1) effects.push(...this.activeSkillEffects(s, foe, ['aura', 'weaken']));
     let damage = Math.max(1, Math.round((base * mult + bonus) * cMult * defMult));
 
     /* 化(decoy): 化け狸は取られてもダメージ半減 */
@@ -356,14 +565,33 @@ export const Game = {
       explode = { name: vDef.skill.name, img: vDef.img, uid: attacker.uid };
     }
 
+    /* --- 覚醒ゲージ: 駒の取り合いで両陣営に+1(使用済みの側は溜まらない) --- */
+    for (const sd of ['p', 'e'] as const) {
+      const st = s.awaken[sd];
+      if (!st.used) st.gauge = Math.min(AWAKEN_MAX, st.gauge + 1);
+    }
+
+    /* --- foxBond(妖狐相伝): 相方を取られた狐が激怒し、次の攻撃が確定会心 --- */
+    let enrage: CaptureEvent['enrage'] = null;
+    const vBase = baseIdOf(victim.id);
+    for (const rs of RESONANCES) {
+      if (rs.effect !== 'foxBond' || !rs.pair.includes(vBase)) continue;
+      const partner = this.findPartnerPiece(s, foe, rs, vBase);
+      if (partner && !partner.pc.enraged) {
+        partner.pc.enraged = true;
+        enrage = { uid: partner.pc.uid, id: partner.pc.id, owner: foe, name: rs.name };
+      }
+    }
+
     events.push({
       t: 'capture',
       attacker: { uid: attacker.uid, id: attacker.id, owner: side, promoted: attacker.promoted },
       victim: { uid: victim.uid, id: victim.id, owner: foe, promoted: victim.promoted },
       at: { ...to },
-      damage, procs, counter, decoy, explode, heal,
+      damage, procs, effects, counter, decoy, explode, heal,
       combo: s.combo[side], comboMult: cMult,
       hp: hpAfterAttack,
+      enrage,
     });
 
     /* --- 勝敗判定 --- */
