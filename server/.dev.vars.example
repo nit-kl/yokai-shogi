@@ -2,3 +2,7 @@
 # (.dev.vars は .gitignore 済み。本番/stagingは `wrangler secret put` で設定)
 JWT_SECRET=local-dev-secret-change-me
 # TURNSTILE_SECRET_KEY=  # 未設定なら検証スキップ(ローカル開発)
+# リワード広告(doc 22): ローカル既定は wrangler.jsonc の vars で mock 有効
+# ADS_REWARD_ENABLED=1
+# ADS_REWARD_PROVIDER=mock
+# ADS_GPT_AD_UNIT_PATH=/your-network/rewarded-unit

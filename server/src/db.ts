@@ -9,6 +9,7 @@ export const EXCHANGE_COST = 300;   // 妖力→チケット1枚
 export const FIRST_BONUS = 10;      // ゲスト作成時(初回10連ガチャ用)
 export const STREAK_BONUS_TICKETS = 3; // 7日連続ごと
 export const SOLO_WIN_DAILY_CAP = 2;   // ソロ勝利報酬の日次上限(申告制のため低め: doc 07)
+export const AD_REWARD_DAILY_CAP = 2;  // リワード広告の日次上限(doc 08 / 22)
 
 /* 新規アカウントはオンボーディングで大将・編成を決める */
 export const DEFAULT_FORMATION: (string | null)[][] = EMPTY_FORMATION.map(r => [...r]);

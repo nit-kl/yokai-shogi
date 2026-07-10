@@ -325,6 +325,58 @@ describe('ソロ勝利報酬', () => {
   });
 });
 
+describe('リワード広告(doc 22)', () => {
+  it('status: 有効時は残回数を返す', async () => {
+    const g = await createGuest();
+    const st = await api('/v1/ads/status', { token: g.accessToken });
+    expect(st.status).toBe(200);
+    expect(st.body).toMatchObject({
+      enabled: true,
+      provider: 'mock',
+      dailyCap: 2,
+      claimed: 0,
+      remaining: 2,
+      ticketsPerReward: 1,
+    });
+  });
+
+  it('reward: 日次上限2枚・provider不一致は拒否・上限後は付与0', async () => {
+    const g = await createGuest();
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
+    await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
+    await api('/v1/me', { token: g.accessToken }); // 11枚
+
+    const bad = await api('/v1/ads/reward', {
+      method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'gpt' }),
+    });
+    expect(bad.status).toBe(400);
+
+    const r1 = await api('/v1/ads/reward', {
+      method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
+    });
+    expect(r1.status).toBe(200);
+    expect(r1.body).toMatchObject({ granted: 1, tickets: 12, dailyCount: 1, remaining: 1 });
+
+    const r2 = await api('/v1/ads/reward', {
+      method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
+    });
+    expect(r2.body).toMatchObject({ granted: 1, tickets: 13, dailyCount: 2, remaining: 0 });
+
+    const r3 = await api('/v1/ads/reward', {
+      method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
+    });
+    expect(r3.body).toMatchObject({ granted: 0, tickets: 13, dailyCount: 2, remaining: 0 });
+
+    const st = await api('/v1/ads/status', { token: g.accessToken });
+    expect(st.body).toMatchObject({ claimed: 2, remaining: 0 });
+
+    const logs = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM currency_logs WHERE user_id = ?1 AND reason = 'ad_reward'",
+    ).bind(g.userId).first<{ n: number }>();
+    expect(logs?.n).toBe(2);
+  });
+});
+
 describe('百鬼夜行 週間連勝ランキング(doc 21)', () => {
   const hyakkiStart = (token: string) =>
     api('/v1/solo/hyakki/start', { method: 'POST', token, body: '{}' });
@@ -510,10 +562,10 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-10-rules-guide-refresh',
-      type: 'update',
+      id: '2026-07-10-rewarded-ads',
+      type: 'campaign',
       priority: 'high',
-      title: '遊び方を現在のルールに合わせて更新しました',
+      title: 'ガチャ画面で広告視聴ボーナスを開始しました',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -531,8 +583,8 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-10-rules-guide-refresh',
-      type: 'update',
+      id: '2026-07-10-rewarded-ads',
+      type: 'campaign',
       priority: 'high',
     });
     const timestamps = r.body.announcements.map((item: { publishedAt: string }) => Date.parse(item.publishedAt));

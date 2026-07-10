@@ -24,7 +24,7 @@ users 1─1 user_profiles(通貨・編成・レート・オンボーディング
 users 1─n user_yokai(所持) / auth_identities(doc 06) / refresh_tokens
 users 1─n gacha_logs / currency_logs / login_bonus_logs
 matches n─2 users、matches 1─n match_actions(リプレイ)
-users 1─n participation_logs / hyakki_weekly
+users 1─n participation_logs / ad_reward_logs / hyakki_weekly
 ```
 
 ## テーブル定義(D1マイグレーション形式)
@@ -97,7 +97,7 @@ CREATE TABLE currency_logs (
   currency   TEXT NOT NULL,                    -- 'tickets' / 'yoryoku'
   delta      INTEGER NOT NULL,
   balance    INTEGER NOT NULL,                 -- 増減後残高(整合性検証用)
-  reason     TEXT NOT NULL,                    -- 'initial'/'login_bonus'/'win_reward'/'gacha'/'exchange'/'event_participation'/'admin'/'compensation'
+  reason     TEXT NOT NULL,                    -- 'initial'/'login_bonus'/'win_reward'/'gacha'/'exchange'/'event_participation'/'ad_reward'/'admin'/'compensation'
   ref_id     TEXT,                             -- 対局ID・ガチャログID等への参照
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -160,6 +160,21 @@ CREATE TABLE participation_logs (
   match_id   TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (user_id, date)
+);
+```
+
+### ad_reward_logs
+リワード広告の日次付与(最大2回/日)。`claim_index` で何回目かを一意にする。
+
+```sql
+CREATE TABLE ad_reward_logs (
+  user_id     TEXT NOT NULL REFERENCES users(id),
+  date        TEXT NOT NULL,
+  claim_index INTEGER NOT NULL,
+  tickets     INTEGER NOT NULL,
+  provider    TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, date, claim_index)
 );
 ```
 

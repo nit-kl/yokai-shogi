@@ -12,6 +12,8 @@ export type { GachaResult } from '../../../shared/gacha';
 import type { GachaResult } from '../../../shared/gacha';
 export type { HyakkiProgress, HyakkiRanking } from '../../../shared/hyakki';
 import type { HyakkiProgress, HyakkiRanking } from '../../../shared/hyakki';
+export type { AdsClaimResult, AdsStatus } from '../ads/rewarded';
+import type { AdsClaimResult, AdsStatus } from '../ads/rewarded';
 
 /* UIが同期で参照する読み取りモデル(キャッシュ) */
 export interface MetaState {
@@ -61,6 +63,10 @@ export interface MetaProvider {
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null>;
   /** 百鬼夜行 週間ランキング取得。オフライン版は null */
   hyakkiRanking(): Promise<HyakkiRanking | null>;
+  /** リワード広告の残回数など。オフラインまたは無効時は null */
+  adsStatus(): Promise<AdsStatus | null>;
+  /** 視聴完了後のチケット請求。オフラインまたは失敗時は null */
+  claimAdReward(provider: AdsStatus['provider']): Promise<AdsClaimResult | null>;
 }
 
 /* ---------- data から導出する同期ヘルパ(両実装共通) ---------- */

@@ -183,12 +183,14 @@
       </div>
       <div class="gacha-center">
         <div class="gacha-orb"><span>召</span><i></i></div>
-        <div class="gacha-note">チケットはログインボーナスやさまざまな報酬で手に入ります。</div>
+        <div class="gacha-note">チケットはログインボーナスや対戦報酬、任意の広告視聴などで手に入ります。</div>
         <div class="title-buttons">
           <button id="btn-pull1" class="btn btn-gold">1回召喚<small>チケット1枚</small></button>
           <button id="btn-pull10" class="btn btn-gold">10連召喚<small>10枚・SR以上確定</small></button>
         </div>
         <button id="btn-exchange" class="btn btn-dark btn-sub">妖力300 → チケット1枚</button>
+        <button id="btn-ad-reward" class="btn btn-dark btn-sub hidden" type="button">広告を見てチケット+1</button>
+        <div id="ad-reward-note" class="gacha-ad-note hidden">1日2回まで・任意視聴</div>
         <div class="gacha-rates">排出率: N 40% / R 40% / SR 16% / SSR 4%（うちSSR異装 0.5%）・ 被りは妖力に変換</div>
       </div>
     </div>
@@ -448,7 +450,7 @@
   <div id="modal-consent" class="modal hidden">
     <div class="modal-box consent-box">
       <h2>オンライン機能の利用について</h2>
-      <p class="link-desc">オンライン機能ではアカウントID、プレイデータ、アクセスログ等を保存します。以下を確認し、同意してからご利用ください。</p>
+      <p class="link-desc">オンライン機能ではアカウントID、プレイデータ、アクセスログ等を保存します。任意のリワード広告を視聴する場合は、広告ネットワークへ端末・接続情報が送信されることがあります。以下を確認し、同意してからご利用ください。</p>
       <div class="consent-links">
         <a href="/legal/terms.html" target="_blank" rel="noopener noreferrer">利用規約を読む</a>
         <a href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">プライバシーポリシーを読む</a>

@@ -8,6 +8,8 @@ import { AudioSys } from './audio';
 import { FX } from './effects';
 import { Meta } from './meta';
 import type { GachaResult } from './meta';
+import { ensureAdRewardConsent, getRewardedProvider } from './ads/rewarded';
+import type { AdsStatus } from './ads/rewarded';
 import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
@@ -17,6 +19,7 @@ export const MenuUI = {
   benchSel: null as string | null,              // 選択中の控え妖怪id
   _enterTitle: () => {},                        // main から注入(循環import回避)
   onboardingMode: null as 'gacha' | 'formation' | null,
+  adsStatus: null as AdsStatus | null,
 
   init(opts: { enterTitle: () => void }) {
     this._enterTitle = opts.enterTitle;
@@ -30,6 +33,7 @@ export const MenuUI = {
       if (await Meta.exchange()) AudioSys.play('promote');
       this.refreshCurrency();
     };
+    $('btn-ad-reward').onclick = () => { void this.watchAdReward(); };
     $('btn-gacha-ok').onclick = () => {
       AudioSys.play('click');
       $('gacha-result').classList.add('hidden');
@@ -179,14 +183,85 @@ export const MenuUI = {
       $<HTMLButtonElement>('btn-pull10').disabled = d.tickets < 10;
     }
     $<HTMLButtonElement>('btn-exchange').disabled = d.yoryoku < Meta.EXCHANGE_COST;
+    this.refreshAdRewardButton();
     /* データ引き継ぎはオンライン(サーバー権威)時のみ提供 */
     $('btn-link').classList.toggle('hidden', !d.online);
+  },
+
+  refreshAdRewardButton() {
+    const btn = $<HTMLButtonElement>('btn-ad-reward');
+    const note = $('ad-reward-note');
+    const st = this.adsStatus;
+    const show = !!(st?.enabled && Meta.data.online && this.onboardingMode !== 'gacha');
+    btn.classList.toggle('hidden', !show);
+    note.classList.toggle('hidden', !show);
+    if (!show || !st) return;
+    const left = st.remaining;
+    btn.disabled = left <= 0;
+    btn.textContent = left > 0
+      ? `広告を見てチケット+${st.ticketsPerReward}`
+      : '本日の広告報酬は上限です';
+    note.textContent = `残り ${left}/${st.dailyCap}回・任意視聴`;
+  },
+
+  async refreshAdsStatus() {
+    if (!Meta.data.online) {
+      this.adsStatus = null;
+      this.refreshAdRewardButton();
+      return;
+    }
+    this.adsStatus = await Meta.adsStatus();
+    this.refreshAdRewardButton();
+  },
+
+  async watchAdReward() {
+    const st = this.adsStatus;
+    if (!st?.enabled || st.remaining <= 0) return;
+    if (!ensureAdRewardConsent()) return;
+
+    const btn = $<HTMLButtonElement>('btn-ad-reward');
+    btn.disabled = true;
+    const prevLabel = btn.textContent;
+    btn.textContent = st.provider === 'mock' ? '視聴中…' : '広告を準備中…';
+    AudioSys.play('click');
+
+    try {
+      const outcome = await getRewardedProvider(st.provider).show(st.clientConfig);
+      if (!outcome.ok) {
+        if (outcome.reason !== 'cancelled') {
+          window.alert(outcome.message || '広告を表示できませんでした');
+        }
+        return;
+      }
+      const res = await Meta.claimAdReward(st.provider);
+      if (res && res.granted > 0) {
+        AudioSys.play('promote');
+        this.adsStatus = st
+          ? { ...st, claimed: res.dailyCount, remaining: res.remaining }
+          : st;
+      } else if (res) {
+        this.adsStatus = { ...st, claimed: res.dailyCount, remaining: res.remaining };
+      } else {
+        window.alert('報酬の受け取りに失敗しました。しばらくしてから再度お試しください');
+        await this.refreshAdsStatus();
+      }
+    } catch {
+      window.alert('通信エラーのため報酬を受け取れませんでした');
+      await this.refreshAdsStatus();
+    } finally {
+      this.refreshCurrency();
+      if (btn.textContent === '視聴中…' || btn.textContent === '広告を準備中…') {
+        btn.textContent = prevLabel || '広告を見てチケット+1';
+      }
+      this.refreshAdRewardButton();
+    }
   },
 
   /* ============================== ガチャ ============================== */
   openGacha() {
     RegistrationStatsUI.stopPolling();
     this.refreshCurrency();
+    void this.refreshAdsStatus();
     $('gacha-result').classList.add('hidden');
     showScreen('screen-gacha');
     FX.setAmbient(['rgba(200,120,255,0.5)', 'rgba(232,196,106,0.5)'], 0.06);

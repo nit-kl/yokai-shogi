@@ -13,6 +13,15 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-07-10-rewarded-ads',
+    type: 'campaign',
+    title: 'ガチャ画面で広告視聴ボーナスを開始しました',
+    body: 'ガチャ画面から任意で広告を視聴すると、チケットを1枚受け取れます。見なくても遊べます。1日2回までです。初回視聴時にプライバシーの確認があります。利用規約・プライバシーポリシーも更新しています。',
+    publishedAt: '2026-07-10T15:30:00+09:00',
+    priority: 'high',
+    showUntil: '2026-07-31T23:59:59+09:00',
+  },
+  {
     id: '2026-07-10-rules-guide-refresh',
     type: 'update',
     title: '遊び方を現在のルールに合わせて更新しました',
