@@ -565,7 +565,7 @@ describe('共通', () => {
       id: '2026-07-10-rewarded-ads',
       type: 'campaign',
       priority: 'high',
-      title: 'ガチャ画面で広告視聴ボーナスを開始しました',
+      title: 'ガチャ画面で広告視聴ボーナスを準備中です',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
       expect.objectContaining({
