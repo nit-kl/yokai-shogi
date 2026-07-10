@@ -230,7 +230,7 @@
         <h2 class="menu-title">駒一覧</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p class="pieces-note">駒の動きと能力を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
+      <p class="pieces-note">駒ごとの動き、能力、SSR特性、覚醒技、因縁を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
       <div class="pieces-toolbar">
         <label class="pieces-search">
           <span>探す</span>
@@ -281,6 +281,7 @@
             <div class="hp-fill" id="enemy-hp-fill"></div>
             <div class="hp-text" id="enemy-hp-text">3000 / 3000</div>
           </div>
+          <div class="awaken-row" id="enemy-awaken-row"><span class="awaken-label">覚醒</span><span class="awaken-pips" id="enemy-awaken-pips"></span></div>
           <div class="hand-tray" id="enemy-hand"></div>
         </div>
         <div class="combo-badge" id="enemy-combo"></div>
@@ -291,6 +292,7 @@
           <div id="board-cells"></div>
           <div id="board-pieces"></div>
         </div>
+        <div id="moon-hud" class="hidden"><span id="moon-icon">🌑</span><span id="moon-label">新月</span></div>
         <div id="turn-banner"></div>
         <div id="thinking" class="hidden"><span></span>相手思考中…</div>
       </div>
@@ -312,6 +314,10 @@
             <div class="hp-ghost" id="player-hp-ghost"></div>
             <div class="hp-fill" id="player-hp-fill"></div>
             <div class="hp-text" id="player-hp-text">3000 / 3000</div>
+          </div>
+          <div class="awaken-row" id="player-awaken-row">
+            <span class="awaken-label">覚醒</span><span class="awaken-pips" id="player-awaken-pips"></span>
+            <button id="btn-awaken" class="btn-awaken hidden" type="button">覚醒する</button>
           </div>
           <div class="hand-tray" id="player-hand"></div>
         </div>
@@ -508,11 +514,19 @@
     <div class="modal-box">
       <h2>遊び方</h2>
       <div class="rules-scroll">
-        <p><b>勝利条件:</b> 相手の<b>魂力(HP)を0</b>にするか、相手の<b>大将(ボス駒)を取る</b>と勝ち。</p>
-        <p><b>ダメージ:</b> 敵の駒を取ると、<b>取った駒の攻撃力</b>ぶん相手の魂力にダメージ!</p>
-        <p><b>コンボ:</b> 自分の手番で連続して駒を取り続けるとダメージ倍率上昇(最大2倍)。取らない手を指すとリセット。</p>
-        <p><b>持ち駒:</b> 取った敵の妖怪は自分の配下に。手駒をタップして空きマスに召喚できる。</p>
-        <p><b>成り:</b> 敵陣(奥2段)に入ると自動で<b>成り</b>、攻撃力1.5倍&amp;動きが強化される。</p>
+        <h3>対局の基本</h3>
+        <p><b>勝利条件:</b> 相手の<b>魂力(HP)を0</b>にするか、相手の<b>大将(ボス駒)を取る</b>と勝ち。合法手がない場合も敗北します。</p>
+        <p><b>駒を取る:</b> 敵の駒を取ると、<b>取った自分の駒の攻撃力</b>をもとに相手の魂力へダメージを与えます。</p>
+        <p><b>コンボ:</b> 自分の手番で連続して駒を取り続けるとダメージ倍率が上昇します(最大2倍)。取らない手や召喚、覚醒でリセットされます。</p>
+        <p><b>持ち駒:</b> 取った敵の妖怪は自分の配下になります。手駒を選び、空きマスへ召喚できます。一部の駒は相手最奥への召喚制限があります。</p>
+        <p><b>成り:</b> 大将以外の駒が敵陣(奥2段)に入ると自動で<b>成り</b>、攻撃力1.5倍&amp;動きが強化されます。</p>
+        <h3>遊べるモードと報酬</h3>
+        <p><b>ソロ対戦:</b> 通常戦は選んだ軍勢と一局勝負。連戦「百鬼夜行」は挑戦ごとに敵軍が変わり、上級のベスト連勝数が週間ランキングに記録されます。</p>
+        <p><b>オンライン対戦:</b> ランダムマッチは毎日20:00〜22:00に開放されます。フレンドルームは6桁コードでいつでも対戦できます。</p>
+        <p><b>逢魔が時報酬:</b> ランダムマッチを一定手数以上プレイして完走すると、1日1回チケットを獲得できます。土曜20:00〜22:00は土曜対戦会として報酬が増え、限定妖怪の初回入手もあります。</p>
+        <p><b>妖怪ガチャ:</b> チケットで妖怪を召喚できます。10連はSR以上1枠確定。被りは妖力になり、妖力300でチケット1枚に交換できます。</p>
+        <p><b>編成:</b> 大将は1体だけ必要です。所持妖怪を前段・最奥段に配置して、自分の軍勢を作れます。</p>
+        <p><b>駒ごとの能力:</b> 月齢、百鬼の陣、八岐の首成長、因縁共鳴、覚醒技などは対象の駒が限られます。詳しくは<b>駒一覧</b>から各駒の詳細を確認してください。</p>
         <h3>妖怪タイプ</h3>
         <p><span class="type-chip t-attack">攻</span> 戦闘スキル持ち。取った時に追加ダメージや会心が発動。</p>
         <p><span class="type-chip t-defense">守</span> 盤上にいる間、自軍が受けるダメージを軽減する。</p>

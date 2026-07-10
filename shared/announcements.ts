@@ -13,6 +13,24 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-07-10-rules-guide-refresh',
+    type: 'update',
+    title: '遊び方を現在のルールに合わせて更新しました',
+    body: '遊び方を基本ルール中心に整理し、駒ごとのSSR特性や覚醒技、因縁は駒一覧・駒詳細で確認できるようにしました。百鬼夜行ランキング、逢魔が時報酬、土曜対戦会、ガチャと編成の案内も更新しています。',
+    publishedAt: '2026-07-10T09:00:00+09:00',
+    priority: 'high',
+    showUntil: '2026-07-24T23:59:59+09:00',
+  },
+  {
+    id: '2026-07-10-awaken-resonance-guide',
+    type: 'update',
+    title: '覚醒と共鳴を活かした編成が重要になりました',
+    body: '駒の取り合いで覚醒ゲージをため、盤上のSSRを1局1回だけ強化できます。さらに酒呑童子×茨木童子、九尾の狐×玉藻前などの因縁共鳴は、異装を含めて同じ組み合わせとして発動します。駒一覧と編成で相性を確認してみてください。',
+    publishedAt: '2026-07-10T08:50:00+09:00',
+    priority: 'high',
+    showUntil: '2026-07-24T23:59:59+09:00',
+  },
+  {
     id: '2026-07-05-hyakki-weekly-ranking',
     type: 'update',
     title: '百鬼夜行の週間連勝ランキングが始まりました',

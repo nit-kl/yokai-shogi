@@ -64,17 +64,24 @@ test('新規駒(baku): 獏が盤上にいるとき、敵軍の与ダメージが
   expect(ev.damage).toBe(Math.round(200 * 0.85)); // 200 * 0.85 = 170
 });
 
-test('新規駒(yamata): 八岐大蛇が駒を取ったとき、期待値計算で会心ダメージが乗ること', () => {
+test('新規駒(yamata): 八岐の首は駒を取るたび成長する(1体目は素、2体目+30%)', () => {
   const s = blank();
   s.turn = 'p';
-  put(s, 2, 3, 'yamata', 'p'); // プレイヤーの八岐大蛇 (ATK 420, 30%で2.2倍)
+  put(s, 2, 3, 'yamata', 'p'); // プレイヤーの八岐大蛇 (ATK 420, 撃破ごとに+30%)
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'ittan', 'e');
-  
-  // 期待値計算 (rng: false)
-  // 会心確率 30% で 2.2倍 ダメージ。
-  // 期待倍率 = 1 + 0.3 * (2.2 - 1) = 1 + 0.3 * 1.2 = 1.36
-  // ダメージ期待値 = 420 * 1.36 = 571.2 -> 四捨五入か切り捨てで 571
-  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-  expect(ev.damage).toBe(Math.round(420 * 1.36)); // 571
+
+  // 1体目: 首はまだ目覚めていない → 素のATK
+  const ev1 = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
+  expect(ev1.damage).toBe(420);
+  expect(s.board[2][2]?.kills).toBe(1);
+
+  // 2体目: 二の首覚醒 ×1.3(コンボの影響を除外して首の成長だけを見る)
+  s.turn = 'p';
+  s.combo.p = 0;
+  put(s, 2, 1, 'ittan', 'e');
+  put(s, 4, 0, 'ittan', 'e'); // 敵の手を残すダミー
+  const ev2 = capEv(cap(s, 2, 2, 2, 1, { rng: false }));
+  expect(ev2.damage).toBe(Math.round(420 * 1.3)); // 546
+  expect(s.board[1][2]?.kills).toBe(2);
 });

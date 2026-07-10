@@ -5,10 +5,12 @@
 import {
   COLS, ROWS, MAX_HP, ZONE_DEPTH, YOKAI, TYPE_INFO, RARITY_INFO,
   ALL_IMAGES, BOSS_CHOICES, ENEMY_BOSS, GACHA_POOL, SETUP,
+  RESONANCES, MOON_PHASES, baseIdOf,
 } from '../../shared/data';
 import type { Rarity, Side, YokaiType } from '../../shared/data';
-import { Game } from '../../shared/game';
+import { AWAKEN_ATK, AWAKEN_MAX, Game, MOON_CYCLE } from '../../shared/game';
 import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
+import { Records } from './records';
 import { AI } from './ai';
 import type { AIDifficulty } from './ai';
 import {
@@ -37,7 +39,11 @@ import { OnlineConnection, actionToServer, eventsForView, stateForView } from '.
 
 let G: GameState | null = null; // ゲーム状態
 let busy = false;               // 演出中・AI思考中の入力ロック
-type Sel = { kind: 'piece'; x: number; y: number; moves: MoveTarget[] } | { kind: 'hand'; id: string; drops: Pos[] } | null;
+type Sel =
+  | { kind: 'piece'; x: number; y: number; moves: MoveTarget[] }
+  | { kind: 'hand'; id: string; drops: Pos[] }
+  | { kind: 'awaken'; targets: Pos[] }
+  | null;
 let sel: Sel = null;            // 選択中
 const pieceEls = new Map<number, HTMLElement>(); // uid -> DOM要素
 let online: OnlineConnection | null = null;
@@ -105,7 +111,12 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
   counter: ['#e8d0ff', '#c88aff', '#8a4aff'],
   decoy: ['#eaffd0', '#a8e063', '#4caf50'],
   explode: ['#ffd24a', '#ff9a3c', '#ff5d5d'],
+  moon: ['#f2ecff', '#b9a8ff', '#6157d6'],    // 月光の藍紫
+  heads: ['#ffe2b8', '#ff8a3c', '#8d1f1f'],   // 大蛇の劫火
+  legion: ['#dbe7ff', '#8ba0e8', '#d98945'],  // 百鬼夜行の宵闇
 };
+/* 会心系(発動="当たり")として扱うスキル */
+const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads']);
 
 /* レアリティ段階(演出の格): N=0, R=1, SR=2, SSR・異装=3 */
 function rarityTier(id: string): 0 | 1 | 2 | 3 {
@@ -330,6 +341,18 @@ function wireButtons() {
   $('btn-mute').onclick = () => {
     AudioSys.init();
     $('btn-mute').textContent = AudioSys.toggle() ? '🔊' : '🔇';
+  };
+  $('btn-awaken').onclick = () => {
+    if (!G || G.winner || busy || G.turn !== 'p' || !Game.awakenReady(G, 'p')) return;
+    if (sel && sel.kind === 'awaken') { clearSel(); return; } // 再押下でキャンセル
+    const targets = Game.awakenTargets(G, 'p');
+    if (targets.length === 0) return;
+    clearSel();
+    /* 対象が1体だけなら即発動、複数なら対象選択モード */
+    if (targets.length === 1) { doAction({ kind: 'awaken', to: targets[0] }); return; }
+    sel = { kind: 'awaken', targets };
+    AudioSys.play('select');
+    for (const t of targets) cellEl(t.x, t.y).classList.add('hl-awaken');
   };
   $('btn-resign').onclick = () => {
     if (!G || G.winner || (!onlineSide && busy)) return;
@@ -632,13 +655,14 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     busy = G.turn !== 'p';
     setOnlineConnection('接続済み');
     setOnlineTurnTimer(message.remainMs);
-    if (entering) summonAnnounced.clear();
+    if (entering) { summonAnnounced.clear(); resonanceAnnounced.clear(); void announceResonances(); }
   } else if (message.t === 'events') {
     if (!onlineSide) return;
     busy = true;
     for (const event of eventsForView(message.events, onlineSide)) await animEvent(event);
     renderAll();
     updateHUD();
+    await announceResonances();
     onlineSeq = message.seq;
     if (G && !G.winner) busy = G.turn !== 'p';
     renderOnlineTimers();
@@ -812,7 +836,8 @@ function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement 
   el.className = `piece owner-${pc.owner}`
     + (YOKAI[pc.id].type === 'boss' ? ' boss-piece' : '')
     + (YOKAI[pc.id].variantOf ? ' special-piece' : '')
-    + (YOKAI[pc.id].rarity === 'SSR' && !YOKAI[pc.id].variantOf ? ' ssr-piece' : '');
+    + (YOKAI[pc.id].rarity === 'SSR' && !YOKAI[pc.id].variantOf ? ' ssr-piece' : '')
+    + (YOKAI[pc.id].skill.kind === 'moon' ? ' moon-piece' : '');
   const specialColors = YOKAI[pc.id].summonColors;
   if (specialColors) {
     el.style.setProperty('--special-light', specialColors[0]);
@@ -853,6 +878,17 @@ function setPromoted(el: HTMLElement) {
 /* 状態とDOMを同期 */
 function renderAll() {
   const seen = new Set<number>();
+  /* 因縁共鳴中の駒uid(両者が盤上に揃っているペア) */
+  const resonating = new Set<number>();
+  for (const side of ['p', 'e'] as const) {
+    for (const rs of RESONANCES) {
+      const members = G!.board.flat().filter(
+        (pc): pc is NonNullable<typeof pc> => !!pc && pc.owner === side && rs.pair.includes(baseIdOf(pc.id)));
+      if (new Set(members.map(pc => baseIdOf(pc.id))).size === 2) {
+        members.forEach(pc => resonating.add(pc.uid));
+      }
+    }
+  }
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       const pc = G!.board[y][x];
@@ -861,6 +897,9 @@ function renderAll() {
       const el = pieceEls.get(pc.uid) || makePieceEl(pc);
       positionPiece(el, x, y);
       if (pc.promoted) setPromoted(el);
+      el.classList.toggle('awakened', Game.isAwakened(pc, G!.plies ?? 0));
+      el.classList.toggle('enraged', pc.enraged === true);
+      el.classList.toggle('resonating', resonating.has(pc.uid));
     }
   }
   for (const [uid, el] of pieceEls) {
@@ -881,6 +920,43 @@ function updateHUD() {
     renderHand(side);
     updateCombo(side);
   }
+  updateMoonHUD();
+  updateAwakenHUD();
+}
+
+/* 月齢表示: moonスキル持ちが対局に絡む時だけ出す。満月は盤ごと月光に染める */
+const MOON_ICONS = ['🌑', '🌓', '🌔', '🌕'] as const;
+function updateMoonHUD() {
+  const hud = $('moon-hud');
+  const involved = G!.board.flat().some(pc => pc && YOKAI[pc.id].skill.kind === 'moon')
+    || (['p', 'e'] as const).some(side => Object.keys(G!.hands[side]).some(id => YOKAI[id].skill.kind === 'moon'));
+  hud.classList.toggle('hidden', !involved);
+  const full = involved && Game.moonPhase(G!) === MOON_CYCLE - 1;
+  $('board-frame').classList.toggle('moonlit', full);
+  if (!involved) return;
+  const phase = Game.moonPhase(G!);
+  $('moon-icon').textContent = MOON_ICONS[phase] ?? MOON_ICONS[0];
+  const nights = Game.nightsUntilFullMoon(G!);
+  $('moon-label').textContent = full ? '満月 ― 会心確定!' : `${MOON_PHASES[phase]}(満月まで${nights}夜)`;
+  hud.classList.toggle('full-moon', full);
+}
+
+/* 覚醒ゲージ: 取り合いで両陣営に溜まる。自分は満タンでボタン点灯 */
+function updateAwakenHUD() {
+  for (const side of ['p', 'e'] as const) {
+    const st = G!.awaken?.[side] ?? { gauge: 0, used: false };
+    const pips = $(`${side === 'p' ? 'player' : 'enemy'}-awaken-pips`);
+    pips.innerHTML = '';
+    for (let i = 0; i < AWAKEN_MAX; i++) {
+      const pip = document.createElement('span');
+      pip.className = 'awaken-pip' + (st.used ? ' pip-used' : i < st.gauge ? ' pip-filled' : '');
+      pips.appendChild(pip);
+    }
+    $(`${side === 'p' ? 'player' : 'enemy'}-awaken-row`).classList.toggle('awaken-used', st.used);
+  }
+  const btn = $('btn-awaken');
+  const ready = Game.awakenReady(G!, 'p') && Game.awakenTargets(G!, 'p').length > 0 && !G!.winner;
+  btn.classList.toggle('hidden', !ready);
 }
 
 function renderHand(side: Side) {
@@ -956,7 +1032,7 @@ function hideInfo() { $('piece-info').classList.add('hidden'); }
 function clearSel() {
   sel = null;
   document.querySelectorAll('.cell').forEach(c =>
-    c.classList.remove('hl-move', 'hl-capture', 'hl-drop', 'hl-selected'));
+    c.classList.remove('hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken'));
   if (G) renderHand('p');
 }
 
@@ -967,7 +1043,7 @@ function onCellClick(x: number, y: number) {
   if (pc) showInfo(pc.id, pc.promoted);
   if (G.winner || busy || G.turn !== 'p') return;
 
-  /* 移動先 / 打ち先として有効か */
+  /* 移動先 / 打ち先 / 覚醒対象として有効か */
   if (sel) {
     if (sel.kind === 'piece') {
       const { x: sx, y: sy } = sel;
@@ -977,6 +1053,9 @@ function onCellClick(x: number, y: number) {
       const id = sel.id;
       const d = sel.drops.find(d => d.x === x && d.y === y);
       if (d) { doAction({ kind: 'drop', id, to: { x, y } }); return; }
+    } else if (sel.kind === 'awaken') {
+      const t = sel.targets.find(t => t.x === x && t.y === y);
+      if (t) { doAction({ kind: 'awaken', to: { x, y } }); return; }
     }
   }
 
@@ -1009,6 +1088,32 @@ function onHandClick(id: string) {
 /* ============================== 対局進行 ============================== */
 /* SSR・異装を打った時の初見参演出(1対局につき駒種ごとに1回) */
 const summonAnnounced = new Set<string>();
+
+/* 因縁共鳴の成立アナウンス(1対局につき陣営×ペアごとに1回) */
+const resonanceAnnounced = new Set<string>();
+async function announceResonances() {
+  if (!G || G.winner) return;
+  for (const side of ['p', 'e'] as const) {
+    for (const rs of RESONANCES) {
+      const members = G.board.flat().filter(
+        (pc): pc is NonNullable<typeof pc> => !!pc && pc.owner === side && rs.pair.includes(baseIdOf(pc.id)));
+      if (new Set(members.map(pc => baseIdOf(pc.id))).size < 2) continue;
+      const key = `${side}:${rs.name}`;
+      if (resonanceAnnounced.has(key)) continue;
+      resonanceAnnounced.add(key);
+      const lead = members[0];
+      AudioSys.play('summon');
+      FX.flash(`color-mix(in srgb, ${rs.colors[1]} 30%, transparent)`, 240);
+      await FX.cutin(YOKAI[lead.id].img, `共鳴【${rs.name}】`, rs.desc, 'summon', [...rs.colors], 3);
+      for (const pc of members) {
+        const el = pieceEls.get(pc.uid);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        FX.ring(rect.left + rect.width / 2, rect.top + rect.height / 2, rs.colors[1], 16, 70);
+      }
+    }
+  }
+}
 
 async function summonCutin(id: string, at?: Pos) {
   const colors = specialFxColors(id);
@@ -1100,10 +1205,12 @@ async function startBattle() {
   AudioSys.init();
   AudioSys.startBattleBgm();
   summonAnnounced.clear();
+  resonanceAnnounced.clear();
   await playVsIntro(
     { bossId: stage.bossId, label: '敵将' },
     soloMode === 'streak' ? `百鬼夜行 ${soloStreak + 1}戦目` : stage.name,
   );
+  await announceResonances(); // 開幕から因縁ペアが揃っている場合
   showBanner('p');
   busy = false;
 }
@@ -1125,6 +1232,7 @@ async function doAction(action: Action) {
 
   renderAll();
   updateHUD();
+  await announceResonances(); // 打ち込みで因縁ペアが揃った場合
   cellEl(action.to.x, action.to.y).classList.add('hl-last');
 
   if (G!.winner) { await sleep(750); showResult(); return; }
@@ -1228,6 +1336,36 @@ async function animEvent(ev: GameEvent) {
       break;
     }
     case 'capture': await animCapture(ev); break;
+    case 'awaken': {
+      const def = YOKAI[ev.id];
+      const colors = specialFxColors(ev.id) ?? [...SSR_FX_COLORS];
+      const c = cellCenter(ev.to.x, ev.to.y);
+      const el = pieceEls.get(ev.uid);
+      /* タメ: 暗転して力を吸い込む → 必殺技名のカットイン → 解放 */
+      FX.spotlight(c.x, c.y, colors[1], 2200);
+      FX.converge(c.x, c.y, colors[1], 26, 110);
+      el?.classList.add('awakening');
+      await sleep(420);
+      AudioSys.play('summon');
+      await FX.cutin(def.img, `覚醒【${ev.name}】`, `${def.name} ― 魂力解放 ATK×${AWAKEN_ATK}`, 'summon', colors, 3);
+      AudioSys.play('bighit');
+      FX.flash(`color-mix(in srgb, ${colors[0]} 40%, transparent)`, 260);
+      FX.pillar(c.x, c.y, colors);
+      setTimeout(() => FX.pillar(c.x, c.y, colors), 150);
+      FX.burst(c.x, c.y, [...colors], 52, 8);
+      FX.ring(c.x, c.y, colors[1], 22, 110);
+      FX.shockwave(c.x, c.y, colors[1], 14);
+      FX.kanjiStamp(c.x, c.y - 12, '覚');
+      FX.shake(true);
+      if (el) {
+        el.classList.remove('awakening');
+        el.classList.add('awakened', 'promoted-burst');
+        setTimeout(() => el.classList.remove('promoted-burst'), 520);
+      }
+      if (ev.owner === 'p') Records.bump(ev.name);
+      await sleep(650);
+      break;
+    }
     case 'promote': {
       const c = cellCenter(ev.to.x, ev.to.y);
       const pc = G!.board[ev.to.y][ev.to.x];
@@ -1279,30 +1417,45 @@ async function animCapture(ev: CaptureEvent) {
   const scale = TIER_SCALE[tier];
   const vTier = rarityTier(ev.victim.id);
   const vScale = TIER_SCALE[vTier];
-  /* 会心系(crit/rush)の発動 = "当たり"。procsは攻撃駒のスキル1件のみ入る */
-  const jackpot = ev.procs.length > 0 && (aSkill.kind === 'crit' || aSkill.kind === 'rush');
-  const multSub = ev.procs.length === 0 ? undefined
-    : (aSkill.kind === 'crit' || aSkill.kind === 'rush') ? `×${aSkill.mult}`
+  const passiveEffects = ev.effects ?? [];
+  /* 会心系(crit/rush/moon/heads)の発動 = "当たり"。攻撃駒のスキルに加え、覚醒・共鳴のprocが並ぶことがある */
+  const jackpot = ev.procs.some(p => p.name === aSkill.name) && JACKPOT_KINDS.has(aSkill.kind);
+  const multSub = !ev.procs.some(p => p.name === aSkill.name) ? undefined
+    : (aSkill.kind === 'crit' || aSkill.kind === 'rush' || aSkill.kind === 'moon') ? `×${aSkill.mult}`
     : aSkill.kind === 'zone' ? `+${aSkill.bonus}` : undefined;
 
-  /* スキル発動カットイン(系統別の前置き演出+系統色・レアリティ格のカットイン) */
+  /* 通算発動記録(自分のスキル・覚醒・共鳴のみ) */
   for (const proc of ev.procs) {
-    if (jackpot) {
+    if (proc.owner === 'p') Records.bump(proc.name);
+  }
+
+  /* スキル発動カットイン(系統別の前置き演出+系統色・レアリティ格のカットイン)。
+     覚醒・共鳴のprocは攻撃駒スキルと別名で並ぶため、前置き演出はスキル本体の1回だけ */
+  for (const proc of ev.procs) {
+    const isSkillProc = proc.name === aSkill.name;
+    if (isSkillProc && jackpot) {
       /* 当たり: 暗転スポットライト+吸い込み(レアリティが高いほど長く・濃く) */
       FX.spotlight(c.x, c.y, kindFx[1], 1700 + tier * 200);
       FX.converge(c.x, c.y, kindFx[1], Math.round(20 * scale), 90 + tier * 15);
       if (tier === 3) FX.converge(c.x, c.y, kindFx[0], 14, 150);
       await sleep(330);
-    } else if (aSkill.kind === 'zone') {
+    } else if (isSkillProc && aSkill.kind === 'zone') {
       /* 敵陣強襲: 藍の衝撃波(高頻度なのでタメなし) */
       FX.ring(c.x, c.y, kindFx[1], Math.round(16 * scale), 70);
       FX.shockwave(c.x, c.y, kindFx[1], 8 + 2 * tier);
-    } else if (aSkill.kind === 'heal') {
+    } else if (isSkillProc && aSkill.kind === 'heal') {
       /* 福招き: 緑の光が集まる */
       FX.converge(c.x, c.y, kindFx[1], Math.round(16 * scale), 80);
     }
     await FX.cutin(proc.img, proc.name, proc.text,
-      aDef.type === 'boss' ? 'boss' : 'skill', kindFx, tier);
+      aDef.type === 'boss' ? 'boss' : 'skill', isSkillProc ? kindFx : SSR_FX_COLORS, tier);
+  }
+
+  if (passiveEffects.length > 0) {
+    passiveEffects.slice(0, 4).forEach((effect, i) => {
+      const color = effect.owner === 'p' ? '#9fdcff' : '#ffb0a0';
+      setTimeout(() => FX.floatLabel(c.x, c.y + 32 + i * 22, `${effect.name} ${effect.text}`, color), i * 90);
+    });
   }
 
   /* 化け狸: 葉隠れ(葉吹雪と共に) */
@@ -1334,13 +1487,32 @@ async function animCapture(ev: CaptureEvent) {
   if (special) FX.ring(c.x, c.y, special[2], 18, big ? 100 : 70);
   FX.shockwave(c.x, c.y, colors[0], big ? 16 : 9);
   /* 系統ごとの署名エフェクト(撃破に重ねる。量はレアリティでスケール) */
-  if (ev.procs.length > 0) {
+  if (ev.procs.some(p => p.name === aSkill.name)) {
     if (aSkill.kind === 'crit') {
       /* 炎: 立ち昇る火柱+火の粉 */
       FX.pillar(c.x, c.y, kindFx);
       if (tier >= 2) setTimeout(() => FX.pillar(c.x, c.y, kindFx), 140);
       FX.ring(c.x, c.y, kindFx[2], Math.round(18 * scale), 110);
       setTimeout(() => FX.burst(c.x, c.y, [...kindFx], Math.round(26 * scale), 9), 120);
+    } else if (aSkill.kind === 'moon') {
+      /* 月光: 天から降る光柱+藍紫の月輪 */
+      FX.pillar(c.x, c.y, kindFx);
+      setTimeout(() => FX.pillar(c.x, c.y, kindFx), 140);
+      FX.ring(c.x, c.y, kindFx[0], 22, 130);
+      FX.converge(c.x, c.y, kindFx[1], Math.round(18 * scale), 120);
+      setTimeout(() => FX.burst(c.x, c.y, [...kindFx], Math.round(28 * scale), 8.5), 120);
+    } else if (aSkill.kind === 'heads') {
+      /* 八岐の首: 多段斬撃の連打 */
+      FX.slash(c.x, c.y, true);
+      setTimeout(() => FX.slash(c.x, c.y, true), 110);
+      setTimeout(() => FX.slash(c.x, c.y, true), 220);
+      FX.pillar(c.x, c.y, kindFx);
+      FX.burst(c.x, c.y, [...kindFx], Math.round(26 * scale), 9);
+    } else if (aSkill.kind === 'legion') {
+      /* 百鬼の陣: 宵闇の波紋が広がる */
+      FX.ring(c.x, c.y, kindFx[1], 24, 140);
+      FX.ring(c.x, c.y, kindFx[2], 18, 100);
+      FX.burst(c.x, c.y, [...kindFx], Math.round(22 * scale), 7.5);
     } else if (aSkill.kind === 'rush') {
       /* 疾風: 風の斬撃+水平に走る翠の奔流 */
       FX.slash(c.x, c.y, true);
@@ -1414,6 +1586,25 @@ async function animCapture(ev: CaptureEvent) {
     }, 150);
     AudioSys.play('bighit');
     await sleep(760);
+  }
+
+  /* 妖狐相伝: 相方を取られた狐の激怒(次の一撃 確定会心) */
+  if (ev.enrage) {
+    const eDef = YOKAI[ev.enrage.id];
+    const rs = RESONANCES.find(r => r.name === ev.enrage!.name);
+    const colors = rs ? [...rs.colors] : [...SSR_FX_COLORS];
+    const el = pieceEls.get(ev.enrage.uid);
+    FX.flash(`color-mix(in srgb, ${colors[1]} 35%, transparent)`, 220);
+    await FX.cutin(eDef.img, `共鳴【${ev.enrage.name}】`, `${eDef.name}が激怒 ― 次の一撃は確定会心!`, 'skill',
+      colors, 3);
+    if (el) {
+      el.classList.add('enraged');
+      const rect = el.getBoundingClientRect();
+      FX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, colors, 30, 6);
+      FX.ring(rect.left + rect.width / 2, rect.top + rect.height / 2, colors[1], 16, 70);
+    }
+    if (ev.enrage.owner === 'p') Records.bump(`共鳴【${ev.enrage.name}】`);
+    await sleep(300);
   }
 }
 
@@ -1581,6 +1772,26 @@ function pieceSourceText(id: string): string {
   return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択 / ガチャ' : 'ガチャ';
 }
 
+function ssrIntroLines(id: string): string[] {
+  const def = YOKAI[id];
+  if (def.rarity !== 'SSR') return [];
+  const lines: string[] = [];
+  if (def.variantOf) lines.push('異装: 通常版と同じ性能。専用演出と覚醒技名を持つ');
+  if (def.skill.kind === 'moon') {
+    lines.push(`月齢: 満月の捕獲で確定会心 ×${def.skill.mult}`);
+  } else if (def.skill.kind === 'heads') {
+    lines.push(`成長: 捕獲ごとに与ダメ+${Math.round(def.skill.step * 100)}%(最大+${Math.round(def.skill.step * def.skill.max * 100)}%)`);
+  } else if (def.skill.kind === 'legion') {
+    lines.push(`布陣: 盤上の味方1体ごとに与ダメ+${Math.round(def.skill.per * 100)}%(最大+${Math.round(def.skill.cap * 100)}%)`);
+  } else if (def.skill.kind === 'crit') {
+    lines.push(`会心: 捕獲時${Math.round(def.skill.chance * 100)}%でダメージ×${def.skill.mult}`);
+  }
+  if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 3手番ATK×${AWAKEN_ATK}`);
+  const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(id)));
+  if (rs) lines.push(`因縁: ${rs.name}`);
+  return lines;
+}
+
 function buildPieceCatalog() {
   buildPieceCatalogControls();
   renderPieceCatalogCards();
@@ -1611,7 +1822,7 @@ function renderPieceCatalogCards() {
     .filter(def => typeFilter === 'all' || def.type === typeFilter)
     .filter(def => {
       if (!q) return true;
-      return `${def.name} ${def.moveText} ${def.skill.name} ${def.skill.desc}`.toLowerCase().includes(q);
+      return `${def.name} ${def.moveText} ${def.skill.name} ${def.skill.desc} ${ssrIntroLines(def.id).join(' ')}`.toLowerCase().includes(q);
     })
     .sort((a, b) =>
       PIECE_RARITY_RANK[a.rarity] - PIECE_RARITY_RANK[b.rarity]
@@ -1673,26 +1884,10 @@ function renderPieceCatalogCards() {
     name.className = 'rp-name';
     name.textContent = def.name;
 
-    const stats = document.createElement('div');
-    stats.className = 'rp-stats';
-    const atk = document.createElement('b');
-    atk.textContent = `ATK ${def.atk}`;
     const source = document.createElement('span');
     source.textContent = pieceSourceText(def.id);
     source.className = 'rp-source';
     top.appendChild(source);
-
-    const move = document.createElement('div');
-    move.className = 'rp-section';
-    const moveLabel = document.createElement('small');
-    moveLabel.textContent = '動き';
-    const moveText = document.createElement('span');
-    moveText.textContent = def.moveText;
-    move.append(moveLabel, moveText);
-
-    const skillHint = document.createElement('div');
-    skillHint.className = 'rp-detail-hint';
-    skillHint.textContent = `${def.skill.name} - 詳細を見る`;
 
     body.append(top, name);
     card.append(art, body);
@@ -1714,7 +1909,15 @@ function openPieceDetail(id: string) {
   $('piece-detail-atk').textContent = `ATK ${def.atk} / ${pieceSourceText(def.id)}で入手`;
   $('piece-detail-move').textContent = def.moveText;
   $('piece-detail-skill-name').textContent = def.skill.name;
-  $('piece-detail-skill-desc').textContent = def.skill.desc;
+  const records = Records.get(def.skill.name);
+  let skillDesc = def.skill.desc;
+  const introLines = ssrIntroLines(def.id);
+  if (introLines.length > 0) skillDesc += `\n【SSR特性】${introLines.join('\n')}`;
+  if (def.awakenName && introLines.length === 0) skillDesc += `\n【覚醒技】${def.awakenName} ― 覚醒ゲージ満タンで発動、3手番の間ATK×${AWAKEN_ATK}`;
+  const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(def.id)));
+  if (rs) skillDesc += `\n【因縁効果】${rs.desc}`;
+  if (records > 0) skillDesc += `\n通算発動 ${records}回`;
+  $('piece-detail-skill-desc').textContent = skillDesc;
   $('modal-piece-detail').classList.remove('hidden');
 }
 
