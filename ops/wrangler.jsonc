@@ -1,0 +1,11 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "nit-games-apex",
+  "main": "nit-games-apex-worker.js",
+  "compatibility_date": "2026-06-01",
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "nit-games.com", "custom_domain": true },
+    { "pattern": "www.nit-games.com", "custom_domain": true }
+  ]
+}

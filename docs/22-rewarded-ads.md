@@ -139,28 +139,43 @@ Invoke-WebRequest https://www.nit-games.com/ -MaximumRedirection 0 -ErrorAction 
 
 #### B-2. サイトへの接続確認(審査でよく求められる)
 
-AdSense 管理画面の指示に従う。代表的なものは次のいずれか(**画面で選んだ方式だけ**でよい)。
+> **よくある失敗:** `nit-games.com` が **301 リダイレクトのみ**だと、AdSense は `<head>` のコードを見つけられず  
+> 「サイトは確認できませんでした」になる。ゲーム側にコードがあってもルートが 301 だと落ちることがある。
 
-1. [ ] **AdSense コード スニペット**(現行で選択中の例)  
-   - `<head>` に次を追加済み: `client/index.html`  
-   - `ca-pub-3213980817040193`(公開パブリッシャーID)  
-   - **本番デプロイ後**に「コードを配置しました」→「確認」→「審査をリクエスト」
-2. [ ] **ads.txt** をサイト直下に置く  
-   - 例: AdSense が表示する行を `client/public/ads.txt` に書いてデプロイ  
-   - 公開 URL: `https://yokai-shogi.nit-games.com/ads.txt`  
-   - ルート経由: `https://nit-games.com/ads.txt` でも中身に辿れること
-3. [ ] **メタタグ**を HTML に追加(管理画面の指示どおり)
+**推奨: ルートは 200 でゲート HTML を返す**(Redirect Rule の代わりに Worker)
+
+ダッシュボードの Hello World が編集できない場合は、**CLI で上書き**する(推奨)。
+
+```bash
+# 先に Redirect Rule「apex to yokai shogi」を無効化
+npm run apex:deploy
+```
+
+手動の場合:
+
+1. [ ] Cloudflare の Redirect Rule(`apex to yokai shogi`)を **無効化または削除**
+2. [ ] Workers & Pages → **Create** → Hello World で名前 `nit-games-apex` をデプロイしてよい
+3. [ ] コード編集できないときは上記 `npm run apex:deploy` で中身を差し替える
+4. [ ] DNS の `@` / `www` は Proxied のまま(カスタムドメインは deploy 時に付く)
+5. [ ] 確認:
+   - `https://nit-games.com/` → **200** でソースに `ca-pub-3213960617040193` があること
+   - `https://nit-games.com/ads.txt` → テキスト1行(HTML ではない)  
+     `google.com, pub-3213960617040193, DIRECT, f08c47fec0942fa0`
+
+AdSense 管理画面では次のいずれか(**画面で選んだ方式**):
+
+1. [ ] **AdSense コード スニペット** — ゲート HTML とゲーム `client/index.html` の両方に配置済み
+2. [ ] **ads.txt** — `client/public/ads.txt` と Worker の `/ads.txt` に配置。AdSense が表示する行と一致させる
+3. [ ] **メタタグ** — ゲート HTML に `google-adsense-account` 済み。ゲーム側にも足す場合は管理画面の値を使う
 
 確認手順:
 
-1. [ ] main へマージ / Pages 本番デプロイが完了している
-2. [ ] ブラウザのページソースで `ca-pub-3213980817040193` が見える  
-   (`https://yokai-shogi.nit-games.com/` およびリダイレクト後の `https://nit-games.com/`)
-3. [ ] AdSense で「コードを配置しました」にチェック → **確認**
-4. [ ] 成功したら **審査をリクエスト**(グレー解除後)
+1. [ ] 上記ゲートが 200 でコードを返すことを確認
+2. [ ] ゲーム Pages も最新デプロイ(スニペット + `ads.txt`)
+3. [ ] AdSense で「コードを配置しました」→ **確認**
+4. [ ] 成功したら **審査をリクエスト**
 
-> `client/public/` に置いたファイルは Pages のルートに出る。  
-> ads.txt の中身は **AdSense / 後の GAM が提示する行を正**とする(手書きで推測しない)。
+> ads.txt の中身は **AdSense 画面が表示する行を正**とする。不一致なら画面の行に合わせて両所を更新する。
 
 #### B-3. 審査待ち・合格の目安
 
