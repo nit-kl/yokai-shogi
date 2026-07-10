@@ -9,7 +9,7 @@ import { drawGacha } from '../../../shared/gacha';
 import type { GachaResult } from '../../../shared/gacha';
 import { validateDisplayName, validateFormation } from '../../../shared/validate';
 import { EXCHANGE_COST, ownedSet } from './types';
-import type { HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
+import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
 
 const FIRST_BONUS = 10;            // 初回起動時のチケット(10連ガチャ用)
 const TICKETS_CAP = 999;
@@ -189,6 +189,8 @@ export class LocalMeta implements MetaProvider {
   async hyakkiStart(): Promise<HyakkiProgress | null> { return null; }
   async hyakkiResult(_win: boolean): Promise<HyakkiProgress | null> { return null; }
   async hyakkiRanking(): Promise<HyakkiRanking | null> { return null; }
+  async adsStatus(): Promise<AdsStatus | null> { return null; }
+  async claimAdReward(_provider: AdsStatus['provider']): Promise<AdsClaimResult | null> { return null; }
 
   async recordSoloWin(): Promise<number> {
     this.blob.wins++;

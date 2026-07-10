@@ -6,7 +6,8 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 export type ErrorCode =
   | 'UNAUTHORIZED' | 'VALIDATION' | 'INSUFFICIENT_TICKETS' | 'INSUFFICIENT_YORYOKU'
-  | 'INVALID_FORMATION' | 'RATE_LIMITED' | 'CONFLICT' | 'MAINTENANCE' | 'BANNED' | 'INTERNAL';
+  | 'INVALID_FORMATION' | 'RATE_LIMITED' | 'CONFLICT' | 'MAINTENANCE' | 'BANNED'
+  | 'FEATURE_DISABLED' | 'INTERNAL';
 
 const STATUS: Record<ErrorCode, ContentfulStatusCode> = {
   UNAUTHORIZED: 401,
@@ -18,6 +19,7 @@ const STATUS: Record<ErrorCode, ContentfulStatusCode> = {
   CONFLICT: 409,
   MAINTENANCE: 503,
   BANNED: 403,
+  FEATURE_DISABLED: 403,
   INTERNAL: 500,
 };
 

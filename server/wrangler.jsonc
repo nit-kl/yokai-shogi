@@ -34,7 +34,9 @@
   },
   "vars": {
     "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173",
-    "MAINTENANCE": "0"
+    "MAINTENANCE": "0",
+    "ADS_REWARD_ENABLED": "1",
+    "ADS_REWARD_PROVIDER": "mock"
   },
   "env": {
     // ステージング: wrangler deploy --env staging
@@ -60,7 +62,9 @@
       "triggers": { "crons": ["0 19 * * *"] },
       "vars": {
         "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://yokai-shogi-staging.pages.dev",
-        "MAINTENANCE": "0"
+        "MAINTENANCE": "0",
+        "ADS_REWARD_ENABLED": "1",
+        "ADS_REWARD_PROVIDER": "mock"
       }
     },
     // 本番: wrangler deploy --env production
@@ -92,7 +96,9 @@
       "triggers": { "crons": ["0 19 * * *"] },
       "vars": {
         "ALLOWED_ORIGINS": "https://yokai-shogi.nit-games.com,https://yokai-shogi.pages.dev",
-        "MAINTENANCE": "0"
+        "MAINTENANCE": "0",
+        "ADS_REWARD_ENABLED": "0",
+        "ADS_REWARD_PROVIDER": "mock"
       }
     }
   }

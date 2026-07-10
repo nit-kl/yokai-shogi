@@ -14,7 +14,7 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 { "error": { "code": "INSUFFICIENT_TICKETS", "message": "チケットが不足しています" } }
 ```
 
-- 主要エラーコード: `UNAUTHORIZED` / `VALIDATION` / `INSUFFICIENT_TICKETS` / `INSUFFICIENT_YORYOKU` / `INVALID_FORMATION` / `RATE_LIMITED` / `CONFLICT` / `MAINTENANCE`
+- 主要エラーコード: `UNAUTHORIZED` / `VALIDATION` / `INSUFFICIENT_TICKETS` / `INSUFFICIENT_YORYOKU` / `INVALID_FORMATION` / `RATE_LIMITED` / `CONFLICT` / `MAINTENANCE` / `FEATURE_DISABLED`
 - レート制限: 認証系 5req/min、ガチャ系 30req/min、その他 120req/min(Cloudflare Rate Limiting ルール(IP単位)+Workers内のユーザー単位制限の二段)
 
 ## REST API
@@ -106,6 +106,15 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 | GET | /rankings/hyakki | 不要 | `{ week, top, lastWeek, me }`。Authorizationがあれば `me` に自分の順位。60秒キャッシュ |
 
 型・定数は `shared/hyakki.ts` が正。
+
+### リワード広告(doc 22)
+
+| メソッド | パス | 認証 | 内容 |
+|---|---|---|---|
+| GET | /ads/status | 必須 | 有効フラグ・provider・日次残回数・clientConfig |
+| POST | /ads/reward | 必須 | `{ "provider": "mock"|"gpt" }`。視聴完了後のチケット請求 |
+
+エラーコードに `FEATURE_DISABLED`(403) を追加(機能オフ時の POST)。
 
 ## WebSocket プロトコル
 

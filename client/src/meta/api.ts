@@ -8,7 +8,7 @@ import { validateDisplayName, validateFormation } from '../../../shared/validate
 import { ApiClient, ApiError } from './client';
 import { ownedSet } from './types';
 import type { GachaResult } from './types';
-import type { HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
+import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
 import { getTurnstileToken } from '../turnstile';
 
 interface MeResponse {
@@ -161,5 +161,24 @@ export class ApiMeta implements MetaProvider {
     await this.client.post2<{ onboardingDone: boolean }>('/v1/onboarding/complete', {});
     this.data.onboardingDone = true;
     return this.reload();
+  }
+
+  async adsStatus(): Promise<AdsStatus | null> {
+    try {
+      return await this.client.get<AdsStatus>('/v1/ads/status');
+    } catch {
+      return null;
+    }
+  }
+
+  async claimAdReward(provider: AdsStatus['provider']): Promise<AdsClaimResult | null> {
+    try {
+      const res = await this.client.post2<AdsClaimResult>('/v1/ads/reward', { provider });
+      this.data.tickets = res.tickets;
+      return res;
+    } catch (e) {
+      if (e instanceof ApiError && (e.code === 'FEATURE_DISABLED' || e.code === 'VALIDATION')) return null;
+      throw e;
+    }
   }
 }

@@ -1740,6 +1740,7 @@ html, body {
 }
 @keyframes summonSpin { to { transform: rotate(360deg); } }
 .gacha-note { color: #9a8fc0; font-size: 0.82rem; letter-spacing: 0.12em; }
+.gacha-ad-note { color: #7a7198; font-size: 0.72rem; letter-spacing: 0.08em; margin-top: -0.35em; }
 .gacha-rates { color: #6e6590; font-size: 0.72rem; letter-spacing: 0.08em; }
 
 /* 召喚儀式 */

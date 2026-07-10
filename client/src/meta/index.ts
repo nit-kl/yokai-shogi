@@ -11,9 +11,9 @@ import { LocalMeta } from './local';
 import {
   EXCHANGE_COST, bossIdOf, ownedListOf, validateFormationOf,
 } from './types';
-import type { GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
+import type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
 
-export type { GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaState } from './types';
+export type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaState } from './types';
 
 /* vite.config.ts の define で注入(空文字=オフライン) */
 const API_URL = __API_URL__ || undefined;
@@ -73,6 +73,10 @@ class MetaFacade {
   hyakkiStart(): Promise<HyakkiProgress | null> { return this.provider.hyakkiStart(); }
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null> { return this.provider.hyakkiResult(win); }
   hyakkiRanking(): Promise<HyakkiRanking | null> { return this.provider.hyakkiRanking(); }
+  adsStatus(): Promise<AdsStatus | null> { return this.provider.adsStatus(); }
+  claimAdReward(provider: AdsStatus['provider']): Promise<AdsClaimResult | null> {
+    return this.provider.claimAdReward(provider);
+  }
   addTickets(n: number): void { if (n > 0) this.provider.data.tickets += n; }
   /** サーバーが付与済みの妖怪をローカル表示へ反映(対戦会限定妖怪など) */
   addYokai(id: string): void { this.provider.data.owned[id] = 1; }

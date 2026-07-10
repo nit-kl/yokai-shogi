@@ -5,7 +5,7 @@
 ## 前提
 
 - 個人〜少人数での開発・運用を想定し、低コストで始めて段階的にスケールできる構成を選ぶ
-- **課金機能は実装しない**方針を継続する(チケットはログインボーナス、勝利報酬、参加報酬、運営配布のみ)
+- **ユーザー課金(IAP・有償チケット)は実装しない**方針を継続する。運営収入として**任意のリワード広告**は許可する(チケットはログインボーナス、勝利報酬、参加報酬、広告視聴、運営配布)
 - Webブラウザ向けを先行し、ネイティブアプリは当面スコープ外(PWA対応で代替)
 - **インフラはCloudflareに統一**: Pages(配信)/ Workers(API)/ Durable Objects(対戦)/ D1(DB)/ Cron・Turnstile・Analytics Engine(補助)
 - **言語はTypeScriptに統一**(client / server / shared)
@@ -34,6 +34,7 @@
 | 19 | [Discordサーバー作成・運用手順](19-discord-server-setup.md) | サーバー新規作成から権限・チャンネル・安全設定・公開・定例運用までの実作業手順 |
 | 20 | [検索インデックス対応手順](20-search-indexing.md) | Google Search Console登録・sitemap送信・外部リンク整備など検索流入向けの運営作業 |
 | 21 | [百鬼夜行 週間連勝ランキング](21-hyakki-weekly-ranking.md) | ソロ連戦ランキングの仕様・DB・API・UI方針 |
+| 22 | [リワード広告](22-rewarded-ads.md) | 任意視聴リワード・日次上限・API・運営者の開設/有効化手順 |
 | - | [Analytics Engine 確認クエリ](analytics-queries.md) | 登録・オンボーディング・対戦・ランキングの確認用SQL |
 
 ## 読み方
