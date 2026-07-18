@@ -32,6 +32,22 @@ export async function dismissLegacyLoginModal(page) {
   }
 }
 
+/** リリース記念など起動時モーダルを閉じる */
+export async function dismissStartupModals(page) {
+  if (await page.locator('#modal-release-gift:not(.hidden)').count()) {
+    await page.click('#btn-release-gift-ok');
+    await page.waitForTimeout(300);
+  }
+  await dismissLegacyLoginModal(page);
+}
+
+/** 対局の入力ロック(開幕VS・共鳴カットイン等)が解除されるまで待つ */
+export async function waitForBattleInput(page, timeout = 15000) {
+  await page.waitForSelector('#vs-intro.hidden', { state: 'attached', timeout });
+  await page.waitForSelector('#cutin.hidden', { state: 'attached', timeout });
+  await page.waitForFunction(() => window.yk && !window.yk.busy && window.yk.G?.turn === 'p', { timeout });
+}
+
 export async function waitForTitle(page, timeout = 90000) {
   await page.waitForSelector('#screen-title.active', { timeout });
 }
@@ -49,7 +65,7 @@ export async function skipOnboarding(page) {
   });
   await page.reload();
   await waitForTitle(page);
-  await dismissLegacyLoginModal(page);
+  await dismissStartupModals(page);
 }
 
 export async function startSoloBattle(page) {
@@ -57,6 +73,5 @@ export async function startSoloBattle(page) {
   await page.waitForSelector('#screen-solo.active');
   await page.click('#btn-solo-battle');
   await page.waitForSelector('#screen-battle.active');
-  // 開幕VS演出(約2.9秒・入力ロック)の終了を待つ
-  await page.waitForSelector('#vs-intro.hidden', { state: 'attached', timeout: 10000 });
+  await waitForBattleInput(page);
 }
