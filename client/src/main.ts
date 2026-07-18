@@ -607,7 +607,8 @@ function connectMatchmaker(extra: Record<string, string> = {}) {
   const url = Meta.battleUrl();
   if (!url) { $('online-message').textContent = 'オンライン接続が利用できません'; return; }
   online = new OnlineConnection(url);
-  online.onMessage = message => { void onOnlineMessage(message); };
+  /* Promiseを返すことで OnlineConnection の直列キューが演出完了を待つ */
+  online.onMessage = message => onOnlineMessage(message);
   online.onState = state => {
     if (state === 'connected' && onlineMatch) {
       setOnlineConnection('接続済み');
@@ -684,6 +685,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     if (onlineEventYokai) Meta.addYokai(onlineEventYokai);
     clearOnlineMatch();
     stopOnlineTimer();
+    await sleep(750); // 最終手のスキル演出後、ソロと同様に間を置いてからリザルトへ
     showResult();
   }
 }
