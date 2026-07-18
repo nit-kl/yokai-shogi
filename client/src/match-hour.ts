@@ -28,17 +28,13 @@ function formatCountdown(ms: number): string {
 export const MatchHourUI = {
   refresh(): void {
     const open = isMatchHour();
-    const schedule = $('title-online-schedule');
     const randomBtn = $<HTMLButtonElement>('btn-online-random');
     const randomNote = $('online-random-schedule');
 
-    schedule.classList.remove('hidden');
     if (open) {
-      schedule.textContent = `逢魔が時 開催中 — ${meritText()}`;
       randomNote.textContent = `逢魔が時 開催中（20:00〜22:00）— ${meritText()}`;
     } else {
       const remain = formatCountdown(msUntilMatchHourOpen());
-      schedule.textContent = `逢魔が時: ${MATCH_HOUR_LABEL}（あと ${remain}）— ${meritText()}`;
       randomNote.textContent = `ランダムマッチは ${MATCH_HOUR_LABEL} のみです（開始まであと ${remain}）— ${meritText()}`;
     }
 

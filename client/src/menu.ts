@@ -372,7 +372,7 @@ export const MenuUI = {
       }
       card.style.animationDelay = `${i * 0.13}s`;
       card.innerHTML =
-        `<div class="gc-rarity">${def.variantOf ? `${ri.label} 異装` : ri.label}</div>` +
+        `<div class="gc-rarity">${ri.label}</div>` +
         `<img src="${def.img}" alt="${def.name}" draggable="false">` +
         `<div class="gc-name">${def.name}</div>` +
         (r.isNew ? `<div class="gc-tag gc-new">NEW!</div>`
