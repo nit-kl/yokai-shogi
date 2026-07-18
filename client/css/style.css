@@ -771,6 +771,22 @@ html, body {
   opacity: 1;
   box-shadow: inset 0 0 0 3px rgba(255, 226, 130, 0.95), inset 0 0 18px rgba(255, 210, 90, 0.5);
 }
+/* 敵駒の利きプレビュー（自駒の青系と区別しやすい暖色） */
+.cell.hl-enemy-selected .hl {
+  opacity: 1;
+  box-shadow: inset 0 0 0 3px rgba(255, 120, 140, 0.95), inset 0 0 18px rgba(255, 70, 90, 0.45);
+}
+.cell.hl-enemy-move .hl {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255, 140, 70, 0.48) 0%, rgba(255, 120, 50, 0.14) 60%, transparent 75%);
+  animation: hlPulse 1.1s ease-in-out infinite;
+}
+.cell.hl-enemy-capture .hl {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255, 50, 80, 0.58) 0%, rgba(255, 40, 70, 0.2) 60%, transparent 78%);
+  box-shadow: inset 0 0 0 2px rgba(255, 70, 100, 0.9);
+  animation: hlPulse 0.7s ease-in-out infinite;
+}
 .cell.hl-last .hl { opacity: 1; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.28); }
 @keyframes hlPulse { 0%, 100% { transform: scale(0.92); } 50% { transform: scale(1); } }
 

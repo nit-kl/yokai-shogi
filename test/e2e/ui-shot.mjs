@@ -62,8 +62,35 @@ await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
 await cell(1, 4).click({ force: true });
 if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
+if (!await cell(1, 4).evaluate(el => el.classList.contains('hl-selected'))) {
+  errors.push('自駒選択のハイライトが付いていない');
+}
 await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-3-select.png') });
+
+// 敵駒タップ → 利きプレビュー確認（着手はしない）
+const enemyPos = await page.evaluate(() => {
+  const { yk } = window;
+  for (let y = 0; y < 6; y++) {
+    for (let x = 0; x < 5; x++) {
+      const pc = yk.G?.board[y][x];
+      if (pc && pc.owner === 'e') return { x, y };
+    }
+  }
+  return null;
+});
+if (!enemyPos) {
+  errors.push('盤上に敵駒が見つからない');
+} else {
+  await cell(enemyPos.x, enemyPos.y).click({ force: true });
+  if (!await cell(enemyPos.x, enemyPos.y).evaluate(el => el.classList.contains('hl-enemy-selected'))) {
+    errors.push('敵駒の利きプレビューが付いていない');
+  }
+  const enemyRange = await page.locator('#board-cells .cell.hl-enemy-move, #board-cells .cell.hl-enemy-capture').count();
+  if (enemyRange < 1) errors.push('敵駒の移動・攻撃範囲ハイライトが出ていない');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(dir, 'shot-3b-enemy-range.png') });
+}
 
 // (1,3)へ移動 → AIの応手まで待つ
 await cell(1, 3).click({ force: true });
