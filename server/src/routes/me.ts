@@ -7,6 +7,7 @@ import { apiError } from '../lib/errors';
 import { gameDate, prevGameDate } from '../lib/time';
 import {
   currencyLogStmt, getOwnedSet, getProfile, isConstraintError,
+  RELEASE_GIFT_CAMPAIGN_ID, RELEASE_GIFT_TICKETS,
   STREAK_BONUS_TICKETS, TICKETS_CAP,
 } from '../db';
 import { authRequired } from '../middleware';
@@ -25,6 +26,7 @@ meRoutes.get('/me', async c => {
 
   const today = gameDate();
   let loginBonus: { day: number; tickets: number } | null = null;
+  let releaseGift: { tickets: number } | null = null;
 
   const onboardingDone = !!p.onboarding_done;
 
@@ -53,6 +55,31 @@ meRoutes.get('/me', async c => {
     }
   }
 
+  /* リリース記念: オンボーディング完了後に1回だけ自動付与 */
+  if (onboardingDone) {
+    const grant = Math.min(RELEASE_GIFT_TICKETS, Math.max(0, TICKETS_CAP - p.tickets));
+    try {
+      const stmts = [
+        db.prepare('INSERT INTO campaign_grants (user_id, campaign_id, tickets) VALUES (?1, ?2, ?3)')
+          .bind(userId, RELEASE_GIFT_CAMPAIGN_ID, grant),
+      ];
+      if (grant > 0) {
+        const newBalance = p.tickets + grant;
+        stmts.push(
+          db.prepare('UPDATE user_profiles SET tickets = MIN(tickets + ?2, ?3) WHERE user_id = ?1')
+            .bind(userId, grant, TICKETS_CAP),
+          currencyLogStmt(db, userId, 'tickets', grant, newBalance, 'compensation', RELEASE_GIFT_CAMPAIGN_ID),
+        );
+      }
+      await db.batch(stmts);
+      if (grant > 0) releaseGift = { tickets: grant };
+      p = (await getProfile(db, userId))!;
+    } catch (e) {
+      if (!isConstraintError(e)) throw e;
+      p = (await getProfile(db, userId))!;
+    }
+  }
+
   return c.json({
     userId,
     name: p.name,
@@ -61,6 +88,7 @@ meRoutes.get('/me', async c => {
     yoryoku: p.yoryoku,
     onboardingDone,
     ...(loginBonus ? { loginBonus } : {}),
+    ...(releaseGift ? { releaseGift } : {}),
     loginStreak: p.login_streak,
     rating: p.rating,
     wins: p.wins,

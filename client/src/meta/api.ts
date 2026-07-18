@@ -8,7 +8,7 @@ import { validateDisplayName, validateFormation } from '../../../shared/validate
 import { ApiClient, ApiError } from './client';
 import { ownedSet } from './types';
 import type { GachaResult } from './types';
-import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
+import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState, ReleaseGift } from './types';
 import { getTurnstileToken } from '../turnstile';
 
 interface MeResponse {
@@ -16,6 +16,7 @@ interface MeResponse {
   tickets: number; yoryoku: number;
   onboardingDone: boolean;
   loginBonus?: LoginBonus;
+  releaseGift?: ReleaseGift;
   rating: number; wins: number; losses: number;
 }
 
@@ -24,6 +25,8 @@ export class ApiMeta implements MetaProvider {
     tickets: 0, yoryoku: 0, owned: {}, formation: [],
     name: 'プレイヤー', wins: 0, isGuest: true, online: true, onboardingDone: false,
   };
+  /** 直近の /me で付与されたリリース記念(タイトル表示で消費) */
+  pendingReleaseGift: ReleaseGift | null = null;
 
   constructor(private client: ApiClient) {}
 
@@ -51,6 +54,7 @@ export class ApiMeta implements MetaProvider {
     this.data.onboardingDone = me.onboardingDone;
     this.data.owned = Object.fromEntries(col.owned.map(id => [id, 1]));
     this.data.formation = form.rows;
+    this.pendingReleaseGift = me.releaseGift ?? null;
     return me.loginBonus ?? null;
   }
 

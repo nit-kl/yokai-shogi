@@ -11,9 +11,9 @@ import { LocalMeta } from './local';
 import {
   EXCHANGE_COST, bossIdOf, ownedListOf, validateFormationOf,
 } from './types';
-import type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
+import type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState, ReleaseGift } from './types';
 
-export type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaState } from './types';
+export type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaState, ReleaseGift } from './types';
 
 /* vite.config.ts の define で注入(空文字=オフライン) */
 const API_URL = __API_URL__ || undefined;
@@ -23,6 +23,8 @@ class MetaFacade {
   private provider: MetaProvider = new LocalMeta();
   /** init() で受け取ったログインボーナス(タイトル表示で消費) */
   pendingLoginBonus: LoginBonus | null = null;
+  /** リリース記念チケット(タイトル表示で消費) */
+  pendingReleaseGift: ReleaseGift | null = null;
   private forceLocal = false;
   /** APIがメンテナンス中のとき true */
   maintenance = false;
@@ -36,12 +38,14 @@ class MetaFacade {
   /* 起動: API優先・オフラインはローカルへフォールバック */
   async init(): Promise<LoginBonus | null> {
     this.maintenance = false;
+    this.pendingReleaseGift = null;
     if (API_URL && !this.forceLocal) {
       const api = new ApiMeta(new ApiClient(API_URL));
       try {
         const bonus = await api.init();
         this.provider = api;
         this.pendingLoginBonus = bonus;
+        this.pendingReleaseGift = api.pendingReleaseGift;
         return bonus;
       } catch (e) {
         if (e instanceof ApiError && e.code === 'MAINTENANCE') {
@@ -69,7 +73,13 @@ class MetaFacade {
   redeemLinkCode(code: string): Promise<boolean> { return this.provider.redeemLinkCode(code); }
   battleUrl(): string | null { return this.provider.battleUrl(); }
   pickBoss(bossId: string): Promise<string | null> { return this.provider.pickBoss(bossId); }
-  completeOnboarding(): Promise<LoginBonus | null> { return this.provider.completeOnboarding(); }
+  async completeOnboarding(): Promise<LoginBonus | null> {
+    const bonus = await this.provider.completeOnboarding();
+    if (this.provider instanceof ApiMeta) {
+      this.pendingReleaseGift = this.provider.pendingReleaseGift;
+    }
+    return bonus;
+  }
   hyakkiStart(): Promise<HyakkiProgress | null> { return this.provider.hyakkiStart(); }
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null> { return this.provider.hyakkiResult(win); }
   hyakkiRanking(): Promise<HyakkiRanking | null> { return this.provider.hyakkiRanking(); }

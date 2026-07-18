@@ -73,7 +73,8 @@ describe('認証', () => {
     const me = await api('/v1/me', { token: g.accessToken });
     expect(me.body.onboardingDone).toBe(true);
     expect(me.body.loginBonus).toEqual({ day: 1, tickets: 1 });
-    expect(me.body.tickets).toBe(11);
+    expect(me.body.releaseGift).toEqual({ tickets: 100 });
+    expect(me.body.tickets).toBe(111); // 初期10 + ログボ1 + リリース記念100
   });
 
   it('ログインボーナス: 初日付与と同日2回目なし', async () => {
@@ -82,17 +83,20 @@ describe('認証', () => {
     await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
     const first = await api('/v1/me', { token: g.accessToken });
     expect(first.body.loginBonus).toEqual({ day: 1, tickets: 1 });
-    expect(first.body.tickets).toBe(11);
+    expect(first.body.releaseGift).toEqual({ tickets: 100 });
+    expect(first.body.tickets).toBe(111);
 
     const second = await api('/v1/me', { token: g.accessToken });
     expect(second.body.loginBonus).toBeUndefined();
-    expect(second.body.tickets).toBe(11);
+    expect(second.body.releaseGift).toBeUndefined();
+    expect(second.body.tickets).toBe(111);
   });
 
   it('ログインボーナス: オンボーディング中は付与しない', async () => {
     const g = await createGuest();
     const me = await api('/v1/me', { token: g.accessToken });
     expect(me.body.loginBonus).toBeUndefined();
+    expect(me.body.releaseGift).toBeUndefined();
     expect(me.body.tickets).toBe(10);
   });
 
@@ -105,7 +109,8 @@ describe('認証', () => {
       .bind(g.userId, prevGameDate(today)).run();
     const seventh = await api('/v1/me', { token: g.accessToken });
     expect(seventh.body.loginBonus).toEqual({ day: 7, tickets: 3 });
-    expect(seventh.body.tickets).toBe(13); // 初期10 + 7日目3
+    expect(seventh.body.releaseGift).toEqual({ tickets: 100 });
+    expect(seventh.body.tickets).toBe(113); // 初期10 + 7日目3 + リリース記念100
   });
 
   it('ログインボーナス: 連続が途切れたら1日目に戻る', async () => {
@@ -270,7 +275,7 @@ describe('妖力交換', () => {
     ]);
     const ok = await api('/v1/exchange', { method: 'POST', token: g.accessToken, body: '{}' });
     expect(ok.status).toBe(200);
-    expect(ok.body.tickets).toBe(12);
+    expect(ok.body.tickets).toBe(112); // 初期10 + ログボ1 + リリース記念100 + 交換1
     expect(ok.body.yoryoku).toBe(0);
   });
 });
@@ -313,14 +318,14 @@ describe('ソロ勝利報酬', () => {
     const g = await createGuest();
     await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
     await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
-    await api('/v1/me', { token: g.accessToken }); // 11枚
+    await api('/v1/me', { token: g.accessToken }); // 111枚(初期10+ログボ1+リリース100)
 
     const w1 = await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });
-    expect(w1.body).toMatchObject({ granted: 1, tickets: 12, dailyCount: 1 });
+    expect(w1.body).toMatchObject({ granted: 1, tickets: 112, dailyCount: 1 });
     const w2 = await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });
-    expect(w2.body).toMatchObject({ granted: 1, tickets: 13, dailyCount: 2 });
+    expect(w2.body).toMatchObject({ granted: 1, tickets: 113, dailyCount: 2 });
     const w3 = await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });
-    expect(w3.body).toMatchObject({ granted: 0, tickets: 13, dailyCount: 2 });
+    expect(w3.body).toMatchObject({ granted: 0, tickets: 113, dailyCount: 2 });
     expect(w3.body.wins).toBe(3);
   });
 });
@@ -344,7 +349,7 @@ describe('リワード広告(doc 22)', () => {
     const g = await createGuest();
     await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
     await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
-    await api('/v1/me', { token: g.accessToken }); // 11枚
+    await api('/v1/me', { token: g.accessToken }); // 111枚(初期10+ログボ1+リリース100)
 
     const bad = await api('/v1/ads/reward', {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'gpt' }),
@@ -355,17 +360,17 @@ describe('リワード広告(doc 22)', () => {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
     });
     expect(r1.status).toBe(200);
-    expect(r1.body).toMatchObject({ granted: 1, tickets: 12, dailyCount: 1, remaining: 1 });
+    expect(r1.body).toMatchObject({ granted: 1, tickets: 112, dailyCount: 1, remaining: 1 });
 
     const r2 = await api('/v1/ads/reward', {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
     });
-    expect(r2.body).toMatchObject({ granted: 1, tickets: 13, dailyCount: 2, remaining: 0 });
+    expect(r2.body).toMatchObject({ granted: 1, tickets: 113, dailyCount: 2, remaining: 0 });
 
     const r3 = await api('/v1/ads/reward', {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
     });
-    expect(r3.body).toMatchObject({ granted: 0, tickets: 13, dailyCount: 2, remaining: 0 });
+    expect(r3.body).toMatchObject({ granted: 0, tickets: 113, dailyCount: 2, remaining: 0 });
 
     const st = await api('/v1/ads/status', { token: g.accessToken });
     expect(st.body).toMatchObject({ claimed: 2, remaining: 0 });
@@ -562,12 +567,18 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-10-rewarded-ads',
+      id: '2026-07-18-release-gift',
       type: 'campaign',
       priority: 'high',
-      title: 'ガチャ画面で広告視聴ボーナスを準備中です',
+      title: 'リリース記念！ガチャチケット🎟100枚配布',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: '2026-07-10-rewarded-ads',
+        type: 'campaign',
+        priority: 'high',
+        title: 'ガチャ画面で広告視聴ボーナスを準備中です',
+      }),
       expect.objectContaining({
         id: '2026-07-05-hyakki-weekly-ranking',
         type: 'update',
@@ -575,7 +586,6 @@ describe('共通', () => {
         title: '百鬼夜行の週間連勝ランキングが始まりました',
       }),
       expect.objectContaining({ id: '2026-07-04-hyakki-nurarihyon-event' }),
-      expect.objectContaining({ id: '2026-06-28-new-pieces-c93015c' }),
     ]));
   });
 
@@ -583,7 +593,7 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-10-rewarded-ads',
+      id: '2026-07-18-release-gift',
       type: 'campaign',
       priority: 'high',
     });

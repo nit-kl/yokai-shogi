@@ -13,6 +13,15 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-07-18-release-gift',
+    type: 'campaign',
+    title: 'リリース記念！ガチャチケット🎟100枚配布',
+    body: 'オンライン公開を記念して、ガチャチケット100枚をプレゼントします。オンボーディング完了後の起動時に自動で付与されます（お一人様1回）。あわせてがしゃどくろ・宿儺をはじめ妖怪駒13体を追加しました。ガチャや駒一覧から能力を確認できます。',
+    publishedAt: '2026-07-18T09:00:00+09:00',
+    priority: 'high',
+    showUntil: '2026-08-18T23:59:59+09:00',
+  },
+  {
     id: '2026-07-10-rewarded-ads',
     type: 'campaign',
     title: 'ガチャ画面で広告視聴ボーナスを準備中です',

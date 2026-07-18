@@ -133,14 +133,18 @@ export const MenuUI = {
     $('modal-link').classList.remove('hidden');
   },
 
-  /* タイトル表示のたびに呼ばれる: 通貨表示+ログインボーナス演出
-     (ボーナス判定は Meta.init() で済んでおり、結果は pendingLoginBonus にある) */
+  /* タイトル表示のたびに呼ばれる: 通貨表示+配布/ログインボーナス演出
+     (判定は Meta.init() で済んでおり、結果は pending* にある) */
   onEnterTitle() {
     this.refreshCurrency();
     $('title-player-name').textContent = Meta.data.name;
+    const gift = Meta.pendingReleaseGift;
+    Meta.pendingReleaseGift = null;
     const bonus = Meta.pendingLoginBonus;
     Meta.pendingLoginBonus = null;
-    if (bonus) {
+
+    const showLoginBonus = () => {
+      if (!bonus) return;
       $('login-day').textContent = String(bonus.day);
       $('login-tickets').textContent = `×${bonus.tickets}`;
       $('login-next').textContent = (bonus.day % 7 === 0)
@@ -152,7 +156,20 @@ export const MenuUI = {
         $('modal-login').classList.add('hidden');
         this.refreshCurrency();
       };
+    };
+
+    if (gift) {
+      $('release-gift-tickets').textContent = `×${gift.tickets}`;
+      $('modal-release-gift').classList.remove('hidden');
+      $('btn-release-gift-ok').onclick = () => {
+        AudioSys.play('promote');
+        $('modal-release-gift').classList.add('hidden');
+        this.refreshCurrency();
+        showLoginBonus();
+      };
+      return;
     }
+    showLoginBonus();
   },
 
   setOnboardingMode(mode: 'gacha' | 'formation' | null) {

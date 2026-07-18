@@ -1788,8 +1788,11 @@ function renderResultStats() {
 const PIECE_CATALOG_ORDER = [
   'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
   'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
-  'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
+  'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'gashadokuro', 'sukuna',
+  'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
   'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',
+  'aoandon', 'umibozu', 'wanyudo', 'yatagarasu', 'oomyukade', 'inugami', 'tenome', 'nopperabo',
+  'bakezouri', 'sunekosuri', 'kodama',
 ];
 const PIECE_TYPE_ORDER: YokaiType[] = ['boss', 'attack', 'defense', 'ambush', 'debuff', 'support', 'transform', 'trap'];
 const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
