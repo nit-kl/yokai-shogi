@@ -270,7 +270,6 @@ function enterTitle() {
   } else {
     RegistrationStatsUI.stopPolling();
     MatchHourUI.stop();
-    $('title-online-schedule').classList.add('hidden');
   }
 }
 

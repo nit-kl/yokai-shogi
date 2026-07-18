@@ -238,7 +238,7 @@ html, body {
   font-weight: 600;
   letter-spacing: 0.12em;
   line-height: 1.1;
-  margin-bottom: 0;
+  margin-bottom: 0.55em;
   background: linear-gradient(175deg, #fff6d8 8%, var(--gold) 38%, #8a5d10 60%, #f7df9a 82%, #c99a2e 100%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -250,19 +250,6 @@ html, body {
   margin: 0.35em 0 0.55em;
   color: #8f83aa; font: clamp(0.68rem, 2vw, 0.82rem) "Yu Mincho", serif;
   letter-spacing: 0.22em;
-}
-.title-value-props {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
-  margin-bottom: 0.55em;
-}
-.title-value-props span {
-  padding: 4px 9px;
-  color: #fff1b8;
-  border: 1px solid rgba(232,196,106,0.32);
-  border-radius: 999px;
-  background: rgba(232,196,106,0.08);
-  font-size: clamp(0.58rem, 1.8vw, 0.72rem);
-  letter-spacing: 0.08em;
 }
 .title-lead {
   width: min(100%, 460px);
@@ -299,22 +286,6 @@ html, body {
   background: linear-gradient(150deg, #315f8c, #203452 58%, #15152b);
   box-shadow: 0 0 20px rgba(88,182,255,0.2), inset 0 1px rgba(255,255,255,0.15);
 }
-.title-steps {
-  display: flex; justify-content: center; gap: 6px;
-  width: min(100%, 460px);
-  margin-top: 0.5em;
-  color: #7f7398;
-  font-size: 0.64rem;
-  letter-spacing: 0.08em;
-}
-.title-steps span {
-  position: relative;
-  padding: 0 0.85em 0 0;
-}
-.title-steps span:not(:last-child)::after {
-  content: ">";
-  position: absolute; right: 0; color: rgba(232,196,106,0.7);
-}
 .title-registration-stats {
   margin: 0.35rem 0 0;
   color: #8f9eb8;
@@ -322,14 +293,6 @@ html, body {
   letter-spacing: 0.08em;
 }
 .title-registration-stats b { color: #e8c46a; font-weight: 700; }
-.title-online-schedule {
-  margin: 0.35rem 0 0;
-  width: min(100%, 460px);
-  color: #8f9eb8;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-align: center;
-}
 .online-random-schedule {
   margin: 0;
   color: #a99dbd;
@@ -2252,12 +2215,9 @@ html, body {
   .title-sub-top i { width: 16px; }
   .title-logo { font-size: clamp(2.8rem, 15vw, 4.2rem); }
   .title-catch { margin-bottom: 0.45em; font-size: 0.62rem; letter-spacing: 0.12em; }
-  .title-value-props { gap: 4px; margin-bottom: 0.4em; }
-  .title-value-props span { padding: 3px 7px; font-size: 0.56rem; }
   .title-lead { margin-bottom: 0.65em; font-size: 0.66rem; line-height: 1.5; }
   .title-main-actions { gap: 7px; }
   .title-main-actions .btn { padding: 0.62em 0.35em; font-size: 0.88rem; }
-  .title-steps { margin-top: 0.4em; font-size: 0.55rem; }
   .title-menu-label { margin-top: 0.65em; }
   .title-secondary-actions { gap: 5px; width: min(100%, 560px); }
   .title-menu-btn { padding: 6px 2px; }
