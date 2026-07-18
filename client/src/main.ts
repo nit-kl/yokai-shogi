@@ -1029,11 +1029,27 @@ function showInfo(id: string, promoted: boolean) {
 function hideInfo() { $('piece-info').classList.add('hidden'); }
 
 /* ============================== 入力 ============================== */
+const HL_CLASSES = [
+  'hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken',
+  'hl-enemy-move', 'hl-enemy-capture', 'hl-enemy-selected',
+] as const;
+
 function clearSel() {
   sel = null;
-  document.querySelectorAll('.cell').forEach(c =>
-    c.classList.remove('hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken'));
+  document.querySelectorAll('.cell').forEach(c => c.classList.remove(...HL_CLASSES));
   if (G) renderHand('p');
+}
+
+/** 敵駒の移動・攻撃範囲を盤上にプレビュー（着手はしない） */
+function showEnemyRange(x: number, y: number) {
+  if (!G) return;
+  clearSel();
+  const moves = Game.getMoves(G, x, y);
+  AudioSys.play('select');
+  cellEl(x, y).classList.add('hl-enemy-selected');
+  for (const m of moves) {
+    cellEl(m.x, m.y).classList.add(m.capture ? 'hl-enemy-capture' : 'hl-enemy-move');
+  }
 }
 
 function onCellClick(x: number, y: number) {
@@ -1041,10 +1057,11 @@ function onCellClick(x: number, y: number) {
 
   const pc = G.board[y][x];
   if (pc) showInfo(pc.id, pc.promoted);
-  if (G.winner || busy || G.turn !== 'p') return;
+
+  const canAct = !G.winner && !busy && G.turn === 'p';
 
   /* 移動先 / 打ち先 / 覚醒対象として有効か */
-  if (sel) {
+  if (canAct && sel) {
     if (sel.kind === 'piece') {
       const { x: sx, y: sy } = sel;
       const m = sel.moves.find(m => m.x === x && m.y === y);
@@ -1059,10 +1076,21 @@ function onCellClick(x: number, y: number) {
     }
   }
 
-  clearSel();
-  if (!pc) { hideInfo(); return; }
-  if (pc.owner !== 'p') return; // 敵駒は情報表示のみ
+  /* 敵駒: 手番外・演出中でも利きを確認できる */
+  if (pc && pc.owner !== 'p') {
+    showEnemyRange(x, y);
+    return;
+  }
 
+  if (!pc) {
+    clearSel();
+    hideInfo();
+    return;
+  }
+
+  if (!canAct) return;
+
+  clearSel();
   const moves = Game.getMoves(G, x, y);
   if (moves.length === 0) return;
   sel = { kind: 'piece', x, y, moves };
@@ -1760,8 +1788,11 @@ function renderResultStats() {
 const PIECE_CATALOG_ORDER = [
   'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
   'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
-  'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
+  'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'gashadokuro', 'sukuna',
+  'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
   'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',
+  'aoandon', 'umibozu', 'wanyudo', 'yatagarasu', 'oomyukade', 'inugami', 'tenome', 'nopperabo',
+  'bakezouri', 'sunekosuri', 'kodama',
 ];
 const PIECE_TYPE_ORDER: YokaiType[] = ['boss', 'attack', 'defense', 'ambush', 'debuff', 'support', 'transform', 'trap'];
 const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];

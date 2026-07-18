@@ -7,6 +7,12 @@
 - 実装に組み込むときは、`shared/data.ts` の駒定義、ガチャプール、必要な小サイズ画像もあわせて更新します。
 - 公開前に生成手段、利用規約、商用・公開可否、権利帰属を確認します。
 
+## 実装済み（2026-07-18）
+
+以下13体は `shared/data.ts` と WebP 資産へ取り込み済みです（PNG は参照用に残置）。
+
+`aoandon` / `bakezouri` / `gashadokuro` / `inugami` / `kodama` / `nopperabo` / `oomyukade` / `sukuna` / `sunekosuri` / `tenome` / `umibozu` / `wanyudo` / `yatagarasu`
+
 ## ストック駒のイラストデザイン方針
 今後追加するストック駒のイラストは、以下のテイスト・雰囲気で統一します。
 

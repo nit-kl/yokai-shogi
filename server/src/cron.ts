@@ -49,6 +49,7 @@ async function cleanupDormantGuests(db: D1Database): Promise<number> {
       db.prepare('DELETE FROM login_bonus_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM participation_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM ad_reward_logs WHERE user_id = ?1').bind(id),
+      db.prepare('DELETE FROM campaign_grants WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM currency_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM gacha_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM user_yokai WHERE user_id = ?1').bind(id),

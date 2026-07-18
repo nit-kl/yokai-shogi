@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-import { skipOnboarding } from './helpers.mjs';
+import { skipOnboarding, waitForBattleInput } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
@@ -49,12 +49,11 @@ await page.locator('.solo-difficulty').nth(2).click();
 await page.click('#btn-solo-battle');
 await page.waitForSelector('#screen-battle.active');
 if (await page.locator('#enemy-name').textContent() !== '九尾の狐') errors.push('選択したソロステージの敵大将が反映されていない');
-// 開幕VS演出を撮ってから、終了(入力ロック解除)を待つ
+// 開幕VS演出を撮ってから、入力ロック(VS・共鳴カットイン)解除を待つ
 await page.waitForTimeout(900);
 await page.screenshot({ path: path.join(dir, 'shot-2-vs-intro.png') });
 if (await page.locator('#vs-label-p').textContent() !== '九尾使い') errors.push('開幕VS演出にプレイヤーネームが表示されていない');
-await page.waitForSelector('#vs-intro.hidden', { state: 'attached', timeout: 10000 });
-await page.waitForTimeout(500);
+await waitForBattleInput(page);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 
 // 小鬼(x=1,y=4)を選択 → 移動ハイライト確認
@@ -62,8 +61,37 @@ await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
 await cell(1, 4).click({ force: true });
 if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
+if (!await cell(1, 4).evaluate(el => el.classList.contains('hl-selected'))) {
+  errors.push('自駒選択のハイライトが付いていない');
+}
 await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-3-select.png') });
+
+// 敵駒タップ → 利きプレビュー確認（着手はしない）
+// 利きが1マス以上ある敵を選ぶ(角で塞がれた駒だと範囲ハイライト0になりうる)
+const enemyPos = await page.evaluate(() => {
+  const { yk } = window;
+  for (let y = 0; y < 6; y++) {
+    for (let x = 0; x < 5; x++) {
+      const pc = yk.G?.board[y][x];
+      if (!pc || pc.owner !== 'e') continue;
+      if (yk.Game.getMoves(yk.G, x, y).length > 0) return { x, y };
+    }
+  }
+  return null;
+});
+if (!enemyPos) {
+  errors.push('盤上に敵駒が見つからない');
+} else {
+  await cell(enemyPos.x, enemyPos.y).click({ force: true });
+  if (!await cell(enemyPos.x, enemyPos.y).evaluate(el => el.classList.contains('hl-enemy-selected'))) {
+    errors.push('敵駒の利きプレビューが付いていない');
+  }
+  const enemyRange = await page.locator('#board-cells .cell.hl-enemy-move, #board-cells .cell.hl-enemy-capture').count();
+  if (enemyRange < 1) errors.push('敵駒の移動・攻撃範囲ハイライトが出ていない');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(dir, 'shot-3b-enemy-range.png') });
+}
 
 // (1,3)へ移動 → AIの応手まで待つ
 await cell(1, 3).click({ force: true });
