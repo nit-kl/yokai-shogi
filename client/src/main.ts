@@ -1801,8 +1801,8 @@ const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
 const PIECE_RARITY_RANK: Record<Rarity, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
 
 function pieceSourceText(id: string): string {
-  if (YOKAI[id]?.limited) return '土曜対戦会 限定';
-  return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択 / ガチャ' : 'ガチャ';
+  if (YOKAI[id]?.limited) return '土曜対戦会限定';
+  return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択またはガチャ' : 'ガチャ';
 }
 
 function ssrIntroLines(id: string): string[] {
@@ -1811,13 +1811,13 @@ function ssrIntroLines(id: string): string[] {
   const lines: string[] = [];
   if (def.variantOf) lines.push('異装: 通常版と同じ性能。専用演出と覚醒技名を持つ');
   if (def.skill.kind === 'moon') {
-    lines.push(`月齢: 満月の捕獲で確定会心 ×${def.skill.mult}`);
+    lines.push(`月齢: 満月に駒を取ると確定会心 ×${def.skill.mult}`);
   } else if (def.skill.kind === 'heads') {
-    lines.push(`成長: 捕獲ごとに与ダメ+${Math.round(def.skill.step * 100)}%(最大+${Math.round(def.skill.step * def.skill.max * 100)}%)`);
+    lines.push(`成長: 駒を取るごとに与ダメ+${Math.round(def.skill.step * 100)}%(最大+${Math.round(def.skill.step * def.skill.max * 100)}%)`);
   } else if (def.skill.kind === 'legion') {
     lines.push(`布陣: 盤上の味方1体ごとに与ダメ+${Math.round(def.skill.per * 100)}%(最大+${Math.round(def.skill.cap * 100)}%)`);
   } else if (def.skill.kind === 'crit') {
-    lines.push(`会心: 捕獲時${Math.round(def.skill.chance * 100)}%でダメージ×${def.skill.mult}`);
+    lines.push(`会心: 駒を取った時${Math.round(def.skill.chance * 100)}%でダメージ×${def.skill.mult}`);
   }
   if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 3手番ATK×${AWAKEN_ATK}`);
   const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(id)));
