@@ -248,7 +248,9 @@
   <div id="modal-piece-detail" class="modal hidden">
     <div class="modal-box piece-detail-box">
       <div class="piece-detail-head">
-        <img id="piece-detail-img" src="" alt="" draggable="false">
+        <button type="button" id="btn-piece-detail-zoom" class="piece-detail-zoom-btn" aria-label="画像を拡大">
+          <img id="piece-detail-img" src="" alt="" draggable="false">
+        </button>
         <div>
           <div id="piece-detail-tags" class="piece-detail-tags"></div>
           <h2 id="piece-detail-name"></h2>
@@ -265,6 +267,12 @@
       </div>
       <button id="btn-piece-detail-close" class="btn btn-gold">閉じる</button>
     </div>
+  </div>
+
+  <div id="modal-piece-zoom" class="modal piece-zoom-modal hidden" role="dialog" aria-modal="true" aria-label="駒画像の拡大表示">
+    <button type="button" id="btn-piece-zoom-close" class="piece-zoom-close" aria-label="閉じる">×</button>
+    <img id="piece-zoom-img" class="piece-zoom-img" src="" alt="" draggable="false">
+    <p class="piece-zoom-hint">タップで閉じる</p>
   </div>
 
   <div id="onboarding-hint" class="onboarding-hint hidden"></div>

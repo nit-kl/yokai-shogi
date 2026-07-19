@@ -322,7 +322,22 @@ function wireButtons() {
   $('btn-rules2').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-support-battle').onclick = () => { AudioSys.play('click'); SupportUI.open('対局中'); };
   $('btn-close-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.add('hidden'); };
-  $('btn-piece-detail-close').onclick = () => { AudioSys.play('click'); $('modal-piece-detail').classList.add('hidden'); };
+  $('btn-piece-detail-close').onclick = () => { AudioSys.play('click'); closePieceDetail(); };
+  $('btn-piece-detail-zoom').onclick = () => {
+    AudioSys.play('click');
+    openPieceZoom($<HTMLImageElement>('piece-detail-img').src, $('piece-detail-name').textContent || '');
+  };
+  const closeZoom = () => { AudioSys.play('click'); closePieceZoom(); };
+  $('modal-piece-zoom').onclick = closeZoom;
+  $('btn-piece-zoom-close').onclick = ev => { ev.stopPropagation(); closeZoom(); };
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape') return;
+    if (!$('modal-piece-zoom').classList.contains('hidden')) {
+      closePieceZoom();
+      return;
+    }
+    if (!$('modal-piece-detail').classList.contains('hidden')) closePieceDetail();
+  });
   $('btn-pieces').onclick = () => {
     AudioSys.play('click');
     RegistrationStatsUI.stopPolling();
@@ -1956,6 +1971,7 @@ function openPieceDetail(id: string) {
   const img = $<HTMLImageElement>('piece-detail-img');
   img.src = def.img;
   img.alt = def.name;
+  $('btn-piece-detail-zoom').setAttribute('aria-label', `${def.name}の画像を拡大`);
   $('piece-detail-tags').innerHTML =
     `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span>` +
     `<span class="type-chip ${ti.cls}">${ti.label}</span>`;
@@ -1973,6 +1989,23 @@ function openPieceDetail(id: string) {
   if (records > 0) skillDesc += `\n通算発動 ${records}回`;
   $('piece-detail-skill-desc').textContent = skillDesc;
   $('modal-piece-detail').classList.remove('hidden');
+}
+
+function closePieceDetail() {
+  closePieceZoom();
+  $('modal-piece-detail').classList.add('hidden');
+}
+
+function openPieceZoom(src: string, name: string) {
+  if (!src) return;
+  const img = $<HTMLImageElement>('piece-zoom-img');
+  img.src = src;
+  img.alt = name;
+  $('modal-piece-zoom').classList.remove('hidden');
+}
+
+function closePieceZoom() {
+  $('modal-piece-zoom').classList.add('hidden');
 }
 
 function renderPieceCatalog() {
