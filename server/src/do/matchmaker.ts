@@ -48,10 +48,11 @@ export class Matchmaker {
     catch { send(ws, { t: 'error', code: 'VALIDATION', message: 'JSONが不正です' }); return; }
 
     if (msg.t === 'join_queue') {
-      if (this.env.MATCH_HOUR_ENFORCE !== '0' && !isMatchHour()) {
+      /* 既定はいつでもキュー可。緊急時のみ MATCH_HOUR_ENFORCE=1 で逢魔が時に閉じる */
+      if (this.env.MATCH_HOUR_ENFORCE === '1' && !isMatchHour()) {
         send(ws, {
           t: 'error', code: 'MATCH_HOUR_CLOSED',
-          message: 'ランダムマッチは逢魔が時（毎日20:00〜22:00）のみ開放されています',
+          message: 'ただいまメンテナンス中です。集まりやすい時間（毎日20:00〜22:00）に再度お試しください',
         });
         return;
       }

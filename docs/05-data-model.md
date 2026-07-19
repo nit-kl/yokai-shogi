@@ -148,7 +148,7 @@ CREATE TABLE login_bonus_logs (
 ```
 
 ### participation_logs
-逢魔が時・土曜対戦会の完走参加報酬を1日1回に制限する。
+ランダムマッチ・土曜対戦会の完走参加報酬を1日1回に制限する。
 
 ```sql
 CREATE TABLE participation_logs (
@@ -188,6 +188,19 @@ CREATE TABLE hyakki_weekly (
   best_streak INTEGER NOT NULL CHECK (best_streak > 0),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (user_id, week)
+);
+```
+
+### hyakki_week_rewards
+百鬼夜行週間ランキング1位への限定異装付与(週キー単位で冪等)。
+
+```sql
+CREATE TABLE hyakki_week_rewards (
+  week       TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id),
+  yokai_id   TEXT NOT NULL,
+  yokai_new  INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 

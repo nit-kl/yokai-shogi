@@ -180,7 +180,7 @@ PC版またはブラウザ版Discordを基準とする。Discordの画面名が�
 無料・登録不要のブラウザ対戦ゲームです。
 ゲーム: https://yokai-shogi.nit-games.com/?utm_source=discord&utm_medium=community&utm_campaign=server_guide
 
-毎日20:00〜22:00は「逢魔が時」。ランダムマッチへ対戦相手が集まりやすい時間です。
+ランダムマッチはいつでも利用できます。毎日20:00〜22:00は「逢魔が時」で、対戦相手が集まりやすい時間です。
 毎週土曜21:00〜22:00に公式対戦会を開催します。
 
 1. #ルール を確認

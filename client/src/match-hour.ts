@@ -1,4 +1,4 @@
-/* 逢魔が時の表示・ランダムマッチボタン制御 */
+/* 逢魔が時の表示 — ランダムマッチは常時可、20–22は推奨時間として案内 */
 
 import {
   EVENT_PARTICIPATION_TICKETS, EVENT_YOKAI_ID, PARTICIPATION_TICKETS,
@@ -15,8 +15,6 @@ function meritText(): string {
   return yokai ? `${bonus}＆限定「${yokai.name}」入手` : bonus;
 }
 
-let timerId: ReturnType<typeof setInterval> | null = null;
-
 function formatCountdown(ms: number): string {
   const totalSec = Math.max(0, Math.ceil(ms / 1000));
   const h = Math.floor(totalSec / 3600);
@@ -25,6 +23,8 @@ function formatCountdown(ms: number): string {
   return `${m}分`;
 }
 
+let timerId: ReturnType<typeof setInterval> | null = null;
+
 export const MatchHourUI = {
   refresh(): void {
     const open = isMatchHour();
@@ -32,13 +32,14 @@ export const MatchHourUI = {
     const randomNote = $('online-random-schedule');
 
     if (open) {
-      randomNote.textContent = `逢魔が時 開催中（20:00〜22:00）— ${meritText()}`;
+      randomNote.textContent = `逢魔が時 開催中（${MATCH_HOUR_LABEL}）— 対戦相手が集まりやすい時間です。${meritText()}`;
     } else {
       const remain = formatCountdown(msUntilMatchHourOpen());
-      randomNote.textContent = `ランダムマッチは ${MATCH_HOUR_LABEL} のみです（開始まであと ${remain}）— ${meritText()}`;
+      randomNote.textContent =
+        `いつでもマッチ可能。集まりやすい時間は ${MATCH_HOUR_LABEL}（開始まであと ${remain}）。${meritText()}`;
     }
 
-    randomBtn.disabled = !open;
+    randomBtn.disabled = false;
     randomNote.classList.toggle('match-hour-open', open);
   },
 

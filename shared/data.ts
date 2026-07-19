@@ -42,7 +42,7 @@ export interface YokaiDef {
   atk: number;
   rarity: Rarity;
   gachaOnly?: boolean;
-  limited?: boolean;  // ガチャ排出なし(土曜対戦会などイベント限定入手: shared/match-hour.ts)
+  limited?: boolean;  // ガチャ排出なし(土曜対戦会・百鬼ランキング1位など: match-hour / hyakki)
   img: string;    // フルサイズ(512px WebP)
   imgSm: string;  // 小サイズ(チップ・一覧用 WebP)
   moveText: string;
@@ -535,6 +535,18 @@ YOKAI.nurarihyon_hyakki = {
   summonTitle: '百鬼夜行 開幕',
   summonColors: ['#dbe7ff', '#6157a8', '#d98945'],
   awakenName: '百鬼夜行・大団円',
+};
+YOKAI.kyubi_hasha = {
+  ...YOKAI.kyubi,
+  id: 'kyubi_hasha',
+  name: '覇者・九尾',
+  limited: true,  // 百鬼夜行週間ランキング1位(HYAKKI_REWARD_YOKAI_ID)
+  img: img('kyubi-hasha'),
+  imgSm: imgSm('kyubi-hasha'),
+  variantOf: 'kyubi',
+  summonTitle: '百鬼覇者 降臨',
+  summonColors: ['#fff4c8', '#d4a017', '#b21f32'],
+  awakenName: '覇者・月蝕開眼',
 };
 
 /* ---------- 因縁共鳴(伝承ベースのペア。異装は variantOf 経由で同一扱い) ---------- */

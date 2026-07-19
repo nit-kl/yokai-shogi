@@ -19,7 +19,7 @@ import {
 import type { SoloStage } from './solo';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
-import { HYAKKI_RANK_DIFFICULTY } from '../../shared/hyakki';
+import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
 import { FX } from './effects';
@@ -32,7 +32,6 @@ import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
 import { MatchHourUI } from './match-hour';
 import { AnnouncementsUI } from './announcements';
-import { isMatchHour } from '../../shared/match-hour';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
@@ -305,11 +304,6 @@ function wireButtons() {
   };
   $('btn-online-close').onclick = () => closeOnlineModal();
   $('btn-online-random').onclick = () => {
-    if (!isMatchHour()) {
-      MatchHourUI.refresh();
-      $('online-message').textContent = 'ランダムマッチは逢魔が時（毎日20:00〜22:00）のみ開放されています';
-      return;
-    }
     connectMatchmaker();
     online?.send({ t: 'join_queue' });
     $('online-message').textContent = '対戦相手を探しています…';
@@ -496,7 +490,25 @@ function hyakkiRankEligible(): boolean {
   return soloMode === 'streak' && soloDifficulty === HYAKKI_RANK_DIFFICULTY && Meta.online;
 }
 
+function renderHyakkiReward() {
+  const def = YOKAI[HYAKKI_REWARD_YOKAI_ID];
+  const baseName = def.variantOf ? YOKAI[def.variantOf].name : def.name;
+  const card = $('hyakki-reward');
+  const img = $<HTMLImageElement>('hyakki-reward-img');
+  img.src = def.img;
+  img.alt = def.name;
+  $('hyakki-reward-name').textContent = def.name;
+  $('hyakki-reward-desc').textContent =
+    `限定異装（性能は${baseName}と同じ）。月曜リセット後、先週1位へ自動授与。タップで詳細。`;
+  if (def.summonColors) {
+    card.style.setProperty('--reward-light', def.summonColors[0]);
+    card.style.setProperty('--reward-primary', def.summonColors[1]);
+  }
+  card.onclick = () => { AudioSys.play('click'); openPieceDetail(HYAKKI_REWARD_YOKAI_ID); };
+}
+
 function renderHyakkiPanel() {
+  renderHyakkiReward();
   const note = $('hyakki-ranking-note');
   note.textContent = '対象: ソロ対戦 > 連戦 > 上級';
   note.classList.remove('hidden');
@@ -649,13 +661,17 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     const entering = !$('screen-battle').classList.contains('active');
     const shouldRender = entering || pieceEls.size === 0 || message.seq <= onlineSeq;
     G = stateForView(message.state, onlineSide);
-    if (entering) startOnlineBattle();
-    if (shouldRender) { renderAll(); updateHUD(); }
+    if (entering) {
+      /* 盤を描いてから VS→共鳴。await で後続イベントより先に開幕演出を完了させる */
+      await startOnlineBattle();
+    } else if (shouldRender) {
+      renderAll();
+      updateHUD();
+    }
     onlineSeq = message.seq;
     busy = G.turn !== 'p';
     setOnlineConnection('接続済み');
     setOnlineTurnTimer(message.remainMs);
-    if (entering) { summonAnnounced.clear(); resonanceAnnounced.clear(); void announceResonances(); }
   } else if (message.t === 'events') {
     if (!onlineSide) return;
     busy = true;
@@ -770,9 +786,9 @@ function renderOnlineTimers(): void {
   }
 }
 
-function startOnlineBattle() {
+async function startOnlineBattle() {
   trackLandingEvent('online_battle_start');
-  busy = true;
+  busy = true; // 開幕演出中は入力・後続イベント演出をロック
   sel = null;
   pieceEls.forEach(el => el.remove());
   pieceEls.clear();
@@ -790,11 +806,16 @@ function startOnlineBattle() {
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
   AudioSys.startBattleBgm();
-  /* 開幕VS演出(オンラインはタイマーが進むため入力はロックせず、オーバーレイ表示のみ) */
-  void playVsIntro(
+  summonAnnounced.clear();
+  resonanceAnnounced.clear();
+  renderAll();
+  updateHUD();
+  /* ソロと同様に VS → 共鳴の順。await しないと共鳴カットインが VS に被る */
+  await playVsIntro(
     { bossId: onlineMatch?.opponentBossId || ENEMY_BOSS, label: onlineMatch?.opponentName || '対戦相手' },
     'オンライン対戦',
   );
+  await announceResonances();
 }
 
 /* ============================== 盤の構築 ============================== */
@@ -1787,7 +1808,7 @@ function renderResultStats() {
 
 /* ============================== 駒一覧 ============================== */
 const PIECE_CATALOG_ORDER = [
-  'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
+  'kyubi', 'kyubi_eclipse', 'kyubi_hasha', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
   'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
   'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'gashadokuro', 'sukuna',
   'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
@@ -1800,6 +1821,7 @@ const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
 const PIECE_RARITY_RANK: Record<Rarity, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
 
 function pieceSourceText(id: string): string {
+  if (id === HYAKKI_REWARD_YOKAI_ID) return '百鬼夜行ランキング1位限定';
   if (YOKAI[id]?.limited) return '土曜対戦会限定';
   return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択またはガチャ' : 'ガチャ';
 }
@@ -1956,7 +1978,7 @@ function openPieceDetail(id: string) {
 function renderPieceCatalog() {
   const wrap = $('pieces-list');
   const order = [
-    'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
+    'kyubi', 'kyubi_eclipse', 'kyubi_hasha', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
     'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
     'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
     'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',
