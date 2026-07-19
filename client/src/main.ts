@@ -661,13 +661,17 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     const entering = !$('screen-battle').classList.contains('active');
     const shouldRender = entering || pieceEls.size === 0 || message.seq <= onlineSeq;
     G = stateForView(message.state, onlineSide);
-    if (entering) startOnlineBattle();
-    if (shouldRender) { renderAll(); updateHUD(); }
+    if (entering) {
+      /* 盤を描いてから VS→共鳴。await で後続イベントより先に開幕演出を完了させる */
+      await startOnlineBattle();
+    } else if (shouldRender) {
+      renderAll();
+      updateHUD();
+    }
     onlineSeq = message.seq;
     busy = G.turn !== 'p';
     setOnlineConnection('接続済み');
     setOnlineTurnTimer(message.remainMs);
-    if (entering) { summonAnnounced.clear(); resonanceAnnounced.clear(); void announceResonances(); }
   } else if (message.t === 'events') {
     if (!onlineSide) return;
     busy = true;
@@ -782,9 +786,9 @@ function renderOnlineTimers(): void {
   }
 }
 
-function startOnlineBattle() {
+async function startOnlineBattle() {
   trackLandingEvent('online_battle_start');
-  busy = true;
+  busy = true; // 開幕演出中は入力・後続イベント演出をロック
   sel = null;
   pieceEls.forEach(el => el.remove());
   pieceEls.clear();
@@ -802,11 +806,16 @@ function startOnlineBattle() {
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
   AudioSys.startBattleBgm();
-  /* 開幕VS演出(オンラインはタイマーが進むため入力はロックせず、オーバーレイ表示のみ) */
-  void playVsIntro(
+  summonAnnounced.clear();
+  resonanceAnnounced.clear();
+  renderAll();
+  updateHUD();
+  /* ソロと同様に VS → 共鳴の順。await しないと共鳴カットインが VS に被る */
+  await playVsIntro(
     { bossId: onlineMatch?.opponentBossId || ENEMY_BOSS, label: onlineMatch?.opponentName || '対戦相手' },
     'オンライン対戦',
   );
+  await announceResonances();
 }
 
 /* ============================== 盤の構築 ============================== */
