@@ -14,9 +14,10 @@
 - **指標**: その週のベスト連勝数。負けたら0に戻る。
 - **週境界**: ゲーム内日付(JST 4:00リセット: doc 08)ベースの**月曜開始**。
   週が替わると進行中の連勝もリセット(前週王者が持ち越しで新週を即制圧するのを防ぐ)。
-- **報酬**: 通貨・ガチャ関連は付与しない。ランキング画面に**先週のTOP3を掲載するのみ**。
-  ソロ結果は申告制で信用できない(doc 07 / `server/src/routes/solo.ts` 冒頭コメント)ため、
-  不正の旨味を名誉のみに限定する方針を維持する。
+- **報酬**: 通貨・ガチャ関連は付与しない。ランキング画面に**先週のTOP3を掲載**し、
+  **表示上の先週1位**へ限定異装 `kyubi_hasha`(覇者・九尾)を日次cronで自動付与する。
+  性能同一の見た目専用で、既所持ならスキップ。ソロ結果は申告制で信用できない
+  (doc 07 / `server/src/routes/solo.ts` 冒頭コメント)ため、不正の旨味は掲示と見た目に限定する。
 - **連勝カウンタの正本はサーバー**に昇格する。現在の `soloStreak`(`client/src/main.ts`)は
   メモリ上のみでリロードで消えるが、サーバー化によりリロード・端末替えでも継続する。
 
@@ -89,6 +90,15 @@ CREATE INDEX idx_hyakki_weekly_rank ON hyakki_weekly(week, best_streak DESC);
   (`solo_battle_start` の `mode:'streak'`)、週間記録者数(`hyakki_weekly` 行数)、
   週跨ぎ再訪率。
 - リリース時に `shared/announcements.ts` で告知を出す。
+
+## 先週1位報酬(限定異装)
+
+- 定数: `HYAKKI_REWARD_YOKAI_ID = 'kyubi_hasha'`(`shared/hyakki.ts`)
+- 付与: `runDailyJobs` 内で `lastWeek = gameWeek(now-7d)` の表示上1位
+  (`best_streak DESC, updated_at ASC`・`users.status='active'`)へ冪等INSERT
+- 監査: `hyakki_week_rewards(week PK, user_id, yokai_id, yokai_new)` — 週1回
+- 既所持: `yokai_new=0` で監査行のみ。`user_yokai` は増やさない
+- 不変条件: `COUNT(user_yokai) = SUM(gacha_logs.new_count) + SUM(participation_logs.yokai_new) + SUM(hyakki_week_rewards.yokai_new)`
 
 ## 今回やらないこと
 

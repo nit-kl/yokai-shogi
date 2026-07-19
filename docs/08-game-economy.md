@@ -30,7 +30,7 @@
 - 排出率: **N 40% / R 40% / SR 16% / SSR 4%**
 - 10連: SR以上1枠確定(全枠N/Rの場合、最終枠をSR 80% / SSR 20%で引き直し)
 - 被り: 妖力に自動変換(N20 / R50 / SR150 / SSR400)
-- プール: `shared/data.ts` の `GACHA_POOL` が正本。2026-07時点は限定妖怪1体を除く35種(N4 / R11 / SR10 / SSR10)
+- プール: `shared/data.ts` の `GACHA_POOL` が正本。2026-07時点は限定妖怪2体(`nurarihyon_hyakki`・`kyubi_hasha`)を除く35種(N4 / R11 / SR10 / SSR10)
 
 ### 天井(Pity)の導入検討 — Phase 3
 
@@ -105,7 +105,7 @@ SSRを「数字が大きいだけの駒」から「使っていて楽しい駒�
 
 ```
 1. user_profiles.tickets == 初期値 + Σ currency_logs.delta (tickets)
-2. user_yokai の件数増加は gacha_logs の new_count 合計+参加報酬の新規付与数と一致
+2. user_yokai の件数増加は gacha_logs の new_count 合計+参加報酬の新規付与数+百鬼1位報酬の yokai_new 合計と一致
 3. 日次の勝利報酬付与 ≦ 上限 × アクティブユーザー数
 4. gacha_logs の レアリティ実測分布が理論値から大きく乖離していない(乱数バグ検知)
 ```

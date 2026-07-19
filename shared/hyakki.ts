@@ -8,6 +8,8 @@ export const HYAKKI_RANKING_TOP = 20;
 export const HYAKKI_LAST_WEEK_TOP = 3;
 /** 開始申告からこの時間未満の勝利報告は負け扱い(スクリプト連打対策) */
 export const HYAKKI_MIN_DURATION_MS = 30_000;
+/** 先週1位への限定異装報酬(通貨なし・見た目のみ: doc 21) */
+export const HYAKKI_REWARD_YOKAI_ID = 'kyubi_hasha';
 
 /** start/result 申告のレスポンス */
 export interface HyakkiProgress {

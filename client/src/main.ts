@@ -19,7 +19,7 @@ import {
 import type { SoloStage } from './solo';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
-import { HYAKKI_RANK_DIFFICULTY } from '../../shared/hyakki';
+import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
 import { FX } from './effects';
@@ -496,7 +496,25 @@ function hyakkiRankEligible(): boolean {
   return soloMode === 'streak' && soloDifficulty === HYAKKI_RANK_DIFFICULTY && Meta.online;
 }
 
+function renderHyakkiReward() {
+  const def = YOKAI[HYAKKI_REWARD_YOKAI_ID];
+  const baseName = def.variantOf ? YOKAI[def.variantOf].name : def.name;
+  const card = $('hyakki-reward');
+  const img = $<HTMLImageElement>('hyakki-reward-img');
+  img.src = def.img;
+  img.alt = def.name;
+  $('hyakki-reward-name').textContent = def.name;
+  $('hyakki-reward-desc').textContent =
+    `限定異装（性能は${baseName}と同じ）。月曜リセット後、先週1位へ自動授与。タップで詳細。`;
+  if (def.summonColors) {
+    card.style.setProperty('--reward-light', def.summonColors[0]);
+    card.style.setProperty('--reward-primary', def.summonColors[1]);
+  }
+  card.onclick = () => { AudioSys.play('click'); openPieceDetail(HYAKKI_REWARD_YOKAI_ID); };
+}
+
 function renderHyakkiPanel() {
+  renderHyakkiReward();
   const note = $('hyakki-ranking-note');
   note.textContent = '対象: ソロ対戦 > 連戦 > 上級';
   note.classList.remove('hidden');
@@ -1787,7 +1805,7 @@ function renderResultStats() {
 
 /* ============================== 駒一覧 ============================== */
 const PIECE_CATALOG_ORDER = [
-  'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
+  'kyubi', 'kyubi_eclipse', 'kyubi_hasha', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
   'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
   'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'gashadokuro', 'sukuna',
   'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
@@ -1800,6 +1818,7 @@ const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
 const PIECE_RARITY_RANK: Record<Rarity, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
 
 function pieceSourceText(id: string): string {
+  if (id === HYAKKI_REWARD_YOKAI_ID) return '百鬼夜行ランキング1位限定';
   if (YOKAI[id]?.limited) return '土曜対戦会限定';
   return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択またはガチャ' : 'ガチャ';
 }
@@ -1956,7 +1975,7 @@ function openPieceDetail(id: string) {
 function renderPieceCatalog() {
   const wrap = $('pieces-list');
   const order = [
-    'kyubi', 'kyubi_eclipse', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
+    'kyubi', 'kyubi_eclipse', 'kyubi_hasha', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
     'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
     'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
     'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',

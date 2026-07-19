@@ -13,6 +13,15 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-07-19-hyakki-hasha-kyubi',
+    type: 'campaign',
+    title: '百鬼夜行ランキング1位に「覇者・九尾」を授与',
+    body: 'ソロ連戦「百鬼夜行」上級の週間ランキングで先週1位になったプレイヤーへ、限定異装「覇者・九尾」を自動で授与します。性能は九尾の狐と同じ見た目専用の異装で、ガチャでは排出されません。既に所持している場合は追加付与はありません。月曜4:00の週替わり後に配布されます。',
+    publishedAt: '2026-07-19T10:00:00+09:00',
+    priority: 'high',
+    showUntil: '2026-08-19T23:59:59+09:00',
+  },
+  {
     id: '2026-07-18-release-gift',
     type: 'campaign',
     title: 'リリース記念！ガチャチケット🎟100枚配布',

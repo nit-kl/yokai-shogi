@@ -65,6 +65,7 @@ test('shared/gacha: limited(イベント限定)以外の全妖怪が排出対象
   expect(new Set(GACHA_POOL)).toEqual(new Set(Object.keys(YOKAI).filter(id => !YOKAI[id].limited)));
   for (const id of GACHA_POOL) expect(YOKAI[id].limited, '限定妖怪はガチャ排出しない: ' + id).toBeFalsy();
   expect(GACHA_POOL.includes('nurarihyon_hyakki'), '対戦会限定はプール外').toBe(false);
+  expect(GACHA_POOL.includes('kyubi_hasha'), '百鬼1位限定はプール外').toBe(false);
 });
 
 test('shared/gacha: 排出率公開の重みと個別確率', () => {

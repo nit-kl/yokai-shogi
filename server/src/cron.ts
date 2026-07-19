@@ -1,10 +1,12 @@
 /* 日次バッチ(Cron Triggers: JST 04:00)
    - 経済の不変条件チェック(doc 08)→ 違反はWorkers Logsへ(console.error)
+   - 百鬼夜行・先週1位への限定異装付与(doc 21)
    - 休眠ゲスト削除(30日未アクセス・連携なし: doc 06)
    - 期限切れリフレッシュトークン掃除 */
 
 import type { Env } from './env';
-import { gameDateDaysAgo } from './lib/time';
+import { gameDateDaysAgo, gameWeek } from './lib/time';
+import { HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 
 interface BalanceMismatch { user_id: string; balance: number; log_sum: number; }
 
@@ -19,14 +21,60 @@ async function checkCurrencyInvariant(db: D1Database, currency: 'tickets' | 'yor
   return rs.results;
 }
 
-/* 不変条件2: 所持妖怪数 == ガチャ・オンボーディング大将の new_count 合計 + 対戦会限定妖怪の新規付与数 */
+/* 不変条件2: 所持妖怪数 == ガチャ・オンボーディング大将の new_count + 対戦会限定 + 百鬼1位報酬 */
 async function checkYokaiInvariant(db: D1Database): Promise<{ actual: number; expected: number } | null> {
   const row = await db.prepare(`
     SELECT (SELECT COUNT(*) FROM user_yokai) AS actual,
            IFNULL((SELECT SUM(new_count) FROM gacha_logs), 0)
-         + IFNULL((SELECT SUM(yokai_new) FROM participation_logs), 0) AS expected`)
+         + IFNULL((SELECT SUM(yokai_new) FROM participation_logs), 0)
+         + IFNULL((SELECT SUM(yokai_new) FROM hyakki_week_rewards), 0) AS expected`)
     .first<{ actual: number; expected: number }>();
   return row && row.actual !== row.expected ? row : null;
+}
+
+/** 先週の表示上1位(連勝降順・先着)へ限定異装を冪等付与。通貨は付けない */
+async function grantHyakkiWeeklyReward(db: D1Database, now: Date = new Date()): Promise<{
+  week: string; granted: boolean; yokaiNew: boolean;
+}> {
+  const lastWeek = gameWeek(new Date(now.getTime() - 7 * 86400e3));
+  const already = await db.prepare('SELECT 1 AS ok FROM hyakki_week_rewards WHERE week = ?1')
+    .bind(lastWeek).first();
+  if (already) return { week: lastWeek, granted: false, yokaiNew: false };
+
+  const winner = await db.prepare(`
+    SELECT r.user_id AS user_id
+      FROM hyakki_weekly r
+      JOIN users u ON u.id = r.user_id AND u.status = 'active'
+     WHERE r.week = ?1
+     ORDER BY r.best_streak DESC, r.updated_at ASC
+     LIMIT 1`).bind(lastWeek).first<{ user_id: string }>();
+  if (!winner) return { week: lastWeek, granted: false, yokaiNew: false };
+
+  const owned = await db.prepare(
+    'SELECT 1 AS ok FROM user_yokai WHERE user_id = ?1 AND yokai_id = ?2',
+  ).bind(winner.user_id, HYAKKI_REWARD_YOKAI_ID).first();
+  const yokaiNew = !owned;
+
+  const stmts = [
+    db.prepare(
+      'INSERT INTO hyakki_week_rewards (week, user_id, yokai_id, yokai_new) VALUES (?1, ?2, ?3, ?4)',
+    ).bind(lastWeek, winner.user_id, HYAKKI_REWARD_YOKAI_ID, yokaiNew ? 1 : 0),
+  ];
+  if (yokaiNew) {
+    stmts.push(db.prepare(
+      'INSERT INTO user_yokai (user_id, yokai_id) VALUES (?1, ?2)',
+    ).bind(winner.user_id, HYAKKI_REWARD_YOKAI_ID));
+  }
+  try {
+    await db.batch(stmts);
+  } catch (e) {
+    /* 週キーPK衝突は並行cronの冪等結果として無視 */
+    if (String(e).includes('UNIQUE') || String(e).includes('constraint')) {
+      return { week: lastWeek, granted: false, yokaiNew: false };
+    }
+    throw e;
+  }
+  return { week: lastWeek, granted: true, yokaiNew };
 }
 
 /* 休眠ゲスト削除: 連携なし(auth_identitiesなし)・作成から30日超・最終ログイン30日超 */
@@ -50,6 +98,8 @@ async function cleanupDormantGuests(db: D1Database): Promise<number> {
       db.prepare('DELETE FROM participation_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM ad_reward_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM campaign_grants WHERE user_id = ?1').bind(id),
+      db.prepare('DELETE FROM hyakki_week_rewards WHERE user_id = ?1').bind(id),
+      db.prepare('DELETE FROM hyakki_weekly WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM currency_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM gacha_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM user_yokai WHERE user_id = ?1').bind(id),
@@ -70,10 +120,12 @@ async function cleanupExpiredTokens(db: D1Database): Promise<number> {
 
 export async function runDailyJobs(env: Env): Promise<{
   ticketMismatches: number; yoryokuMismatches: number; yokaiMismatch: boolean;
-  dormantDeleted: number; tokensDeleted: number;
+  hyakkiRewardGranted: boolean; dormantDeleted: number; tokensDeleted: number;
 }> {
   const db = env.DB;
   await db.prepare('UPDATE user_profiles SET online_win_reward_count = 0').run();
+
+  const hyakkiReward = await grantHyakkiWeeklyReward(db);
 
   const tickets = await checkCurrencyInvariant(db, 'tickets');
   const yoryoku = await checkCurrencyInvariant(db, 'yoryoku');
@@ -83,6 +135,9 @@ export async function runDailyJobs(env: Env): Promise<{
   for (const m of tickets) console.error('[invariant] tickets mismatch', JSON.stringify(m));
   for (const m of yoryoku) console.error('[invariant] yoryoku mismatch', JSON.stringify(m));
   if (yokai) console.error('[invariant] user_yokai count mismatch', JSON.stringify(yokai));
+  if (hyakkiReward.granted) {
+    console.log('[cron] hyakki weekly reward', JSON.stringify(hyakkiReward));
+  }
 
   const dormantDeleted = await cleanupDormantGuests(db);
   const tokensDeleted = await cleanupExpiredTokens(db);
@@ -91,6 +146,7 @@ export async function runDailyJobs(env: Env): Promise<{
     ticketMismatches: tickets.length,
     yoryokuMismatches: yoryoku.length,
     yokaiMismatch: !!yokai,
+    hyakkiRewardGranted: hyakkiReward.granted,
     dormantDeleted,
     tokensDeleted,
   };

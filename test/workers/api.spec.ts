@@ -531,6 +531,46 @@ describe('日次バッチ(Cron)', () => {
     expect(summary.yokaiMismatch).toBe(false);
   });
 
+  it('先週1位へ覇者・九尾を冪等付与し、既所持ならスキップする', async () => {
+    const g = await createGuest();
+    await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
+    const lastWeek = gameWeek(new Date(Date.now() - 7 * 86400e3));
+    /* 先行テストの cron / 週跨ぎ記録が lastWeek を埋めているので作り直す。
+       報酬行だけ消すと yokai_new と user_yokai が食い違うため、新規付与分の所持も戻す */
+    const prior = await env.DB.prepare(
+      'SELECT user_id, yokai_id FROM hyakki_week_rewards WHERE yokai_new = 1',
+    ).all<{ user_id: string; yokai_id: string }>();
+    for (const r of prior.results) {
+      await env.DB.prepare('DELETE FROM user_yokai WHERE user_id = ?1 AND yokai_id = ?2')
+        .bind(r.user_id, r.yokai_id).run();
+    }
+    await env.DB.prepare('DELETE FROM hyakki_week_rewards').run();
+    await env.DB.prepare('DELETE FROM hyakki_weekly WHERE week = ?1').bind(lastWeek).run();
+    await env.DB.prepare(
+      'INSERT INTO hyakki_weekly (user_id, week, best_streak) VALUES (?1, ?2, 3)',
+    ).bind(g.userId, lastWeek).run();
+
+    const first = await runDailyJobs(env);
+    expect(first.hyakkiRewardGranted).toBe(true);
+    expect(first.yokaiMismatch).toBe(false);
+    const owned = await env.DB.prepare(
+      "SELECT yokai_id FROM user_yokai WHERE user_id = ?1 AND yokai_id = 'kyubi_hasha'",
+    ).bind(g.userId).first();
+    expect(owned).not.toBeNull();
+    const reward = await env.DB.prepare(
+      'SELECT yokai_new FROM hyakki_week_rewards WHERE week = ?1',
+    ).bind(lastWeek).first<{ yokai_new: number }>();
+    expect(reward?.yokai_new).toBe(1);
+
+    const second = await runDailyJobs(env);
+    expect(second.hyakkiRewardGranted).toBe(false);
+    expect(second.yokaiMismatch).toBe(false);
+    const count = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM user_yokai WHERE user_id = ?1 AND yokai_id = 'kyubi_hasha'",
+    ).bind(g.userId).first<{ n: number }>();
+    expect(count?.n).toBe(1);
+  });
+
   it('休眠ゲスト(30日超・連携なし)が削除され、連携済みは残る', async () => {
     const dormant = await createGuest();
     const linked = await createGuest();
@@ -567,12 +607,18 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-18-release-gift',
+      id: '2026-07-19-hyakki-hasha-kyubi',
       type: 'campaign',
       priority: 'high',
-      title: 'リリース記念！ガチャチケット🎟100枚配布',
+      title: '百鬼夜行ランキング1位に「覇者・九尾」を授与',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: '2026-07-18-release-gift',
+        type: 'campaign',
+        priority: 'high',
+        title: 'リリース記念！ガチャチケット🎟100枚配布',
+      }),
       expect.objectContaining({
         id: '2026-07-10-rewarded-ads',
         type: 'campaign',
@@ -593,7 +639,7 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-18-release-gift',
+      id: '2026-07-19-hyakki-hasha-kyubi',
       type: 'campaign',
       priority: 'high',
     });
