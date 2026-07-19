@@ -12,7 +12,7 @@ export interface Env {
   /* CORS許可オリジン(カンマ区切り) */
   ALLOWED_ORIGINS?: string;
   MAINTENANCE?: string;
-  /* 未設定または '1' なら逢魔が時以外のランダムマッチを拒否(テストは '0') */
+  /* '1' のときだけ逢魔が時以外のランダムマッチを拒否(緊急クローズ用。未設定/'0' は常時開放) */
   MATCH_HOUR_ENFORCE?: string;
   /* 参加報酬の最低アクション数の上書き(テスト用。未設定は shared/match-hour.ts の既定値) */
   PARTICIPATION_MIN_ACTIONS?: string;

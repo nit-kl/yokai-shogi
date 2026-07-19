@@ -1,4 +1,4 @@
-/* 逢魔が時 — ランダムマッチ開放時間帯(JST) */
+/* 逢魔が時 — ランダムマッチの推奨時間帯(JST)。キュー自体は常時開放(緊急時のみ MATCH_HOUR_ENFORCE=1) */
 
 export const MATCH_HOUR_START = 20;
 export const MATCH_HOUR_END = 22;

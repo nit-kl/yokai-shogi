@@ -32,7 +32,6 @@ import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
 import { MatchHourUI } from './match-hour';
 import { AnnouncementsUI } from './announcements';
-import { isMatchHour } from '../../shared/match-hour';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
@@ -305,11 +304,6 @@ function wireButtons() {
   };
   $('btn-online-close').onclick = () => closeOnlineModal();
   $('btn-online-random').onclick = () => {
-    if (!isMatchHour()) {
-      MatchHourUI.refresh();
-      $('online-message').textContent = 'ランダムマッチは逢魔が時（毎日20:00〜22:00）のみ開放されています';
-      return;
-    }
     connectMatchmaker();
     online?.send({ t: 'join_queue' });
     $('online-message').textContent = '対戦相手を探しています…';

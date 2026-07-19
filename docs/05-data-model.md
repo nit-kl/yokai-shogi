@@ -148,7 +148,7 @@ CREATE TABLE login_bonus_logs (
 ```
 
 ### participation_logs
-逢魔が時・土曜対戦会の完走参加報酬を1日1回に制限する。
+ランダムマッチ・土曜対戦会の完走参加報酬を1日1回に制限する。
 
 ```sql
 CREATE TABLE participation_logs (

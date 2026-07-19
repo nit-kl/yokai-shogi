@@ -13,6 +13,15 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-07-19-random-match-anytime',
+    type: 'update',
+    title: 'ランダムマッチをいつでも利用できるようにしました',
+    body: 'オンライン対戦のランダムマッチは、これまで逢魔が時（毎日20:00〜22:00）のみでしたが、いつでもキューに入れるようになりました。対戦相手が集まりやすい時間はこれまでどおり20:00〜22:00です。土曜の逢魔が時は土曜対戦会として報酬が増え、限定妖怪の初回入手もあります。待ち時間が長いときはAI対戦への切り替えもご利用ください。',
+    publishedAt: '2026-07-19T11:00:00+09:00',
+    priority: 'high',
+    showUntil: '2026-08-19T23:59:59+09:00',
+  },
+  {
     id: '2026-07-19-hyakki-hasha-kyubi',
     type: 'campaign',
     title: '百鬼夜行ランキング1位に「覇者・九尾」を授与',

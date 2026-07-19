@@ -607,12 +607,18 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-19-hyakki-hasha-kyubi',
-      type: 'campaign',
+      id: '2026-07-19-random-match-anytime',
+      type: 'update',
       priority: 'high',
-      title: '百鬼夜行ランキング1位に「覇者・九尾」を授与',
+      title: 'ランダムマッチをいつでも利用できるようにしました',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: '2026-07-19-hyakki-hasha-kyubi',
+        type: 'campaign',
+        priority: 'high',
+        title: '百鬼夜行ランキング1位に「覇者・九尾」を授与',
+      }),
       expect.objectContaining({
         id: '2026-07-18-release-gift',
         type: 'campaign',
@@ -639,8 +645,8 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-19-hyakki-hasha-kyubi',
-      type: 'campaign',
+      id: '2026-07-19-random-match-anytime',
+      type: 'update',
       priority: 'high',
     });
     const timestamps = r.body.announcements.map((item: { publishedAt: string }) => Date.parse(item.publishedAt));
