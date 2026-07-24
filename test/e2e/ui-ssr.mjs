@@ -2,7 +2,9 @@
    node test/e2e/ui-ssr.mjs  ※ vite preview (port 4173) が起動済みであること
 
    激怒・覚醒は doAction(演出+hard AI) を使わず Game.applyAction で状態を進め、
-   renderAll/updateHUD で DOM を同期する。CI の長尺演出・AI手番タイムアウトを避ける。 */
+   renderAll/updateHUD で DOM を同期する。CI の長尺演出・AI手番タイムアウトを避ける。
+
+   注意: 百鬼の敵大将はランダム。敵も九尾になりうるので、探索は必ず owner==='p' で絞る。 */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -47,9 +49,10 @@ if (resonating < 2) errors.push(`共鳴中の駒の光輪が出ていない: ${r
 /* 3) 妖狐相伝: エンジンで捕獲を適用し、激怒状態+オーラDOMを同期確認(AI/演出なし) */
 const enrageOk = await page.evaluate(() => {
   const { yk } = window;
+  const playerKyubi = () => yk.G.board.flat().find(pc => pc && pc.id === 'kyubi' && pc.owner === 'p');
   yk.busy = false;
   yk.G.winner = null;
-  /* unit test と同じ斜め取り: 猫又(1,2) → 玉藻前(2,3)。九尾は明示配置 */
+  /* unit test と同じ斜め取り: 猫又(1,2) → 玉藻前(2,3)。自軍九尾は明示配置 */
   yk.G.board[5][2] = { uid: 919, id: 'kyubi', owner: 'p', promoted: false };
   yk.G.board[3][2] = { uid: 920, id: 'tamamo', owner: 'p', promoted: false };
   yk.G.board[2][1] = { uid: 921, id: 'nekomata', owner: 'e', promoted: false };
@@ -57,17 +60,18 @@ const enrageOk = await page.evaluate(() => {
   const events = yk.Game.applyAction(yk.G, { kind: 'move', from: { x: 1, y: 2 }, to: { x: 2, y: 3 } });
   yk.renderAll();
   yk.updateHUD();
-  const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi');
-  const hasEvent = events.some(e => e.t === 'capture' && e.enrage && e.enrage.id === 'kyubi');
+  const kyubi = playerKyubi();
+  const hasEvent = events.some(e =>
+    e.t === 'capture' && e.enrage && e.enrage.id === 'kyubi' && e.enrage.owner === 'p');
   return {
     hasEvent,
     enraged: !!(kyubi && kyubi.enraged),
-    aura: document.querySelectorAll('.piece.enraged').length >= 1,
+    aura: document.querySelectorAll('.piece.owner-p.enraged').length >= 1,
     turn: yk.G.turn,
   };
 });
 if (!enrageOk.hasEvent || !enrageOk.enraged || !enrageOk.aura) {
-  errors.push('妖狐相伝の激怒(状態+オーラ)が発動していない');
+  errors.push(`妖狐相伝の激怒(状態+オーラ)が発動していない (${JSON.stringify(enrageOk)})`);
 }
 await page.screenshot({ path: path.join(dir, 'shot-ssr2-enraged.png') });
 
@@ -77,16 +81,16 @@ await page.evaluate(() => {
   yk.busy = false;
   yk.G.winner = null;
   yk.G.turn = 'p';
-  /* 九尾+酒呑異装を残し、覚醒対象が2体以上になるようにする */
-  if (!yk.G.board.flat().some(pc => pc && pc.id === 'kyubi')) {
+  if (!yk.G.board.flat().some(pc => pc && pc.id === 'kyubi' && pc.owner === 'p')) {
     yk.G.board[5][2] = { uid: 930, id: 'kyubi', owner: 'p', promoted: false };
   }
-  if (!yk.G.board.flat().some(pc => pc && pc.id === 'shuten_kishin')) {
+  if (!yk.G.board.flat().some(pc => pc && pc.id === 'shuten_kishin' && pc.owner === 'p')) {
     yk.G.board[3][0] = { uid: 910, id: 'shuten_kishin', owner: 'p', promoted: false };
   }
-  /* 覚醒未使用の九尾にする */
-  const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi');
+  const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi' && pc.owner === 'p');
   if (kyubi) delete kyubi.awakenUntil;
+  const shuten = yk.G.board.flat().find(pc => pc && pc.id === 'shuten_kishin' && pc.owner === 'p');
+  if (shuten) delete shuten.awakenUntil;
   yk.G.awaken.p = { gauge: 6, used: false };
   yk.renderAll();
   yk.updateHUD();
@@ -114,23 +118,26 @@ const awakenOk = await page.evaluate(() => {
     if (at) break;
   }
   if (!at) return { ok: false, reason: 'no-kyubi' };
+  const beforePly = yk.G.plies;
   yk.Game.applyAction(yk.G, { kind: 'awaken', to: at });
-  /* 敵手番にはせず、UI同期だけ行う */
+  /* 敵手番・AIには入らせない */
   yk.G.turn = 'p';
   yk.busy = false;
   yk.renderAll();
   yk.updateHUD();
-  const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi');
+  const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi' && pc.owner === 'p');
   return {
     ok: true,
     used: yk.G.awaken.p.used === true,
     until: kyubi?.awakenUntil !== undefined,
-    aura: document.querySelectorAll('.piece.awakened').length >= 1,
+    aura: document.querySelectorAll('.piece.owner-p.awakened').length >= 1,
     btnHidden: document.getElementById('btn-awaken').classList.contains('hidden'),
+    beforePly,
+    awakenUntil: kyubi?.awakenUntil ?? null,
   };
 });
 if (!awakenOk.ok || !awakenOk.used || !awakenOk.until || !awakenOk.aura || !awakenOk.btnHidden) {
-  errors.push('覚醒の発動(状態・オーラ・ボタン消灯)が確認できない');
+  errors.push(`覚醒の発動(状態・オーラ・ボタン消灯)が確認できない (${JSON.stringify(awakenOk)})`);
 }
 await page.screenshot({ path: path.join(dir, 'shot-ssr3-awaken.png') });
 
