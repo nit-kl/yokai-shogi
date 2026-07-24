@@ -553,6 +553,32 @@
     </div>
   </div>
 
+  <!-- 引き継ぎコード催促 -->
+  <div id="modal-link-nudge" class="modal hidden">
+    <div class="modal-box link-box">
+      <h2>データを守りましょう</h2>
+      <p class="link-desc">ブラウザのデータを消すと進行が失われます。<b>引き継ぎコードを発行してメモ</b>しておけば、別の端末からも復元できます。</p>
+      <button id="btn-nudge-issue" class="btn btn-gold">コードを発行する</button>
+      <div id="nudge-code-display" class="link-code hidden"></div>
+      <div id="nudge-msg" class="link-msg"></div>
+      <button id="btn-nudge-later" class="btn btn-dark btn-sub">あとで</button>
+    </div>
+  </div>
+
+  <!-- セッション失効・復元 -->
+  <div id="modal-session-recovery" class="modal hidden">
+    <div class="modal-box link-box">
+      <h2>セッションが切れました</h2>
+      <p class="link-desc">端末のデータが消えたか、長期間アクセスがなかった可能性があります。<b>引き継ぎコードがあれば復元</b>できます。コードがない場合は新規開始になります。</p>
+      <input id="recovery-code-input" type="text" maxlength="40" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+      <button id="btn-recovery-redeem" class="btn btn-gold">コードで復元</button>
+      <hr class="link-sep">
+      <p class="link-desc">コードがない場合は、新しい進行で始められます。</p>
+      <button id="btn-recovery-new" class="btn btn-dark">新規に始める</button>
+      <div id="recovery-msg" class="link-msg"></div>
+    </div>
+  </div>
+
   <!-- オンライン対戦モーダル -->
   <div id="modal-online" class="modal hidden">
     <div class="modal-box online-box">

@@ -14,6 +14,9 @@ import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
 
+const LINK_NUDGE_KEY = 'yokaiShogi.linkNudge.v1';
+const LINK_NUDGE_INTERVAL_MS = 3 * 86400e3; // 3日おきに再催促
+
 export const MenuUI = {
   rows: null as unknown as (string | null)[][], // 編成画面の作業用コピー [前段, 最奥段]
   benchSel: null as string | null,              // 選択中の控え妖怪id
@@ -158,6 +161,7 @@ export const MenuUI = {
         disp.textContent = code;
         disp.classList.remove('hidden');
         $('link-msg').textContent = 'コードを発行しました。メモして保管してください。';
+        this.clearLinkNudgeSnooze();
       } catch (e) {
         $('link-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
       } finally {
@@ -183,6 +187,82 @@ export const MenuUI = {
         btn.disabled = false;
       }
     };
+    this.initLinkNudge();
+    this.initSessionRecovery();
+  },
+
+  initLinkNudge() {
+    $('btn-nudge-issue').onclick = async () => {
+      const btn = $<HTMLButtonElement>('btn-nudge-issue');
+      btn.disabled = true;
+      $('nudge-msg').textContent = '';
+      try {
+        const code = await Meta.issueLinkCode();
+        const disp = $('nudge-code-display');
+        disp.textContent = code;
+        disp.classList.remove('hidden');
+        $('nudge-msg').textContent = '発行しました。このコードをメモして保管してください。';
+        this.clearLinkNudgeSnooze();
+        btn.classList.add('hidden');
+        $('btn-nudge-later').textContent = '閉じる';
+      } catch (e) {
+        $('nudge-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    $('btn-nudge-later').onclick = () => {
+      AudioSys.play('click');
+      if (!$('nudge-code-display').classList.contains('hidden')) {
+        /* 発行済みで閉じる場合は催促不要 */
+        this.clearLinkNudgeSnooze();
+      } else {
+        this.snoozeLinkNudge();
+      }
+      $('modal-link-nudge').classList.add('hidden');
+    };
+  },
+
+  initSessionRecovery() {
+    $('btn-recovery-redeem').onclick = async () => {
+      const input = $<HTMLInputElement>('recovery-code-input');
+      const code = input.value.trim();
+      if (!code) { $('recovery-msg').textContent = 'コードを入力してください'; return; }
+      const btn = $<HTMLButtonElement>('btn-recovery-redeem');
+      const newBtn = $<HTMLButtonElement>('btn-recovery-new');
+      btn.disabled = true;
+      newBtn.disabled = true;
+      $('recovery-msg').textContent = '復元中…';
+      try {
+        await Meta.recoverWithLinkCode(code);
+        $('recovery-msg').textContent = '復元しました。タイトルに戻ります。';
+        setTimeout(() => {
+          $('modal-session-recovery').classList.add('hidden');
+          this._enterTitle();
+        }, 700);
+      } catch (e) {
+        $('recovery-msg').textContent = e instanceof Error ? e.message : '復元に失敗しました';
+        btn.disabled = false;
+        newBtn.disabled = false;
+      }
+    };
+    $('btn-recovery-new').onclick = async () => {
+      if (!confirm('新しい進行で始めます。引き継ぎコードがない限り、以前のデータには戻れません。よろしいですか？')) return;
+      const btn = $<HTMLButtonElement>('btn-recovery-new');
+      const redeemBtn = $<HTMLButtonElement>('btn-recovery-redeem');
+      btn.disabled = true;
+      redeemBtn.disabled = true;
+      $('recovery-msg').textContent = '準備中…';
+      try {
+        await Meta.startFreshGuest();
+        $('modal-session-recovery').classList.add('hidden');
+        this._enterTitle();
+      } catch (e) {
+        $('recovery-msg').textContent = e instanceof Error ? e.message : '開始に失敗しました';
+        btn.disabled = false;
+        redeemBtn.disabled = false;
+      }
+    };
   },
 
   openLink() {
@@ -190,6 +270,49 @@ export const MenuUI = {
     $('link-code-display').classList.add('hidden');
     $<HTMLInputElement>('link-code-input').value = '';
     $('modal-link').classList.remove('hidden');
+  },
+
+  openSessionRecovery() {
+    showScreen('screen-loading');
+    $('recovery-msg').textContent = '';
+    $<HTMLInputElement>('recovery-code-input').value = '';
+    $<HTMLButtonElement>('btn-recovery-redeem').disabled = false;
+    $<HTMLButtonElement>('btn-recovery-new').disabled = false;
+    $('modal-session-recovery').classList.remove('hidden');
+  },
+
+  /* ゲストかつオンボーディング済みなら、数日おきに引き継ぎコードを催促 */
+  maybeShowLinkNudge() {
+    if (!Meta.data.online || !Meta.data.isGuest || !Meta.data.onboardingDone) return;
+    if (!this.shouldShowLinkNudge()) return;
+    $('nudge-msg').textContent = '';
+    $('nudge-code-display').classList.add('hidden');
+    $('nudge-code-display').textContent = '';
+    const issueBtn = $<HTMLButtonElement>('btn-nudge-issue');
+    issueBtn.classList.remove('hidden');
+    issueBtn.disabled = false;
+    $('btn-nudge-later').textContent = 'あとで';
+    $('modal-link-nudge').classList.remove('hidden');
+  },
+
+  shouldShowLinkNudge(): boolean {
+    try {
+      const raw = localStorage.getItem(LINK_NUDGE_KEY);
+      if (!raw) return true;
+      const t = Number(raw);
+      if (!Number.isFinite(t)) return true;
+      return Date.now() - t >= LINK_NUDGE_INTERVAL_MS;
+    } catch {
+      return true;
+    }
+  },
+
+  snoozeLinkNudge() {
+    try { localStorage.setItem(LINK_NUDGE_KEY, String(Date.now())); } catch { /* ignore */ }
+  },
+
+  clearLinkNudgeSnooze() {
+    try { localStorage.removeItem(LINK_NUDGE_KEY); } catch { /* ignore */ }
   },
 
   /* タイトル表示のたびに呼ばれる: 通貨表示+配布/ログインボーナス演出
@@ -202,8 +325,10 @@ export const MenuUI = {
     const bonus = Meta.pendingLoginBonus;
     Meta.pendingLoginBonus = null;
 
+    const afterBonuses = () => this.maybeShowLinkNudge();
+
     const showLoginBonus = () => {
-      if (!bonus) return;
+      if (!bonus) { afterBonuses(); return; }
       $('login-day').textContent = String(bonus.day);
       $('login-tickets').textContent = `×${bonus.tickets}`;
       $('login-next').textContent = (bonus.day % 7 === 0)
@@ -214,6 +339,7 @@ export const MenuUI = {
         AudioSys.play('promote');
         $('modal-login').classList.add('hidden');
         this.refreshCurrency();
+        afterBonuses();
       };
     };
 

@@ -16,6 +16,7 @@ import { HYAKKI_STAGE, soloBattleStage } from './solo';
 import type { SoloStage } from './solo';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
+import { SessionExpiredError } from './meta';
 import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
@@ -154,15 +155,24 @@ async function boot() {
     showMaintenance();
     return;
   }
+  let sessionExpired = false;
   await Promise.all([
     preloadImages(),
     Meta.init().catch(err => {
       if (Meta.maintenance) { showMaintenance(); return null; }
+      if (err instanceof SessionExpiredError) {
+        sessionExpired = true;
+        return null;
+      }
       console.error('[meta] init failed', err);
       captureException(err);
       return null;
     }),
   ]);
+  if (sessionExpired) {
+    MenuUI.openSessionRecovery();
+    return;
+  }
   if (!resumeOnlineMatch()) enterTitle();
 }
 

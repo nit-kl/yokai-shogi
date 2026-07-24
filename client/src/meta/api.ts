@@ -38,6 +38,12 @@ export class ApiMeta implements MetaProvider {
     return this.reload();
   }
 
+  /** セッション失効後の「新規開始」。ユーザー明示操作でのみ呼ぶ */
+  async startAsNewGuest(): Promise<LoginBonus | null> {
+    await this.client.createGuestSession(getTurnstileToken);
+    return this.reload();
+  }
+
   /* /me・collection・formation を取得して読み取りモデルを更新(init・引き継ぎ後に共用) */
   async reload(): Promise<LoginBonus | null> {
     const [me, col, form] = await Promise.all([
