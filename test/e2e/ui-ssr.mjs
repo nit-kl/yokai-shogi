@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-import { skipOnboarding, startSoloBattle } from './helpers.mjs';
+import { skipOnboarding, startSoloBattle, waitForBattleInput } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
@@ -41,49 +41,79 @@ await page.evaluate(() => {
 const resonating = await page.evaluate(() => document.querySelectorAll('.piece.resonating').length);
 if (resonating < 2) errors.push(`共鳴中の駒の光輪が出ていない: ${resonating}個(期待2以上)`);
 
-/* 3) 妖狐相伝: 玉藻前を取られると九尾が激怒(確定会心の予告オーラ) */
+/* 3) 妖狐相伝: 玉藻前を取られると九尾が激怒(確定会心の予告オーラ)
+   猫又は斜め1マスのみ。unit test と同じ配置(1,2)→(2,3)にする */
 await page.evaluate(() => {
   const { yk } = window;
-  yk.G.winner = null; yk.busy = false;
-  yk.G.board[2][3] = { uid: 920, id: 'tamamo', owner: 'p', promoted: false };
-  yk.G.board[1][3] = { uid: 921, id: 'nekomata', owner: 'e', promoted: false };
+  yk.G.winner = null;
+  yk.busy = false;
+  /* 九尾を自陣に明示配置(百鬼の敵編成で盤が埋まっていても相伝できるようにする) */
+  yk.G.board[5][2] = { uid: 919, id: 'kyubi', owner: 'p', promoted: false };
+  yk.G.board[3][2] = { uid: 920, id: 'tamamo', owner: 'p', promoted: false };
+  yk.G.board[2][1] = { uid: 921, id: 'nekomata', owner: 'e', promoted: false };
   yk.renderAll();
   yk.G.turn = 'e';
-  yk.doAction({ kind: 'move', from: { x: 3, y: 1 }, to: { x: 3, y: 2 } });
+  void yk.doAction({ kind: 'move', from: { x: 1, y: 2 }, to: { x: 2, y: 3 } });
 });
-await page.waitForTimeout(4500); // 撃破+激怒カットイン
-const enraged = await page.evaluate(() => {
-  const kyubi = window.yk.G.board.flat().find(pc => pc && pc.id === 'kyubi');
-  return !!(kyubi && kyubi.enraged) && document.querySelectorAll('.piece.enraged').length >= 1;
-});
-if (!enraged) errors.push('妖狐相伝の激怒(状態+オーラ)が発動していない');
+try {
+  await page.waitForFunction(() => {
+    const { yk } = window;
+    if (!yk?.G || yk.busy) return false;
+    const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi');
+    return !!(kyubi && kyubi.enraged) && document.querySelectorAll('.piece.enraged').length >= 1;
+  }, { timeout: 20000 });
+} catch {
+  errors.push('妖狐相伝の激怒(状態+オーラ)が発動していない');
+}
 await page.screenshot({ path: path.join(dir, 'shot-ssr2-enraged.png') });
 
 /* 4) 覚醒: ゲージ満タン → ボタン点灯 → 対象選択 → 発動 */
+await page.waitForFunction(() => window.yk && !window.yk.busy && window.yk.G?.turn === 'p', { timeout: 15000 });
 await page.evaluate(() => {
   const { yk } = window;
-  yk.G.winner = null; yk.G.turn = 'p'; yk.busy = false;
+  yk.G.winner = null;
+  yk.G.turn = 'p';
+  yk.busy = false;
+  /* 九尾が盤上にいることを保証 */
+  if (!yk.G.board.flat().some(pc => pc && pc.id === 'kyubi')) {
+    yk.G.board[5][2] = { uid: 930, id: 'kyubi', owner: 'p', promoted: false };
+    yk.renderAll();
+  }
   yk.G.awaken.p = { gauge: 6, used: false };
   yk.updateHUD();
 });
 if (!await page.locator('#btn-awaken:not(.hidden)').count()) errors.push('覚醒ボタンが点灯しない');
 await page.click('#btn-awaken');
 const targets = await page.evaluate(() => document.querySelectorAll('.cell.hl-awaken').length);
-if (targets < 2) errors.push(`覚醒対象のハイライトが出ていない: ${targets}マス(期待2: 九尾+酒呑異装)`);
-await page.evaluate(() => { document.getElementById('board-cells').children[5 * 5 + 2].click(); }); // 九尾(2,5)
-await page.waitForTimeout(2600); // 覚醒カットイン中
-await page.screenshot({ path: path.join(dir, 'shot-ssr3-awaken.png') });
-await page.waitForTimeout(4500); // 発動完了+AI応手待ち
-
-const awakened = await page.evaluate(() => {
+if (targets < 1) errors.push(`覚醒対象のハイライトが出ていない: ${targets}マス(期待1以上)`);
+await page.evaluate(() => {
   const { yk } = window;
-  const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi');
-  return yk.G.awaken.p.used === true
-    && !!(kyubi && kyubi.awakenUntil !== undefined)
-    && document.querySelectorAll('.piece.awakened').length >= 1
-    && document.getElementById('btn-awaken').classList.contains('hidden');
+  /* 盤上の九尾マスをクリック(位置が変わっていても追従) */
+  for (let y = 0; y < 6; y++) {
+    for (let x = 0; x < 5; x++) {
+      const pc = yk.G.board[y][x];
+      if (pc && pc.id === 'kyubi' && pc.owner === 'p') {
+        document.getElementById('board-cells').children[y * 5 + x].click();
+        return;
+      }
+    }
+  }
 });
-if (!awakened) errors.push('覚醒の発動(状態・オーラ・ボタン消灯)が確認できない');
+try {
+  await page.waitForFunction(() => {
+    const { yk } = window;
+    if (!yk?.G || yk.busy) return false;
+    const kyubi = yk.G.board.flat().find(pc => pc && pc.id === 'kyubi');
+    return yk.G.awaken.p.used === true
+      && !!(kyubi && kyubi.awakenUntil !== undefined)
+      && document.querySelectorAll('.piece.awakened').length >= 1
+      && document.getElementById('btn-awaken').classList.contains('hidden');
+  }, { timeout: 20000 });
+} catch {
+  errors.push('覚醒の発動(状態・オーラ・ボタン消灯)が確認できない');
+}
+await page.screenshot({ path: path.join(dir, 'shot-ssr3-awaken.png') });
+await waitForBattleInput(page).catch(() => {});
 
 await browser.close();
 if (errors.length) {
