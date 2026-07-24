@@ -280,7 +280,10 @@ function wireButtons() {
   };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-solo-battle').onclick = () => { AudioSys.play('click'); openHyakkiPreview(); };
-  $('btn-solo-formation').onclick = () => { AudioSys.play('click'); MenuUI.openFormation(); };
+  $('btn-solo-formation').onclick = () => {
+    AudioSys.play('click');
+    MenuUI.openFormation({ onReturn: () => openSolo() });
+  };
   $('btn-solo-ranking').onclick = () => {
     trackLandingEvent('hyakki_rank_view', { source: 'solo_lobby' });
     AudioSys.play('click');

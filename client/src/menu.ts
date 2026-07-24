@@ -18,11 +18,13 @@ export const MenuUI = {
   rows: null as unknown as (string | null)[][], // 編成画面の作業用コピー [前段, 最奥段]
   benchSel: null as string | null,              // 選択中の控え妖怪id
   _enterTitle: () => {},                        // main から注入(循環import回避)
+  _returnFromFormation: () => {},
   onboardingMode: null as 'gacha' | 'formation' | null,
   adsStatus: null as AdsStatus | null,
 
   init(opts: { enterTitle: () => void }) {
     this._enterTitle = opts.enterTitle;
+    this._returnFromFormation = opts.enterTitle;
     $('btn-gacha').onclick = () => { AudioSys.play('click'); this.openGacha(); };
     $('btn-formation').onclick = () => { AudioSys.play('click'); this.openFormation(); };
     $('btn-gacha-back').onclick = () => { AudioSys.play('click'); this._enterTitle(); };
@@ -38,6 +40,7 @@ export const MenuUI = {
       AudioSys.play('click');
       $('gacha-result').classList.add('hidden');
     };
+    $('btn-form-back').onclick = () => { AudioSys.play('click'); this.leaveFormation(); };
     $('btn-form-save').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     this.initLinkCode();
     this.initProfile();
@@ -231,6 +234,7 @@ export const MenuUI = {
   setOnboardingMode(mode: 'gacha' | 'formation' | null) {
     this.onboardingMode = mode;
     $('btn-gacha-back').classList.toggle('hidden', mode === 'gacha');
+    $('btn-form-back').classList.toggle('hidden', mode === 'formation');
     $('btn-pull1').classList.toggle('hidden', mode === 'gacha');
     const hint = $('onboarding-hint');
     hint.classList.toggle('hidden', !mode);
@@ -455,7 +459,8 @@ export const MenuUI = {
   },
 
   /* ============================== 編成 ============================== */
-  openFormation() {
+  openFormation(opts?: { onReturn?: () => void }) {
+    this._returnFromFormation = opts?.onReturn ?? this._enterTitle;
     RegistrationStatsUI.stopPolling();
     this.rows = Meta.formationRows();
     this.benchSel = null;
@@ -465,6 +470,13 @@ export const MenuUI = {
     showScreen('screen-formation');
     FX.setAmbient(['rgba(88,182,255,0.45)', 'rgba(232,196,106,0.4)'], 0.04);
     this.renderFormation();
+  },
+
+  leaveFormation() {
+    if (Onboarding.active) return;
+    const ret = this._returnFromFormation;
+    this._returnFromFormation = this._enterTitle;
+    ret();
   },
 
   placedIds(): Set<string> {
@@ -613,6 +625,8 @@ export const MenuUI = {
       await Onboarding.onFormationSaved();
       return;
     }
-    this._enterTitle();
+    const ret = this._returnFromFormation;
+    this._returnFromFormation = this._enterTitle;
+    ret();
   },
 };
