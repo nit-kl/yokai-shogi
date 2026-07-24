@@ -16,7 +16,7 @@ export default defineConfig(async () => {
           bindings: {
             TEST_MIGRATIONS: migrations,
             JWT_SECRET: 'test-secret',
-            ALLOWED_ORIGINS: 'http://localhost:5173',
+            ALLOWED_ORIGINS: 'http://localhost:5173,http://localhost:4173,http://example.com',
             MATCH_HOUR_ENFORCE: '0',
             PARTICIPATION_MIN_ACTIONS: '1',
             ADS_REWARD_ENABLED: '1',

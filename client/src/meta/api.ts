@@ -10,9 +10,15 @@ import { ownedSet } from './types';
 import type { GachaResult } from './types';
 import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState, ReleaseGift } from './types';
 import { getTurnstileToken } from '../turnstile';
+import { assertPasskey, createPasskey, passkeyErrorMessage, passkeySupported } from './passkey';
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser';
 
 interface MeResponse {
   userId: string; name: string; isGuest: boolean;
+  hasPasskey?: boolean;
   tickets: number; yoryoku: number;
   onboardingDone: boolean;
   loginBonus?: LoginBonus;
@@ -23,7 +29,7 @@ interface MeResponse {
 export class ApiMeta implements MetaProvider {
   readonly data: MetaState = {
     tickets: 0, yoryoku: 0, owned: {}, formation: [],
-    name: 'プレイヤー', wins: 0, isGuest: true, online: true, onboardingDone: false,
+    name: 'プレイヤー', wins: 0, isGuest: true, hasPasskey: false, online: true, onboardingDone: false,
   };
   /** 直近の /me で付与されたリリース記念(タイトル表示で消費) */
   pendingReleaseGift: ReleaseGift | null = null;
@@ -38,6 +44,12 @@ export class ApiMeta implements MetaProvider {
     return this.reload();
   }
 
+  /** セッション失効後の「新規開始」。ユーザー明示操作でのみ呼ぶ */
+  async startAsNewGuest(): Promise<LoginBonus | null> {
+    await this.client.createGuestSession(getTurnstileToken);
+    return this.reload();
+  }
+
   /* /me・collection・formation を取得して読み取りモデルを更新(init・引き継ぎ後に共用) */
   async reload(): Promise<LoginBonus | null> {
     const [me, col, form] = await Promise.all([
@@ -49,6 +61,7 @@ export class ApiMeta implements MetaProvider {
     this.data.yoryoku = me.yoryoku;
     this.data.name = me.name;
     this.data.isGuest = me.isGuest;
+    this.data.hasPasskey = !!me.hasPasskey;
     this.data.wins = me.wins;
     this.data.online = true;
     this.data.onboardingDone = me.onboardingDone;
@@ -119,6 +132,10 @@ export class ApiMeta implements MetaProvider {
     return this.client.post2<HyakkiProgress>('/v1/solo/hyakki/start', {});
   }
 
+  hyakkiStatus(): Promise<HyakkiProgress | null> {
+    return this.client.get<HyakkiProgress>('/v1/solo/hyakki/status');
+  }
+
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null> {
     return this.client.post2<HyakkiProgress>('/v1/solo/hyakki/result', { win });
   }
@@ -144,6 +161,40 @@ export class ApiMeta implements MetaProvider {
     await this.client.loginWithCode(code); // 失敗時 ApiError
     await this.reload();                   // 切り替え先アカウントのデータを取得
     return true;
+  }
+
+  async registerPasskey(): Promise<void> {
+    if (!passkeySupported()) throw new Error('この端末ではパスキーを利用できません');
+    try {
+      const options = await this.client.post2<PublicKeyCredentialCreationOptionsJSON>(
+        '/v1/auth/passkey/register/options',
+        {},
+      );
+      const attestation = await createPasskey(options);
+      await this.client.post2<{ ok: boolean; hasPasskey: boolean }>(
+        '/v1/auth/passkey/register',
+        attestation,
+      );
+      this.data.hasPasskey = true;
+      this.data.isGuest = false;
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new Error(passkeyErrorMessage(e));
+    }
+  }
+
+  async loginWithPasskey(): Promise<boolean> {
+    if (!passkeySupported()) throw new Error('この端末ではパスキーを利用できません');
+    try {
+      const options = await this.client.getPasskeyLoginOptions<PublicKeyCredentialRequestOptionsJSON>();
+      const assertion = await assertPasskey(options);
+      await this.client.loginWithPasskey(assertion);
+      await this.reload();
+      return true;
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new Error(passkeyErrorMessage(e));
+    }
   }
 
   async pickBoss(bossId: string): Promise<string | null> {

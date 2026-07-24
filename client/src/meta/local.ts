@@ -69,6 +69,7 @@ export class LocalMeta implements MetaProvider {
       name: 'プレイヤー',
       wins: 0,
       isGuest: true,
+      hasPasskey: false,
       online: false,
       onboardingDone: false,
       lastLogin: null,
@@ -183,10 +184,19 @@ export class LocalMeta implements MetaProvider {
     throw new Error('引き継ぎはオンライン接続時のみ利用できます');
   }
 
+  async registerPasskey(): Promise<void> {
+    throw new Error('パスキーはオンライン接続時のみ利用できます');
+  }
+
+  async loginWithPasskey(): Promise<boolean> {
+    throw new Error('パスキーはオンライン接続時のみ利用できます');
+  }
+
   battleUrl(): string | null { return null; }
 
   /* 百鬼夜行ランキングはサーバー専用機能。オフラインでは参加も閲覧もしない */
   async hyakkiStart(): Promise<HyakkiProgress | null> { return null; }
+  async hyakkiStatus(): Promise<HyakkiProgress | null> { return null; }
   async hyakkiResult(_win: boolean): Promise<HyakkiProgress | null> { return null; }
   async hyakkiRanking(): Promise<HyakkiRanking | null> { return null; }
   async adsStatus(): Promise<AdsStatus | null> { return null; }

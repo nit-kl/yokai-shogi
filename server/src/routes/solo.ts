@@ -83,6 +83,19 @@ soloRoutes.post('/solo/hyakki/start', authRequired, async c => {
   return c.json<HyakkiProgress>({ currentStreak: streak, bestStreak, rank });
 });
 
+/* ロビー表示用: pendingを立てずに現在連勝・今週ベストを返す */
+soloRoutes.get('/solo/hyakki/status', authRequired, async c => {
+  const userId = c.get('userId');
+  const db = c.env.DB;
+  const p = await getProfile(db, userId);
+  if (!p) return apiError(c, 'UNAUTHORIZED', 'プロファイルが存在しません');
+
+  const week = gameWeek();
+  const currentStreak = p.hyakki_week === week ? p.hyakki_streak : 0;
+  const { bestStreak, rank } = await hyakkiStanding(db, userId, week);
+  return c.json<HyakkiProgress>({ currentStreak, bestStreak, rank });
+});
+
 soloRoutes.post('/solo/hyakki/result', authRequired, async c => {
   const body = await c.req.json().catch(() => null) as { win?: unknown } | null;
   if (!body || typeof body.win !== 'boolean') return apiError(c, 'VALIDATION', 'win(boolean)が必要です');

@@ -15,11 +15,13 @@ function freshIp(): string {
   return `10.${(ipCounter >> 8) & 255}.${ipCounter & 255}.1`;
 }
 
-async function api(path: string, init?: RequestInit & { token?: string; ip?: string }) {
+async function api(path: string, init?: RequestInit & { token?: string; ip?: string; origin?: string }) {
+  const { token, ip, origin, ...rest } = init || {};
   const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (init?.token) headers.Authorization = `Bearer ${init.token}`;
-  if (init?.ip) headers['CF-Connecting-IP'] = init.ip;
-  const res = await SELF.fetch(`${BASE}${path}`, { ...init, headers });
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (ip) headers['CF-Connecting-IP'] = ip;
+  if (origin) headers.Origin = origin;
+  const res = await SELF.fetch(`${BASE}${path}`, { ...rest, headers });
   return { status: res.status, body: await res.json<any>().catch(() => null) };
 }
 
@@ -33,7 +35,7 @@ describe('認証', () => {
   it('認証設定: Turnstile未設定時は不要と返す', async () => {
     const config = await api('/v1/auth/config');
     expect(config.status).toBe(200);
-    expect(config.body).toEqual({ turnstileRequired: false });
+    expect(config.body).toEqual({ turnstileRequired: false, passkeyEnabled: true });
   });
 
   it('ゲスト作成: 初期チケット10・所持なし・オンボーディング未完了', async () => {
@@ -157,6 +159,33 @@ describe('認証', () => {
     expect(reissued.body.code).not.toBe(code);
     const oldLogin = await api('/v1/auth/login/link-code', { method: 'POST', ip: freshIp(), body: JSON.stringify({ code }) });
     expect(oldLogin.status).toBe(401);
+  });
+
+  it('パスキー: 登録・ログインの options を発行できる', async () => {
+    const g = await createGuest();
+    const origin = 'http://localhost:5173';
+    const reg = await api('/v1/auth/passkey/register/options', {
+      method: 'POST', token: g.accessToken, body: '{}', origin,
+    });
+    expect(reg.status).toBe(200);
+    expect(reg.body.challenge).toBeTruthy();
+    expect(reg.body.rp.id).toBe('localhost');
+    expect(reg.body.user.name).toBe(g.userId);
+
+    const me = await api('/v1/me', { token: g.accessToken });
+    expect(me.body.hasPasskey).toBe(false);
+
+    const loginOpt = await api('/v1/auth/passkey/login/options', {
+      method: 'POST', body: '{}', origin, ip: freshIp(),
+    });
+    expect(loginOpt.status).toBe(200);
+    expect(loginOpt.body.challenge).toBeTruthy();
+    expect(loginOpt.body.rpId).toBe('localhost');
+
+    const badOrigin = await api('/v1/auth/passkey/login/options', {
+      method: 'POST', body: '{}', origin: 'https://evil.example', ip: freshIp(),
+    });
+    expect(badOrigin.status).toBe(400);
   });
 
   it('BANユーザーはAPIを利用できない', async () => {
@@ -416,6 +445,18 @@ describe('百鬼夜行 週間連勝ランキング(doc 21)', () => {
     expect(lose.body).toEqual({ currentStreak: 0, bestStreak: 2, rank: 1 });
   });
 
+  it('statusはpendingを立てずに現在連勝を返す', async () => {
+    const g = await createGuest();
+    await hyakkiWin(g);
+    await hyakkiWin(g);
+    const before = await api('/v1/solo/hyakki/status', { token: g.accessToken });
+    expect(before.body).toEqual({ currentStreak: 2, bestStreak: 2, rank: 1 });
+    const again = await api('/v1/solo/hyakki/status', { token: g.accessToken });
+    expect(again.body.currentStreak).toBe(2);
+    const start = await hyakkiStart(g.accessToken);
+    expect(start.body.currentStreak).toBe(2);
+  });
+
   it('開始から30秒未満の勝利報告は負け扱い(連打対策)', async () => {
     const g = await createGuest();
     await hyakkiStart(g.accessToken);
@@ -607,12 +648,18 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-19-random-match-anytime',
+      id: '2026-07-24-hyakki-frontier',
       type: 'update',
       priority: 'high',
-      title: 'ランダムマッチをいつでも利用できるようにしました',
+      title: 'ソロを百鬼夜行の連戦施設に刷新しました',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: '2026-07-19-random-match-anytime',
+        type: 'update',
+        priority: 'high',
+        title: 'ランダムマッチをいつでも利用できるようにしました',
+      }),
       expect.objectContaining({
         id: '2026-07-19-hyakki-hasha-kyubi',
         type: 'campaign',
@@ -645,7 +692,7 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-07-19-random-match-anytime',
+      id: '2026-07-24-hyakki-frontier',
       type: 'update',
       priority: 'high',
     });

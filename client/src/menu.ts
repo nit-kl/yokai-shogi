@@ -13,16 +13,22 @@ import type { AdsStatus } from './ads/rewarded';
 import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
+import { passkeySupported } from './meta/passkey';
+
+const LINK_NUDGE_KEY = 'yokaiShogi.linkNudge.v1';
+const LINK_NUDGE_INTERVAL_MS = 3 * 86400e3; // 3日おきに再催促
 
 export const MenuUI = {
   rows: null as unknown as (string | null)[][], // 編成画面の作業用コピー [前段, 最奥段]
   benchSel: null as string | null,              // 選択中の控え妖怪id
   _enterTitle: () => {},                        // main から注入(循環import回避)
+  _returnFromFormation: () => {},
   onboardingMode: null as 'gacha' | 'formation' | null,
   adsStatus: null as AdsStatus | null,
 
   init(opts: { enterTitle: () => void }) {
     this._enterTitle = opts.enterTitle;
+    this._returnFromFormation = opts.enterTitle;
     $('btn-gacha').onclick = () => { AudioSys.play('click'); this.openGacha(); };
     $('btn-formation').onclick = () => { AudioSys.play('click'); this.openFormation(); };
     $('btn-gacha-back').onclick = () => { AudioSys.play('click'); this._enterTitle(); };
@@ -38,9 +44,11 @@ export const MenuUI = {
       AudioSys.play('click');
       $('gacha-result').classList.add('hidden');
     };
+    $('btn-form-back').onclick = () => { AudioSys.play('click'); this.leaveFormation(); };
     $('btn-form-save').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     this.initLinkCode();
     this.initProfile();
+    this.initAudioSettings();
     SupportUI.init();
   },
 
@@ -52,6 +60,61 @@ export const MenuUI = {
     $<HTMLInputElement>('profile-name-input').onkeydown = ev => {
       if (ev.key === 'Enter') void this.saveProfile();
     };
+  },
+
+  /* ============================== 音量設定 ============================== */
+  initAudioSettings() {
+    const syncMuteBtn = () => {
+      const icon = AudioSys.enabled ? '🔊' : '🔇';
+      const muteBtn = document.getElementById('btn-mute');
+      const titleBtn = document.getElementById('btn-audio');
+      if (muteBtn) muteBtn.textContent = icon;
+      if (titleBtn) titleBtn.textContent = icon;
+    };
+    const syncForm = () => {
+      const bgm = Math.round(AudioSys.bgmVolume * 100);
+      const se = Math.round(AudioSys.seVolume * 100);
+      $<HTMLInputElement>('audio-mute').checked = !AudioSys.enabled;
+      $<HTMLInputElement>('audio-bgm').value = String(bgm);
+      $<HTMLInputElement>('audio-se').value = String(se);
+      $('audio-bgm-val').textContent = String(bgm);
+      $('audio-se-val').textContent = String(se);
+      $<HTMLInputElement>('audio-bgm').disabled = !AudioSys.enabled;
+      $<HTMLInputElement>('audio-se').disabled = !AudioSys.enabled;
+      syncMuteBtn();
+    };
+    this._syncAudioUi = syncForm;
+    $('btn-audio').onclick = () => { AudioSys.play('click'); this.openAudioSettings(); };
+    $('btn-audio-close').onclick = () => { AudioSys.play('click'); $('modal-audio').classList.add('hidden'); };
+    $<HTMLInputElement>('audio-mute').onchange = ev => {
+      AudioSys.init();
+      AudioSys.setEnabled(!(ev.target as HTMLInputElement).checked);
+      syncForm();
+    };
+    $<HTMLInputElement>('audio-bgm').oninput = ev => {
+      AudioSys.init();
+      const v = Number((ev.target as HTMLInputElement).value);
+      AudioSys.setBgmVolume(v / 100);
+      $('audio-bgm-val').textContent = String(v);
+    };
+    $<HTMLInputElement>('audio-se').oninput = ev => {
+      AudioSys.init();
+      const v = Number((ev.target as HTMLInputElement).value);
+      AudioSys.setSeVolume(v / 100);
+      $('audio-se-val').textContent = String(v);
+    };
+    $<HTMLInputElement>('audio-se').onchange = () => {
+      if (AudioSys.enabled && AudioSys.seVolume > 0) AudioSys.play('click');
+    };
+    syncForm();
+  },
+
+  _syncAudioUi() {},
+
+  openAudioSettings() {
+    AudioSys.init();
+    this._syncAudioUi();
+    $('modal-audio').classList.remove('hidden');
   },
 
   openProfile() {
@@ -99,6 +162,7 @@ export const MenuUI = {
         disp.textContent = code;
         disp.classList.remove('hidden');
         $('link-msg').textContent = 'コードを発行しました。メモして保管してください。';
+        this.clearLinkNudgeSnooze();
       } catch (e) {
         $('link-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
       } finally {
@@ -124,13 +188,206 @@ export const MenuUI = {
         btn.disabled = false;
       }
     };
+    $('btn-passkey-register').onclick = async () => {
+      const btn = $<HTMLButtonElement>('btn-passkey-register');
+      btn.disabled = true;
+      $('link-msg').textContent = 'パスキー登録中…';
+      try {
+        await Meta.registerPasskey();
+        $('link-msg').textContent = 'パスキーを登録しました。';
+        this.clearLinkNudgeSnooze();
+        this.refreshPasskeyButtons();
+      } catch (e) {
+        $('link-msg').textContent = e instanceof Error ? e.message : 'パスキー登録に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    $('btn-passkey-login').onclick = async () => {
+      if (!confirm('パスキーで別アカウントに切り替えます。現在この端末のデータは置き換わります。よろしいですか？')) return;
+      const btn = $<HTMLButtonElement>('btn-passkey-login');
+      btn.disabled = true;
+      $('link-msg').textContent = 'パスキー認証中…';
+      try {
+        await Meta.loginWithPasskey();
+        $('link-msg').textContent = '切り替えが完了しました。タイトルに戻ります。';
+        setTimeout(() => { $('modal-link').classList.add('hidden'); this._enterTitle(); }, 900);
+      } catch (e) {
+        $('link-msg').textContent = e instanceof Error ? e.message : 'パスキー認証に失敗しました';
+        btn.disabled = false;
+      }
+    };
+    this.initLinkNudge();
+    this.initSessionRecovery();
+  },
+
+  initLinkNudge() {
+    $('btn-nudge-passkey').onclick = async () => {
+      const btn = $<HTMLButtonElement>('btn-nudge-passkey');
+      btn.disabled = true;
+      $('nudge-msg').textContent = 'パスキー登録中…';
+      try {
+        await Meta.registerPasskey();
+        $('nudge-msg').textContent = 'パスキーを登録しました。';
+        this.clearLinkNudgeSnooze();
+        btn.classList.add('hidden');
+        $<HTMLButtonElement>('btn-nudge-issue').classList.add('hidden');
+        $('btn-nudge-later').textContent = '閉じる';
+      } catch (e) {
+        $('nudge-msg').textContent = e instanceof Error ? e.message : 'パスキー登録に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    $('btn-nudge-issue').onclick = async () => {
+      const btn = $<HTMLButtonElement>('btn-nudge-issue');
+      btn.disabled = true;
+      $('nudge-msg').textContent = '';
+      try {
+        const code = await Meta.issueLinkCode();
+        const disp = $('nudge-code-display');
+        disp.textContent = code;
+        disp.classList.remove('hidden');
+        $('nudge-msg').textContent = '発行しました。このコードをメモして保管してください。';
+        this.clearLinkNudgeSnooze();
+        btn.classList.add('hidden');
+        $<HTMLButtonElement>('btn-nudge-passkey').classList.add('hidden');
+        $('btn-nudge-later').textContent = '閉じる';
+      } catch (e) {
+        $('nudge-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    $('btn-nudge-later').onclick = () => {
+      AudioSys.play('click');
+      if (!$('nudge-code-display').classList.contains('hidden') || Meta.data.hasPasskey) {
+        this.clearLinkNudgeSnooze();
+      } else {
+        this.snoozeLinkNudge();
+      }
+      $('modal-link-nudge').classList.add('hidden');
+    };
+  },
+
+  initSessionRecovery() {
+    const setBusy = (busy: boolean) => {
+      $<HTMLButtonElement>('btn-recovery-redeem').disabled = busy;
+      $<HTMLButtonElement>('btn-recovery-new').disabled = busy;
+      const pk = document.getElementById('btn-recovery-passkey') as HTMLButtonElement | null;
+      if (pk) pk.disabled = busy;
+    };
+    $('btn-recovery-passkey').onclick = async () => {
+      setBusy(true);
+      $('recovery-msg').textContent = 'パスキー認証中…';
+      try {
+        await Meta.recoverWithPasskey();
+        $('recovery-msg').textContent = '復元しました。タイトルに戻ります。';
+        setTimeout(() => {
+          $('modal-session-recovery').classList.add('hidden');
+          this._enterTitle();
+        }, 700);
+      } catch (e) {
+        $('recovery-msg').textContent = e instanceof Error ? e.message : '復元に失敗しました';
+        setBusy(false);
+      }
+    };
+    $('btn-recovery-redeem').onclick = async () => {
+      const input = $<HTMLInputElement>('recovery-code-input');
+      const code = input.value.trim();
+      if (!code) { $('recovery-msg').textContent = 'コードを入力してください'; return; }
+      setBusy(true);
+      $('recovery-msg').textContent = '復元中…';
+      try {
+        await Meta.recoverWithLinkCode(code);
+        $('recovery-msg').textContent = '復元しました。タイトルに戻ります。';
+        setTimeout(() => {
+          $('modal-session-recovery').classList.add('hidden');
+          this._enterTitle();
+        }, 700);
+      } catch (e) {
+        $('recovery-msg').textContent = e instanceof Error ? e.message : '復元に失敗しました';
+        setBusy(false);
+      }
+    };
+    $('btn-recovery-new').onclick = async () => {
+      if (!confirm('新しい進行で始めます。パスキーや引き継ぎコードがない限り、以前のデータには戻れません。よろしいですか？')) return;
+      setBusy(true);
+      $('recovery-msg').textContent = '準備中…';
+      try {
+        await Meta.startFreshGuest();
+        $('modal-session-recovery').classList.add('hidden');
+        this._enterTitle();
+      } catch (e) {
+        $('recovery-msg').textContent = e instanceof Error ? e.message : '開始に失敗しました';
+        setBusy(false);
+      }
+    };
   },
 
   openLink() {
     $('link-msg').textContent = '';
     $('link-code-display').classList.add('hidden');
     $<HTMLInputElement>('link-code-input').value = '';
+    this.refreshPasskeyButtons();
     $('modal-link').classList.remove('hidden');
+  },
+
+  refreshPasskeyButtons() {
+    const ok = passkeySupported() && Meta.data.online;
+    const has = Meta.data.hasPasskey;
+    $('btn-passkey-register').classList.toggle('hidden', !ok || has);
+    $('passkey-registered-note').classList.toggle('hidden', !has);
+    $('btn-passkey-login').classList.toggle('hidden', !ok);
+  },
+
+  openSessionRecovery() {
+    showScreen('screen-loading');
+    $('recovery-msg').textContent = '';
+    $<HTMLInputElement>('recovery-code-input').value = '';
+    $<HTMLButtonElement>('btn-recovery-redeem').disabled = false;
+    $<HTMLButtonElement>('btn-recovery-new').disabled = false;
+    const pk = $<HTMLButtonElement>('btn-recovery-passkey');
+    pk.disabled = false;
+    pk.classList.toggle('hidden', !passkeySupported());
+    $('modal-session-recovery').classList.remove('hidden');
+  },
+
+  /* ゲストかつオンボーディング済みなら、数日おきに引き継ぎを催促 */
+  maybeShowLinkNudge() {
+    if (!Meta.data.online || !Meta.data.isGuest || !Meta.data.onboardingDone) return;
+    if (!this.shouldShowLinkNudge()) return;
+    $('nudge-msg').textContent = '';
+    $('nudge-code-display').classList.add('hidden');
+    $('nudge-code-display').textContent = '';
+    const issueBtn = $<HTMLButtonElement>('btn-nudge-issue');
+    issueBtn.classList.remove('hidden');
+    issueBtn.disabled = false;
+    const pkBtn = $<HTMLButtonElement>('btn-nudge-passkey');
+    pkBtn.classList.toggle('hidden', !passkeySupported());
+    pkBtn.disabled = false;
+    $('btn-nudge-later').textContent = 'あとで';
+    $('modal-link-nudge').classList.remove('hidden');
+  },
+
+  shouldShowLinkNudge(): boolean {
+    try {
+      const raw = localStorage.getItem(LINK_NUDGE_KEY);
+      if (!raw) return true;
+      const t = Number(raw);
+      if (!Number.isFinite(t)) return true;
+      return Date.now() - t >= LINK_NUDGE_INTERVAL_MS;
+    } catch {
+      return true;
+    }
+  },
+
+  snoozeLinkNudge() {
+    try { localStorage.setItem(LINK_NUDGE_KEY, String(Date.now())); } catch { /* ignore */ }
+  },
+
+  clearLinkNudgeSnooze() {
+    try { localStorage.removeItem(LINK_NUDGE_KEY); } catch { /* ignore */ }
   },
 
   /* タイトル表示のたびに呼ばれる: 通貨表示+配布/ログインボーナス演出
@@ -143,8 +400,10 @@ export const MenuUI = {
     const bonus = Meta.pendingLoginBonus;
     Meta.pendingLoginBonus = null;
 
+    const afterBonuses = () => this.maybeShowLinkNudge();
+
     const showLoginBonus = () => {
-      if (!bonus) return;
+      if (!bonus) { afterBonuses(); return; }
       $('login-day').textContent = String(bonus.day);
       $('login-tickets').textContent = `×${bonus.tickets}`;
       $('login-next').textContent = (bonus.day % 7 === 0)
@@ -155,6 +414,7 @@ export const MenuUI = {
         AudioSys.play('promote');
         $('modal-login').classList.add('hidden');
         this.refreshCurrency();
+        afterBonuses();
       };
     };
 
@@ -175,6 +435,7 @@ export const MenuUI = {
   setOnboardingMode(mode: 'gacha' | 'formation' | null) {
     this.onboardingMode = mode;
     $('btn-gacha-back').classList.toggle('hidden', mode === 'gacha');
+    $('btn-form-back').classList.toggle('hidden', mode === 'formation');
     $('btn-pull1').classList.toggle('hidden', mode === 'gacha');
     const hint = $('onboarding-hint');
     hint.classList.toggle('hidden', !mode);
@@ -399,7 +660,8 @@ export const MenuUI = {
   },
 
   /* ============================== 編成 ============================== */
-  openFormation() {
+  openFormation(opts?: { onReturn?: () => void }) {
+    this._returnFromFormation = opts?.onReturn ?? this._enterTitle;
     RegistrationStatsUI.stopPolling();
     this.rows = Meta.formationRows();
     this.benchSel = null;
@@ -409,6 +671,13 @@ export const MenuUI = {
     showScreen('screen-formation');
     FX.setAmbient(['rgba(88,182,255,0.45)', 'rgba(232,196,106,0.4)'], 0.04);
     this.renderFormation();
+  },
+
+  leaveFormation() {
+    if (Onboarding.active) return;
+    const ret = this._returnFromFormation;
+    this._returnFromFormation = this._enterTitle;
+    ret();
   },
 
   placedIds(): Set<string> {
@@ -557,6 +826,8 @@ export const MenuUI = {
       await Onboarding.onFormationSaved();
       return;
     }
-    this._enterTitle();
+    const ret = this._returnFromFormation;
+    this._returnFromFormation = this._enterTitle;
+    ret();
   },
 };

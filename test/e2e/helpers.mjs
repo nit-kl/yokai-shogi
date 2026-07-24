@@ -39,6 +39,10 @@ export async function dismissStartupModals(page) {
     await page.waitForTimeout(300);
   }
   await dismissLegacyLoginModal(page);
+  if (await page.locator('#modal-link-nudge:not(.hidden)').count()) {
+    await page.click('#btn-nudge-later');
+    await page.waitForTimeout(200);
+  }
 }
 
 /** 対局の入力ロック(開幕VS・共鳴カットイン等)が解除されるまで待つ */
@@ -68,10 +72,13 @@ export async function skipOnboarding(page) {
   await dismissStartupModals(page);
 }
 
+/** 百鬼夜行: ロビー → プレビュー → 開戦 */
 export async function startSoloBattle(page) {
   await page.click('#btn-start');
   await page.waitForSelector('#screen-solo.active');
   await page.click('#btn-solo-battle');
+  await page.waitForSelector('#screen-hyakki-preview.active');
+  await page.click('#btn-hyakki-fight');
   await page.waitForSelector('#screen-battle.active');
   await waitForBattleInput(page);
 }

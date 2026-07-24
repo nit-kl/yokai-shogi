@@ -5,7 +5,7 @@
    - UIはこの Meta だけを参照する(provider の差し替えを意識しない)
    ============================================================ */
 
-import { ApiClient, ApiError, NetworkError } from './client';
+import { ApiClient, ApiError, NetworkError, SessionExpiredError } from './client';
 import { ApiMeta } from './api';
 import { LocalMeta } from './local';
 import {
@@ -14,6 +14,7 @@ import {
 import type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState, ReleaseGift } from './types';
 
 export type { AdsClaimResult, AdsStatus, GachaResult, HyakkiProgress, HyakkiRanking, LoginBonus, MetaState, ReleaseGift } from './types';
+export { ApiError, NetworkError, SessionExpiredError } from './client';
 
 /* vite.config.ts の define で注入(空文字=オフライン) */
 const API_URL = __API_URL__ || undefined;
@@ -71,6 +72,45 @@ class MetaFacade {
   recordSoloWin(): Promise<number> { return this.provider.recordSoloWin(); }
   issueLinkCode(): Promise<string> { return this.provider.issueLinkCode(); }
   redeemLinkCode(code: string): Promise<boolean> { return this.provider.redeemLinkCode(code); }
+  registerPasskey(): Promise<void> { return this.provider.registerPasskey(); }
+  loginWithPasskey(): Promise<boolean> { return this.provider.loginWithPasskey(); }
+
+  /** セッション失効画面から引き継ぎコードで復元(ApiMeta 未確立時も可) */
+  async recoverWithLinkCode(code: string): Promise<boolean> {
+    if (!API_URL) throw new Error('オンライン接続時のみ利用できます');
+    const api = new ApiMeta(new ApiClient(API_URL));
+    await api.redeemLinkCode(code);
+    this.provider = api;
+    this.forceLocal = false;
+    this.pendingLoginBonus = null;
+    this.pendingReleaseGift = api.pendingReleaseGift;
+    return true;
+  }
+
+  /** セッション失効画面からパスキーで復元 */
+  async recoverWithPasskey(): Promise<boolean> {
+    if (!API_URL) throw new Error('オンライン接続時のみ利用できます');
+    const api = new ApiMeta(new ApiClient(API_URL));
+    await api.loginWithPasskey();
+    this.provider = api;
+    this.forceLocal = false;
+    this.pendingLoginBonus = null;
+    this.pendingReleaseGift = api.pendingReleaseGift;
+    return true;
+  }
+
+  /** セッション失効画面から新規ゲスト開始 */
+  async startFreshGuest(): Promise<LoginBonus | null> {
+    if (!API_URL) throw new Error('オンライン接続時のみ利用できます');
+    const api = new ApiMeta(new ApiClient(API_URL));
+    const bonus = await api.startAsNewGuest();
+    this.provider = api;
+    this.forceLocal = false;
+    this.pendingLoginBonus = bonus;
+    this.pendingReleaseGift = api.pendingReleaseGift;
+    return bonus;
+  }
+
   battleUrl(): string | null { return this.provider.battleUrl(); }
   pickBoss(bossId: string): Promise<string | null> { return this.provider.pickBoss(bossId); }
   async completeOnboarding(): Promise<LoginBonus | null> {
@@ -81,6 +121,7 @@ class MetaFacade {
     return bonus;
   }
   hyakkiStart(): Promise<HyakkiProgress | null> { return this.provider.hyakkiStart(); }
+  hyakkiStatus(): Promise<HyakkiProgress | null> { return this.provider.hyakkiStatus(); }
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null> { return this.provider.hyakkiResult(win); }
   hyakkiRanking(): Promise<HyakkiRanking | null> { return this.provider.hyakkiRanking(); }
   adsStatus(): Promise<AdsStatus | null> { return this.provider.adsStatus(); }

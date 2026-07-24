@@ -12,13 +12,11 @@ import { AWAKEN_ATK, AWAKEN_MAX, Game, MOON_CYCLE } from '../../shared/game';
 import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
 import { AI } from './ai';
-import type { AIDifficulty } from './ai';
-import {
-  SOLO_DIFFICULTIES, SOLO_STAGES, recordSoloClear, soloBattleStage, soloClearCount, soloStage,
-} from './solo';
+import { HYAKKI_STAGE, soloBattleStage } from './solo';
 import type { SoloStage } from './solo';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
+import { SessionExpiredError } from './meta';
 import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
@@ -60,14 +58,15 @@ let onlineTurnDeadline = 0;
 let onlineDisconnectDeadline = 0;
 let onlineTimerId: ReturnType<typeof setInterval> | null = null;
 let onlineQueueTimerId: ReturnType<typeof setTimeout> | null = null;
-let soloStageId = SOLO_STAGES[0].id;
-let soloDifficulty: AIDifficulty = 'normal';
-let activeSoloStage: SoloStage = soloStage(soloStageId);
-let soloClearRecorded = false;
-let soloMode: 'single' | 'streak' = 'single';
+let activeSoloStage: SoloStage = HYAKKI_STAGE;
+let pendingSoloStage: SoloStage | null = null;
 let soloStreak = 0;
+let soloBestStreak = 0;
+let soloRank: number | null = null;
+let soloWinCounted = false;
 let hyakkiRanking: HyakkiRanking | null = null;
 let hyakkiRankingAt = 0; // 最終取得時刻(60秒キャッシュ)
+let rankingReturn: 'title' | 'solo' = 'title';
 type BattleStats = {
   turns: number;
   captures: Record<Side, number>;
@@ -156,15 +155,24 @@ async function boot() {
     showMaintenance();
     return;
   }
+  let sessionExpired = false;
   await Promise.all([
     preloadImages(),
     Meta.init().catch(err => {
       if (Meta.maintenance) { showMaintenance(); return null; }
+      if (err instanceof SessionExpiredError) {
+        sessionExpired = true;
+        return null;
+      }
       console.error('[meta] init failed', err);
       captureException(err);
       return null;
     }),
   ]);
+  if (sessionExpired) {
+    MenuUI.openSessionRecovery();
+    return;
+  }
   if (!resumeOnlineMatch()) enterTitle();
 }
 
@@ -281,13 +289,28 @@ function wireButtons() {
     openSolo();
   };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
-  $('btn-solo-battle').onclick = () => { AudioSys.play('click'); soloStreak = 0; startBattle(); };
-  $('btn-solo-single').onclick = () => { AudioSys.play('select'); soloMode = 'single'; renderSoloSelect(); };
-  $('btn-solo-streak').onclick = () => {
-    AudioSys.play('select');
-    soloMode = 'streak';
-    soloStageId = 'hyakki';
-    renderSoloSelect();
+  $('btn-solo-battle').onclick = () => { AudioSys.play('click'); openHyakkiPreview(); };
+  $('btn-solo-formation').onclick = () => {
+    AudioSys.play('click');
+    MenuUI.openFormation({ onReturn: () => openSolo() });
+  };
+  $('btn-solo-ranking').onclick = () => {
+    trackLandingEvent('hyakki_rank_view', { source: 'solo_lobby' });
+    AudioSys.play('click');
+    openRanking('solo');
+  };
+  $('btn-hyakki-preview-back').onclick = () => { AudioSys.play('click'); pendingSoloStage = null; openSolo(); };
+  $('btn-hyakki-fight').onclick = () => { AudioSys.play('click'); startBattle(); };
+  $('btn-hyakki-continue').onclick = () => { AudioSys.play('click'); openHyakkiPreview(); };
+  $('btn-hyakki-retry').onclick = () => {
+    AudioSys.play('click');
+    soloStreak = 0;
+    openHyakkiPreview();
+  };
+  $('btn-hyakki-retire').onclick = () => {
+    AudioSys.play('click');
+    AudioSys.stopBgm();
+    openSolo();
   };
   $('btn-hyakki-name').onclick = () => { AudioSys.play('click'); MenuUI.openProfile(); };
   /* プロフィール保存後に名前設定導線を消す(menu.tsが発火) */
@@ -295,9 +318,13 @@ function wireButtons() {
   $('btn-ranking').onclick = () => {
     trackLandingEvent('hyakki_rank_view', { source: 'title' });
     AudioSys.play('click');
-    openRanking();
+    openRanking('title');
   };
-  $('btn-ranking-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
+  $('btn-ranking-back').onclick = () => {
+    AudioSys.play('click');
+    if (rankingReturn === 'solo') openSolo();
+    else enterTitle();
+  };
   $('btn-online').onclick = () => {
     trackLandingEvent('online_cta_click', { source: 'title' });
     void openOnline();
@@ -348,7 +375,7 @@ function wireButtons() {
   $('btn-pieces-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-mute').onclick = () => {
     AudioSys.init();
-    $('btn-mute').textContent = AudioSys.toggle() ? '🔊' : '🔇';
+    MenuUI.openAudioSettings();
   };
   $('btn-awaken').onclick = () => {
     if (!G || G.winner || busy || G.turn !== 'p' || !Game.awakenReady(G, 'p')) return;
@@ -373,10 +400,6 @@ function wireButtons() {
   $('btn-retry').onclick = () => {
     AudioSys.play('click');
     if (onlineSide) { online?.close(); clearOnlineMatch(); onlineSide = null; onlineMatch = null; enterTitle(); }
-    else {
-      if (soloMode === 'streak' && G?.winner !== 'p') soloStreak = 0;
-      startBattle();
-    }
   };
   $('btn-title').onclick = () => {
     AudioSys.play('click');
@@ -391,12 +414,23 @@ function wireButtons() {
 function openSolo() {
   RegistrationStatsUI.stopPolling();
   MatchHourUI.stop();
-  renderSoloSelect();
+  renderHyakkiLobby();
   showScreen('screen-solo');
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(200,120,255,0.4)', 'rgba(88,182,255,0.3)'], 0.04);
 }
 
-function openRanking() {
+function openHyakkiPreview() {
+  RegistrationStatsUI.stopPolling();
+  MatchHourUI.stop();
+  pendingSoloStage = soloBattleStage();
+  activeSoloStage = pendingSoloStage;
+  renderHyakkiPreview();
+  showScreen('screen-hyakki-preview');
+  FX.setAmbient(['rgba(255,170,60,0.4)', 'rgba(200,120,255,0.45)', 'rgba(88,182,255,0.25)'], 0.05);
+}
+
+function openRanking(from: 'title' | 'solo' = 'title') {
+  rankingReturn = from;
   RegistrationStatsUI.stopPolling();
   MatchHourUI.stop();
   renderHyakkiPanel();
@@ -404,105 +438,49 @@ function openRanking() {
   FX.setAmbient(['rgba(200,120,255,0.45)', 'rgba(232,196,106,0.35)', 'rgba(88,182,255,0.25)'], 0.04);
 }
 
-function renderSoloSelect() {
-  $('btn-solo-single').classList.toggle('active', soloMode === 'single');
-  $('btn-solo-streak').classList.toggle('active', soloMode === 'streak');
-  const completed = SOLO_STAGES.reduce((sum, stage) =>
-    sum + SOLO_DIFFICULTIES.filter(difficulty => soloClearCount(stage.id, difficulty.id) > 0).length, 0);
-  $('solo-progress').textContent = `攻略記録 ${completed} / ${SOLO_STAGES.length * SOLO_DIFFICULTIES.length}`;
-  const stages = $('solo-stages');
-  stages.replaceChildren();
-  for (const stage of SOLO_STAGES) {
-    const boss = YOKAI[stage.bossId];
-    const card = document.createElement('button');
-    card.className = 'solo-stage-card' + (stage.id === soloStageId ? ' selected' : '');
+function applyHyakkiStanding(p: { currentStreak: number; bestStreak: number; rank: number | null }) {
+  soloStreak = p.currentStreak;
+  soloBestStreak = Math.max(soloBestStreak, p.bestStreak);
+  soloRank = p.rank;
+}
 
-    if (stage.randomized) {
-      const randomBoss = document.createElement('div');
-      randomBoss.className = 'solo-stage-random-boss';
-      randomBoss.setAttribute('aria-label', 'ランダムな大将');
-      randomBoss.textContent = '?';
-      card.appendChild(randomBoss);
-    } else {
-      const bossImg = document.createElement('img');
-      bossImg.src = boss.imgSm;
-      bossImg.alt = boss.name;
-      card.appendChild(bossImg);
-    }
+function renderHyakkiLobby() {
+  $('solo-current-streak').textContent = String(soloStreak);
+  $('solo-best-streak').textContent = soloBestStreak > 0 ? String(soloBestStreak) : '—';
+  $('solo-rank').textContent = soloRank ? `${soloRank}位` : '—';
+  if (!Meta.online) return;
+  Meta.hyakkiStatus().then(p => {
+    if (!p) return;
+    applyHyakkiStanding(p);
+    $('solo-current-streak').textContent = String(soloStreak);
+    $('solo-best-streak').textContent = soloBestStreak > 0 ? String(soloBestStreak) : '—';
+    $('solo-rank').textContent = soloRank ? `${soloRank}位` : '—';
+  }).catch(() => { /* オフライン表示のまま */ });
+}
 
-    const body = document.createElement('div');
-    body.className = 'solo-stage-body';
-
-    const head = document.createElement('div');
-    head.className = 'solo-stage-head';
-    const trait = document.createElement('span');
-    trait.textContent = stage.trait;
-    const title = document.createElement('b');
-    title.textContent = stage.name;
-    head.append(trait, title);
-
-    const bossLine = document.createElement('div');
-    bossLine.className = 'solo-stage-boss';
-    bossLine.textContent = stage.randomized ? '大将 毎回ランダム' : `大将 ${boss.name}`;
-
-    const desc = document.createElement('p');
-    desc.textContent = stage.desc;
-
-    const pieces = document.createElement('div');
-    pieces.className = 'solo-stage-pieces';
-    for (const id of stage.enemyRows.flat().filter(Boolean)) {
-      const yokai = YOKAI[id!];
-      const pieceImg = document.createElement('img');
-      pieceImg.src = yokai.imgSm;
-      pieceImg.alt = yokai.name;
-      pieceImg.title = yokai.name;
-      pieces.appendChild(pieceImg);
-    }
-
-    const clears = document.createElement('div');
-    clears.className = 'solo-stage-clears';
-    for (const difficulty of SOLO_DIFFICULTIES) {
-      const count = soloClearCount(stage.id, difficulty.id);
-      const badge = document.createElement('span');
-      if (count) badge.classList.add('cleared');
-      badge.textContent = count ? `${difficulty.name} ${count}` : difficulty.name;
-      clears.appendChild(badge);
-    }
-
-    body.append(head, bossLine, desc, pieces, clears);
-    card.appendChild(body);
-    card.onclick = () => {
-      AudioSys.play('select');
-      soloStageId = stage.id;
-      if (stage.id !== 'hyakki') soloMode = 'single';
-      renderSoloSelect();
-    };
-    stages.appendChild(card);
+function renderHyakkiPreview() {
+  const stage = pendingSoloStage || activeSoloStage;
+  const boss = YOKAI[stage.bossId];
+  $('hyakki-preview-round').textContent = `第 ${soloStreak + 1} 戦`;
+  $<HTMLImageElement>('hyakki-preview-boss').src = boss.img;
+  $<HTMLImageElement>('hyakki-preview-boss').alt = boss.name;
+  $('hyakki-preview-boss-name').textContent = boss.name;
+  const pieces = $('hyakki-preview-pieces');
+  pieces.replaceChildren();
+  for (const id of stage.enemyRows.flat().filter((x): x is string => !!x)) {
+    const yokai = YOKAI[id];
+    const img = document.createElement('img');
+    img.src = yokai.imgSm;
+    img.alt = yokai.name;
+    img.title = yokai.name;
+    pieces.appendChild(img);
   }
-
-  const difficulties = $('solo-difficulties');
-  difficulties.replaceChildren();
-  for (const difficulty of SOLO_DIFFICULTIES) {
-    const button = document.createElement('button');
-    button.className = 'solo-difficulty' + (difficulty.id === soloDifficulty ? ' selected' : '');
-    const count = soloClearCount(soloStageId, difficulty.id);
-    const name = document.createElement('b');
-    name.textContent = count ? `${difficulty.name} ✓` : difficulty.name;
-    const info = document.createElement('span');
-    info.textContent = difficulty.desc;
-    const status = document.createElement('small');
-    status.textContent = count ? `勝利 ${count}回` : '未攻略';
-    button.append(name, info, status);
-    button.onclick = () => { AudioSys.play('select'); soloDifficulty = difficulty.id; renderSoloSelect(); };
-    difficulties.appendChild(button);
-  }
-
 }
 
 /* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
 
 function hyakkiRankEligible(): boolean {
-  return soloMode === 'streak' && soloDifficulty === HYAKKI_RANK_DIFFICULTY && Meta.online;
+  return Meta.online;
 }
 
 function renderHyakkiReward() {
@@ -525,7 +503,7 @@ function renderHyakkiReward() {
 function renderHyakkiPanel() {
   renderHyakkiReward();
   const note = $('hyakki-ranking-note');
-  note.textContent = '対象: ソロ対戦 > 連戦 > 上級';
+  note.textContent = '対象: 百鬼夜行の連戦';
   note.classList.remove('hidden');
   if (!Meta.online) {
     hyakkiRanking = null;
@@ -741,9 +719,7 @@ function switchQueueToAi(): void {
   online?.close();
   online = null;
   $('modal-online').classList.add('hidden');
-  soloMode = 'single';
-  soloDifficulty = 'normal';
-  startBattle();
+  openHyakkiPreview();
 }
 
 function formatCountdown(ms: number): string {
@@ -816,6 +792,7 @@ async function startOnlineBattle() {
   $<HTMLImageElement>('enemy-avatar').src = YOKAI[onlineMatch?.opponentBossId || ENEMY_BOSS].img;
   $('enemy-hud').querySelector('.hud-name')!.lastChild!.textContent = onlineMatch?.opponentName || '対戦相手';
   $('online-status').classList.remove('hidden');
+  $('hyakki-round-hud').classList.add('hidden');
   setOnlineConnection('接続済み');
   ensureOnlineTimer();
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
@@ -1230,18 +1207,23 @@ async function playVsIntro(enemy: { bossId: string; label: string }, stageLabel:
 
 async function startBattle() {
   trackLandingEvent('solo_battle_start', {
-    mode: soloMode,
-    stage: soloMode === 'streak' ? 'hyakki' : soloStageId,
-    difficulty: soloDifficulty,
+    mode: 'streak',
+    stage: 'hyakki',
+    difficulty: HYAKKI_RANK_DIFFICULTY,
   });
-  const stage = soloBattleStage(soloMode === 'streak' ? 'hyakki' : soloStageId);
+  const stage = pendingSoloStage || soloBattleStage();
+  pendingSoloStage = null;
   activeSoloStage = stage;
-  soloClearRecorded = false;
+  soloWinCounted = false;
   battleStats = newBattleStats();
   if (hyakkiRankEligible()) {
     /* 開始申告(doc 21)。サーバーが正本の連勝数を返す(リロード後の継続もここで復元)。
        失敗してもローカル表示で対局は続行 */
-    Meta.hyakkiStart().then(p => { if (p) soloStreak = p.currentStreak; }).catch(() => {});
+    Meta.hyakkiStart().then(p => {
+      if (!p) return;
+      applyHyakkiStanding(p);
+      $('hyakki-round-label').textContent = `${soloStreak + 1}戦目`;
+    }).catch(() => {});
   }
   onlineSide = null;
   onlineEndReason = null;
@@ -1264,6 +1246,8 @@ async function startBattle() {
   $('player-name').textContent = Meta.data.name;
   $<HTMLImageElement>('enemy-avatar').src = YOKAI[stage.bossId].img;
   $('enemy-name').textContent = YOKAI[stage.bossId].name;
+  $('hyakki-round-hud').classList.remove('hidden');
+  $('hyakki-round-label').textContent = `${soloStreak + 1}戦目`;
   renderAll();
   updateHUD();
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
@@ -1273,7 +1257,7 @@ async function startBattle() {
   resonanceAnnounced.clear();
   await playVsIntro(
     { bossId: stage.bossId, label: '敵将' },
-    soloMode === 'streak' ? `百鬼夜行 ${soloStreak + 1}戦目` : stage.name,
+    `百鬼夜行 ${soloStreak + 1}戦目`,
   );
   await announceResonances(); // 開幕から因縁ペアが揃っている場合
   showBanner('p');
@@ -1306,7 +1290,7 @@ async function doAction(action: Action) {
     showBanner('e');
     $('thinking').classList.remove('hidden');
     await sleep(850 + Math.random() * 550);
-    const act = AI.chooseAction(G!, soloDifficulty);
+    const act = AI.chooseAction(G!, HYAKKI_RANK_DIFFICULTY);
     $('thinking').classList.add('hidden');
     if (act) { doAction(act); return; }
     // 指し手なし(エンジン側で勝敗確定済みのはず)
@@ -1724,6 +1708,7 @@ function showResult() {
   $('combo-vignette').className = '';
   const draw = onlineEndReason === 'draw';
   const win = G!.winner === 'p';
+  const solo = !onlineSide;
   trackLandingEvent('result_view', {
     online: !!onlineSide,
     result: draw ? 'draw' : win ? 'win' : 'lose',
@@ -1732,23 +1717,78 @@ function showResult() {
   const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS) : activeSoloStage.bossId;
   const enemyBossName = YOKAI[enemyBoss].name;
   $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : enemyBoss].img;
-  if (win && !onlineSide) {
-    if (!soloClearRecorded) {
-      recordSoloClear(soloStageId, soloDifficulty);
-      soloClearRecorded = true;
-      if (soloMode === 'streak') soloStreak++;
+
+  const streakEl = $('result-hyakki-streak');
+  const details = $<HTMLDetailsElement>('result-hyakki-details');
+  const onlineActions = $('result-actions-online');
+  const hyakkiActions = $('result-actions-hyakki');
+
+  if (solo) {
+    if (win && !soloWinCounted) {
+      soloStreak++;
+      soloWinCounted = true;
+      soloBestStreak = Math.max(soloBestStreak, soloStreak);
     }
-    /* ソロ勝利報酬はサーバー(またはローカル)が日次上限つきで付与。結果を待って表示を確定 */
-    $('result-reward').textContent = '勝利報酬を確認中…';
-    $('result-reward').classList.remove('hidden');
-    Meta.recordSoloWin().then(reward => {
-      $('result-reward').textContent = reward > 0
-        ? `勝利報酬: ガチャチケット 🎟 +${reward}`
-        : '本日の勝利報酬は上限に達しました';
-    }).catch(() => {
-      $('result-reward').textContent = '勝利報酬の付与に失敗しました(通信状態を確認)';
-    });
-  } else if (onlineSide) {
+    const brokenStreak = soloStreak;
+    if (win) {
+      streakEl.textContent = `${soloStreak}連勝`;
+      streakEl.classList.remove('is-broken');
+      $('result-sub').textContent = reasonsFor(win, enemyBossName);
+    } else {
+      streakEl.textContent = brokenStreak > 0 ? `連勝はここで途切れた（${brokenStreak}連勝）` : '連勝ならず';
+      streakEl.classList.add('is-broken');
+      $('result-sub').textContent = reasonsFor(win, enemyBossName)
+        + (soloBestStreak > 0 ? `　今週ベスト ${soloBestStreak}` : '');
+    }
+    streakEl.classList.remove('hidden');
+    details.classList.remove('hidden');
+    details.open = false;
+    renderHyakkiResultStats();
+    $('result-stats').classList.add('hidden');
+    onlineActions.classList.add('hidden');
+    hyakkiActions.classList.remove('hidden');
+    $('btn-hyakki-continue').classList.toggle('hidden', !win);
+    $('btn-hyakki-retry').classList.toggle('hidden', win);
+
+    $('result-reward').textContent = win ? '勝利報酬を確認中…' : '';
+    $('result-reward').classList.toggle('hidden', !win);
+    if (win) {
+      Meta.recordSoloWin().then(reward => {
+        $('result-reward').textContent = reward > 0
+          ? `勝利報酬: ガチャチケット 🎟 +${reward}`
+          : '本日の勝利報酬は上限に達しました';
+      }).catch(() => {
+        $('result-reward').textContent = '勝利報酬の付与に失敗しました(通信状態を確認)';
+      });
+    }
+
+    if (hyakkiRankEligible()) {
+      hyakkiRankingAt = 0;
+      Meta.hyakkiResult(win).then(p => {
+        if (!p) return;
+        applyHyakkiStanding(p);
+        if (win) {
+          streakEl.textContent = `${p.currentStreak}連勝`
+            + (p.rank ? `（今週${p.rank}位）` : '');
+        } else {
+          streakEl.textContent = brokenStreak > 0
+            ? `連勝はここで途切れた（${brokenStreak}連勝）`
+            : '連勝ならず';
+          if (p.bestStreak > 0) {
+            $('result-sub').textContent = reasonsFor(win, enemyBossName)
+              + `　今週ベスト ${p.bestStreak}`
+              + (p.rank ? `（${p.rank}位）` : '');
+          }
+        }
+      }).catch(() => { /* 通信断でもローカル表示は維持 */ });
+    }
+    if (!win) soloStreak = 0;
+  } else {
+    streakEl.classList.add('hidden');
+    details.classList.add('hidden');
+    onlineActions.classList.remove('hidden');
+    hyakkiActions.classList.add('hidden');
+    $('result-sub').textContent = reasonsFor(win, enemyBossName);
     const lines: string[] = [];
     if (win && onlineReward > 0) lines.push(`勝利報酬: ガチャチケット 🎟 +${onlineReward}`);
     if (onlineParticipation > 0) lines.push(`参加報酬: ガチャチケット 🎟 +${onlineParticipation}`);
@@ -1759,36 +1799,12 @@ function showResult() {
     } else {
       $('result-reward').classList.add('hidden');
     }
-  } else {
-    $('result-reward').classList.add('hidden');
+    $('result-stats').classList.add('hidden');
   }
-  if (!onlineSide && hyakkiRankEligible()) {
-    /* 結果申告(doc 21)。連勝数と今週順位はサーバーの返答で確定 */
-    hyakkiRankingAt = 0;
-    Meta.hyakkiResult(win).then(p => {
-      if (!p) return;
-      soloStreak = p.currentStreak;
-      const el = document.querySelector('.result-streak');
-      if (el) el.textContent = `百鬼夜行 ${p.currentStreak}連勝` + (p.rank ? `(今週${p.rank}位)` : '');
-    }).catch(() => { /* 通信断でもローカル表示は維持 */ });
-  }
+
   const title = $('result-title');
   title.textContent = draw ? '引き分け' : win ? '討伐成功' : '敗北';
   title.className = win ? 'win' : 'lose';
-  const reasons: Record<string, string> = {
-    boss: win ? `敵大将・${enemyBossName}を討ち取った!` : '我が大将が討ち取られた…',
-    hp: win ? `${enemyBossName}の魂力を打ち砕いた!` : '魂力が尽き果てた…',
-    explode: win ? '鬼火が敵大将を道連れにした!' : '我が大将が鬼火の道連れに…',
-    nomoves: win ? '敵軍は身動きが取れなくなった!' : '我が軍は身動きが取れなくなった…',
-    resign: '投了した…',
-    timeout: win ? '相手の持ち時間が切れた' : '持ち時間が切れた…',
-    disconnect: win ? '相手の再接続猶予が切れた' : '再接続猶予が切れた…',
-    draw: '300手に達したため引き分け',
-  };
-  $('result-sub').textContent = reasons[onlineEndReason || G!.reason || ''] || '';
-  renderResultStats();
-  const retry = $('btn-retry');
-  retry.textContent = soloMode === 'streak' && !onlineSide && win ? '次の軍勢へ' : '再戦';
   showScreen('screen-result');
   AudioSys.play(win ? 'win' : 'lose');
   if (win) {
@@ -1800,25 +1816,30 @@ function showResult() {
   }
 }
 
-function renderResultStats() {
-  const stats = $('result-stats');
-  if (onlineSide) {
-    stats.classList.add('hidden');
-    return;
-  }
+function reasonsFor(win: boolean, enemyBossName: string): string {
+  const reasons: Record<string, string> = {
+    boss: win ? `敵大将・${enemyBossName}を討ち取った!` : '我が大将が討ち取られた…',
+    hp: win ? `${enemyBossName}の魂力を打ち砕いた!` : '魂力が尽き果てた…',
+    explode: win ? '鬼火が敵大将を道連れにした!' : '我が大将が鬼火の道連れに…',
+    nomoves: win ? '敵軍は身動きが取れなくなった!' : '我が軍は身動きが取れなくなった…',
+    resign: '投了した…',
+    timeout: win ? '相手の持ち時間が切れた' : '持ち時間が切れた…',
+    disconnect: win ? '相手の再接続猶予が切れた' : '再接続猶予が切れた…',
+    draw: '300手に達したため引き分け',
+  };
+  return reasons[onlineEndReason || G!.reason || ''] || '';
+}
+
+function renderHyakkiResultStats() {
   const hp = G?.hp.p || 0;
   const hpPct = Math.round(hp / MAX_HP * 100);
-  const streak = soloMode === 'streak'
-    ? `<div class="result-stat result-streak">百鬼夜行 ${soloStreak}連勝</div>`
-    : '';
-  stats.innerHTML = streak +
+  $('result-hyakki-stats').innerHTML =
     `<div class="result-stat">手数<b>${battleStats.turns}</b></div>` +
     `<div class="result-stat">撃破数<b>${battleStats.captures.p}</b></div>` +
     `<div class="result-stat">与ダメージ<b>${battleStats.damage.p}</b></div>` +
     `<div class="result-stat">被ダメージ<b>${battleStats.damage.e}</b></div>` +
     `<div class="result-stat">最大コンボ<b>${battleStats.maxCombo.p}</b></div>` +
     `<div class="result-stat">残り魂力<b>${hpPct}%</b></div>`;
-  stats.classList.remove('hidden');
 }
 
 /* ============================== 駒一覧 ============================== */

@@ -2,7 +2,7 @@
    サーバー契約自体は test/workers/api.spec.ts(実Workersランタイム)で検証済み。
    ここではリクエスト形・トークン管理・401リフレッシュ・エラーコードのマッピングを確認する。 */
 import { beforeEach, test, expect, vi } from 'vitest';
-import { ApiClient, ApiError, NetworkError } from '../client/src/meta/client';
+import { ApiClient, ApiError, NetworkError, SessionExpiredError } from '../client/src/meta/client';
 import { ApiMeta } from '../client/src/meta/api';
 
 /* localStorageシム(リフレッシュトークン保存先) */
@@ -64,7 +64,7 @@ function install(opts: { offline?: boolean } = {}) {
     if (authed !== `Bearer ${server.validAccess}`) return errBody('UNAUTHORIZED', 401);
 
     if (path === '/v1/me') return json({
-      userId: 'u_1', name: 'プレイヤー', isGuest: true,
+      userId: 'u_1', name: 'プレイヤー', isGuest: true, hasPasskey: false,
       tickets: server.tickets, yoryoku: server.yoryoku,
       onboardingDone: server.onboardingDone,
       ...(server.onboardingDone ? { loginBonus: { day: 1, tickets: 1 } } : {}),
@@ -164,6 +164,60 @@ test('既存リフレッシュトークンがあればゲストではなくrefre
   expect(ls.get('yokaiShogi.rt.v1')).toBe('refresh-2'); // ローテーション
 });
 
+test('リフレッシュ失効時は新規ゲストを発行せず SessionExpiredError', async () => {
+  install();
+  ls.set('yokaiShogi.rt.v1', 'refresh-1');
+  server.refreshValid = false;
+  const m = new ApiMeta(new ApiClient('http://api.test'));
+  await expect(m.init()).rejects.toBeInstanceOf(SessionExpiredError);
+  const paths = server.requests.map(r => r.path);
+  expect(paths).toContain('/v1/auth/refresh');
+  expect(paths).not.toContain('/v1/auth/guest');
+  expect(ls.get('yokaiShogi.rt.v1')).toBeUndefined();
+  expect(ls.get('yokaiShogi.needsRecovery.v1')).toBe('1');
+});
+
+test('needsRecovery 中は RT がなくてもゲスト自動発行しない', async () => {
+  install();
+  ls.set('yokaiShogi.needsRecovery.v1', '1');
+  const client = new ApiClient('http://api.test');
+  await expect(client.ensureSession()).rejects.toBeInstanceOf(SessionExpiredError);
+  expect(server.requests.some(r => r.path === '/v1/auth/guest')).toBe(false);
+});
+
+test('createGuestSession で明示的に新規開始できる', async () => {
+  install();
+  ls.set('yokaiShogi.needsRecovery.v1', '1');
+  const m = new ApiMeta(new ApiClient('http://api.test'));
+  await m.startAsNewGuest();
+  expect(m.data.online).toBe(true);
+  expect(ls.get('yokaiShogi.rt.v1')).toBe('refresh-1');
+  expect(ls.get('yokaiShogi.needsRecovery.v1')).toBeUndefined();
+  expect(server.requests.some(r => r.path === '/v1/auth/guest')).toBe(true);
+});
+
+test('401時に自動でセッション再確立してリトライする', async () => {
+  install();
+  const m = new ApiMeta(new ApiClient('http://api.test'));
+  await m.init();
+  // 次の認証付きリクエストを一度だけ401にする → refresh で復帰しリトライ成功
+  server.failNextAuthOnce = true;
+  server.refreshValid = true;
+  const res = await m.pull(1);
+  expect(res).not.toBeNull();
+  expect(server.requests.some(r => r.path === '/v1/auth/refresh')).toBe(true);
+});
+
+test('401後のrefresh失敗は SessionExpiredError(ゲスト再発行しない)', async () => {
+  install();
+  const m = new ApiMeta(new ApiClient('http://api.test'));
+  await m.init();
+  server.failNextAuthOnce = true;
+  server.refreshValid = false;
+  await expect(m.pull(1)).rejects.toBeInstanceOf(SessionExpiredError);
+  expect(server.requests.filter(r => r.path === '/v1/auth/guest')).toHaveLength(1); // init時のみ
+});
+
 test('pull: サーバー結果でtickets/yoryoku/ownedを更新・idempotencyKey送信', async () => {
   const fetchMock = install();
   const m = new ApiMeta(new ApiClient('http://api.test'));
@@ -231,18 +285,6 @@ test('recordSoloWin: tickets/winsを更新', async () => {
   expect(granted).toBe(1);
   expect(m.data.tickets).toBe(12);
   expect(m.data.wins).toBe(1);
-});
-
-test('401時に自動でセッション再確立してリトライする', async () => {
-  install();
-  const m = new ApiMeta(new ApiClient('http://api.test'));
-  await m.init();
-  // 次の認証付きリクエストを一度だけ401にする → refresh で復帰しリトライ成功
-  server.failNextAuthOnce = true;
-  server.refreshValid = true;
-  const res = await m.pull(1);
-  expect(res).not.toBeNull();
-  expect(server.requests.some(r => r.path === '/v1/auth/refresh')).toBe(true);
 });
 
 test('引き継ぎコード: 発行でゲスト卒業・別端末ログイン相当でデータ再取得', async () => {

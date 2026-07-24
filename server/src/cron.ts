@@ -7,6 +7,7 @@
 import type { Env } from './env';
 import { gameDateDaysAgo, gameWeek } from './lib/time';
 import { HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
+import { cleanupExpiredChallenges } from './lib/webauthn';
 
 interface BalanceMismatch { user_id: string; balance: number; log_sum: number; }
 
@@ -121,6 +122,7 @@ async function cleanupExpiredTokens(db: D1Database): Promise<number> {
 export async function runDailyJobs(env: Env): Promise<{
   ticketMismatches: number; yoryokuMismatches: number; yokaiMismatch: boolean;
   hyakkiRewardGranted: boolean; dormantDeleted: number; tokensDeleted: number;
+  challengesDeleted: number;
 }> {
   const db = env.DB;
   await db.prepare('UPDATE user_profiles SET online_win_reward_count = 0').run();
@@ -141,6 +143,7 @@ export async function runDailyJobs(env: Env): Promise<{
 
   const dormantDeleted = await cleanupDormantGuests(db);
   const tokensDeleted = await cleanupExpiredTokens(db);
+  const challengesDeleted = await cleanupExpiredChallenges(db);
 
   const summary = {
     ticketMismatches: tickets.length,
@@ -149,6 +152,7 @@ export async function runDailyJobs(env: Env): Promise<{
     hyakkiRewardGranted: hyakkiReward.granted,
     dormantDeleted,
     tokensDeleted,
+    challengesDeleted,
   };
   console.log('[cron] daily jobs done', JSON.stringify(summary));
   return summary;
