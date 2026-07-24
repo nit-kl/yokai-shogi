@@ -72,12 +72,26 @@ class MetaFacade {
   recordSoloWin(): Promise<number> { return this.provider.recordSoloWin(); }
   issueLinkCode(): Promise<string> { return this.provider.issueLinkCode(); }
   redeemLinkCode(code: string): Promise<boolean> { return this.provider.redeemLinkCode(code); }
+  registerPasskey(): Promise<void> { return this.provider.registerPasskey(); }
+  loginWithPasskey(): Promise<boolean> { return this.provider.loginWithPasskey(); }
 
   /** セッション失効画面から引き継ぎコードで復元(ApiMeta 未確立時も可) */
   async recoverWithLinkCode(code: string): Promise<boolean> {
     if (!API_URL) throw new Error('オンライン接続時のみ利用できます');
     const api = new ApiMeta(new ApiClient(API_URL));
     await api.redeemLinkCode(code);
+    this.provider = api;
+    this.forceLocal = false;
+    this.pendingLoginBonus = null;
+    this.pendingReleaseGift = api.pendingReleaseGift;
+    return true;
+  }
+
+  /** セッション失効画面からパスキーで復元 */
+  async recoverWithPasskey(): Promise<boolean> {
+    if (!API_URL) throw new Error('オンライン接続時のみ利用できます');
+    const api = new ApiMeta(new ApiClient(API_URL));
+    await api.loginWithPasskey();
     this.provider = api;
     this.forceLocal = false;
     this.pendingLoginBonus = null;

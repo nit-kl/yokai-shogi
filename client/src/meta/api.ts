@@ -10,9 +10,15 @@ import { ownedSet } from './types';
 import type { GachaResult } from './types';
 import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState, ReleaseGift } from './types';
 import { getTurnstileToken } from '../turnstile';
+import { assertPasskey, createPasskey, passkeyErrorMessage, passkeySupported } from './passkey';
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser';
 
 interface MeResponse {
   userId: string; name: string; isGuest: boolean;
+  hasPasskey?: boolean;
   tickets: number; yoryoku: number;
   onboardingDone: boolean;
   loginBonus?: LoginBonus;
@@ -23,7 +29,7 @@ interface MeResponse {
 export class ApiMeta implements MetaProvider {
   readonly data: MetaState = {
     tickets: 0, yoryoku: 0, owned: {}, formation: [],
-    name: 'プレイヤー', wins: 0, isGuest: true, online: true, onboardingDone: false,
+    name: 'プレイヤー', wins: 0, isGuest: true, hasPasskey: false, online: true, onboardingDone: false,
   };
   /** 直近の /me で付与されたリリース記念(タイトル表示で消費) */
   pendingReleaseGift: ReleaseGift | null = null;
@@ -55,6 +61,7 @@ export class ApiMeta implements MetaProvider {
     this.data.yoryoku = me.yoryoku;
     this.data.name = me.name;
     this.data.isGuest = me.isGuest;
+    this.data.hasPasskey = !!me.hasPasskey;
     this.data.wins = me.wins;
     this.data.online = true;
     this.data.onboardingDone = me.onboardingDone;
@@ -154,6 +161,40 @@ export class ApiMeta implements MetaProvider {
     await this.client.loginWithCode(code); // 失敗時 ApiError
     await this.reload();                   // 切り替え先アカウントのデータを取得
     return true;
+  }
+
+  async registerPasskey(): Promise<void> {
+    if (!passkeySupported()) throw new Error('この端末ではパスキーを利用できません');
+    try {
+      const options = await this.client.post2<PublicKeyCredentialCreationOptionsJSON>(
+        '/v1/auth/passkey/register/options',
+        {},
+      );
+      const attestation = await createPasskey(options);
+      await this.client.post2<{ ok: boolean; hasPasskey: boolean }>(
+        '/v1/auth/passkey/register',
+        attestation,
+      );
+      this.data.hasPasskey = true;
+      this.data.isGuest = false;
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new Error(passkeyErrorMessage(e));
+    }
+  }
+
+  async loginWithPasskey(): Promise<boolean> {
+    if (!passkeySupported()) throw new Error('この端末ではパスキーを利用できません');
+    try {
+      const options = await this.client.getPasskeyLoginOptions<PublicKeyCredentialRequestOptionsJSON>();
+      const assertion = await assertPasskey(options);
+      await this.client.loginWithPasskey(assertion);
+      await this.reload();
+      return true;
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new Error(passkeyErrorMessage(e));
+    }
   }
 
   async pickBoss(bossId: string): Promise<string | null> {

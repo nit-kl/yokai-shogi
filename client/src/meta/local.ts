@@ -69,6 +69,7 @@ export class LocalMeta implements MetaProvider {
       name: 'プレイヤー',
       wins: 0,
       isGuest: true,
+      hasPasskey: false,
       online: false,
       onboardingDone: false,
       lastLogin: null,
@@ -181,6 +182,14 @@ export class LocalMeta implements MetaProvider {
 
   async redeemLinkCode(_code: string): Promise<boolean> {
     throw new Error('引き継ぎはオンライン接続時のみ利用できます');
+  }
+
+  async registerPasskey(): Promise<void> {
+    throw new Error('パスキーはオンライン接続時のみ利用できます');
+  }
+
+  async loginWithPasskey(): Promise<boolean> {
+    throw new Error('パスキーはオンライン接続時のみ利用できます');
   }
 
   battleUrl(): string | null { return null; }

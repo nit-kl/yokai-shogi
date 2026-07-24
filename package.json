@@ -40,6 +40,8 @@
   },
   "dependencies": {
     "@sentry/browser": "^9.39.0",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "hono": "^4.12.25",
     "zod": "^4.4.3"
   }

@@ -38,17 +38,20 @@ if (await page.locator('#pieces-list').getByText('ガチャ限定').count()) err
 await page.click('#btn-pieces-back');
 await page.waitForSelector('#screen-title.active');
 
-// ソロ対戦
+// 百鬼夜行(ソロ連戦)
 await page.click('#btn-start');
 await page.waitForSelector('#screen-solo.active');
-if (await page.locator('.solo-stage-card').count() !== 4) errors.push('ソロステージが4件表示されていない');
-if (await page.locator('.solo-difficulty').count() !== 3) errors.push('ソロ難易度が3件表示されていない');
-if (await page.locator('.solo-mode').count() !== 2) errors.push('通常戦・連戦の切替が表示されていない');
-await page.locator('.solo-stage-card').nth(2).click();
-await page.locator('.solo-difficulty').nth(2).click();
+if (!(await page.locator('#btn-solo-battle').isVisible())) errors.push('百鬼夜行の挑戦ボタンが表示されていない');
+if (!(await page.locator('#solo-current-streak').isVisible())) errors.push('連勝表示がない');
 await page.click('#btn-solo-battle');
+await page.waitForSelector('#screen-hyakki-preview.active');
+const expectedBoss = (await page.locator('#hyakki-preview-boss-name').textContent())?.trim() || '';
+if (!expectedBoss) errors.push('プレビューに敵大将名がない');
+await page.click('#btn-hyakki-fight');
 await page.waitForSelector('#screen-battle.active');
-if (await page.locator('#enemy-name').textContent() !== '九尾の狐') errors.push('選択したソロステージの敵大将が反映されていない');
+if (await page.locator('#enemy-name').textContent() !== expectedBoss) {
+  errors.push(`選択した百鬼の敵大将が反映されていない: ${await page.locator('#enemy-name').textContent()} / 期待 ${expectedBoss}`);
+}
 // 開幕VS演出を撮ってから、入力ロック(VS・共鳴カットイン)解除を待つ
 await page.waitForTimeout(900);
 await page.screenshot({ path: path.join(dir, 'shot-2-vs-intro.png') });

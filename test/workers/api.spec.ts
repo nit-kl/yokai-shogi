@@ -15,11 +15,13 @@ function freshIp(): string {
   return `10.${(ipCounter >> 8) & 255}.${ipCounter & 255}.1`;
 }
 
-async function api(path: string, init?: RequestInit & { token?: string; ip?: string }) {
+async function api(path: string, init?: RequestInit & { token?: string; ip?: string; origin?: string }) {
+  const { token, ip, origin, ...rest } = init || {};
   const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (init?.token) headers.Authorization = `Bearer ${init.token}`;
-  if (init?.ip) headers['CF-Connecting-IP'] = init.ip;
-  const res = await SELF.fetch(`${BASE}${path}`, { ...init, headers });
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (ip) headers['CF-Connecting-IP'] = ip;
+  if (origin) headers.Origin = origin;
+  const res = await SELF.fetch(`${BASE}${path}`, { ...rest, headers });
   return { status: res.status, body: await res.json<any>().catch(() => null) };
 }
 
@@ -33,7 +35,7 @@ describe('認証', () => {
   it('認証設定: Turnstile未設定時は不要と返す', async () => {
     const config = await api('/v1/auth/config');
     expect(config.status).toBe(200);
-    expect(config.body).toEqual({ turnstileRequired: false });
+    expect(config.body).toEqual({ turnstileRequired: false, passkeyEnabled: true });
   });
 
   it('ゲスト作成: 初期チケット10・所持なし・オンボーディング未完了', async () => {
@@ -157,6 +159,33 @@ describe('認証', () => {
     expect(reissued.body.code).not.toBe(code);
     const oldLogin = await api('/v1/auth/login/link-code', { method: 'POST', ip: freshIp(), body: JSON.stringify({ code }) });
     expect(oldLogin.status).toBe(401);
+  });
+
+  it('パスキー: 登録・ログインの options を発行できる', async () => {
+    const g = await createGuest();
+    const origin = 'http://localhost:5173';
+    const reg = await api('/v1/auth/passkey/register/options', {
+      method: 'POST', token: g.accessToken, body: '{}', origin,
+    });
+    expect(reg.status).toBe(200);
+    expect(reg.body.challenge).toBeTruthy();
+    expect(reg.body.rp.id).toBe('localhost');
+    expect(reg.body.user.name).toBe(g.userId);
+
+    const me = await api('/v1/me', { token: g.accessToken });
+    expect(me.body.hasPasskey).toBe(false);
+
+    const loginOpt = await api('/v1/auth/passkey/login/options', {
+      method: 'POST', body: '{}', origin, ip: freshIp(),
+    });
+    expect(loginOpt.status).toBe(200);
+    expect(loginOpt.body.challenge).toBeTruthy();
+    expect(loginOpt.body.rpId).toBe('localhost');
+
+    const badOrigin = await api('/v1/auth/passkey/login/options', {
+      method: 'POST', body: '{}', origin: 'https://evil.example', ip: freshIp(),
+    });
+    expect(badOrigin.status).toBe(400);
   });
 
   it('BANユーザーはAPIを利用できない', async () => {

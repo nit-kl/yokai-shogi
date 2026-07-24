@@ -12,6 +12,7 @@ import {
 } from '../db';
 import { authRequired } from '../middleware';
 import { validateFormation, validateDisplayName } from '../../../shared/validate';
+import { userHasPasskey } from '../lib/webauthn';
 
 export const meRoutes = new Hono<AppEnv>();
 meRoutes.use('/me', authRequired);
@@ -84,6 +85,7 @@ meRoutes.get('/me', async c => {
     userId,
     name: p.name,
     isGuest: c.get('isGuest'),
+    hasPasskey: await userHasPasskey(db, userId),
     tickets: p.tickets,
     yoryoku: p.yoryoku,
     onboardingDone,

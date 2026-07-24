@@ -156,6 +156,16 @@ export class ApiClient {
     this.applyTokens(t);
   }
 
+  /* パスキー検証結果でログイン。失敗時 ApiError */
+  async loginWithPasskey(assertion: unknown): Promise<void> {
+    const t = await this.post<TokenResponse>('/v1/auth/passkey/login', assertion);
+    this.applyTokens(t);
+  }
+
+  async getPasskeyLoginOptions<T = unknown>(): Promise<T> {
+    return this.post<T>('/v1/auth/passkey/login/options', {});
+  }
+
   /* 認証付きリクエスト。401ならrefreshのみ1回試行してリトライ(新規ゲストは作らない) */
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const doFetch = async (): Promise<Response> => {

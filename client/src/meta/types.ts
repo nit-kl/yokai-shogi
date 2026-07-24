@@ -24,6 +24,7 @@ export interface MetaState {
   name: string;
   wins: number;
   isGuest: boolean;
+  hasPasskey: boolean;
   online: boolean;                 // true=サーバー権威 / false=ローカル(オフライン)
   onboardingDone: boolean;
 }
@@ -52,6 +53,10 @@ export interface MetaProvider {
   issueLinkCode(): Promise<string>;
   /** 引き継ぎコードでこの端末のデータを別アカウントに差し替え。成功で true */
   redeemLinkCode(code: string): Promise<boolean>;
+  /** パスキーを登録。オフライン・非対応は例外 */
+  registerPasskey(): Promise<void>;
+  /** パスキーで別アカウントに差し替え。成功で true */
+  loginWithPasskey(): Promise<boolean>;
   /** オンライン対戦WebSocket URL。オフライン版は null */
   battleUrl(): string | null;
   /** 初回オンボーディング: 大将を選ぶ */

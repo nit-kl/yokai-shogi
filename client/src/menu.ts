@@ -13,6 +13,7 @@ import type { AdsStatus } from './ads/rewarded';
 import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
+import { passkeySupported } from './meta/passkey';
 
 const LINK_NUDGE_KEY = 'yokaiShogi.linkNudge.v1';
 const LINK_NUDGE_INTERVAL_MS = 3 * 86400e3; // 3日おきに再催促
@@ -187,11 +188,57 @@ export const MenuUI = {
         btn.disabled = false;
       }
     };
+    $('btn-passkey-register').onclick = async () => {
+      const btn = $<HTMLButtonElement>('btn-passkey-register');
+      btn.disabled = true;
+      $('link-msg').textContent = 'パスキー登録中…';
+      try {
+        await Meta.registerPasskey();
+        $('link-msg').textContent = 'パスキーを登録しました。';
+        this.clearLinkNudgeSnooze();
+        this.refreshPasskeyButtons();
+      } catch (e) {
+        $('link-msg').textContent = e instanceof Error ? e.message : 'パスキー登録に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    $('btn-passkey-login').onclick = async () => {
+      if (!confirm('パスキーで別アカウントに切り替えます。現在この端末のデータは置き換わります。よろしいですか？')) return;
+      const btn = $<HTMLButtonElement>('btn-passkey-login');
+      btn.disabled = true;
+      $('link-msg').textContent = 'パスキー認証中…';
+      try {
+        await Meta.loginWithPasskey();
+        $('link-msg').textContent = '切り替えが完了しました。タイトルに戻ります。';
+        setTimeout(() => { $('modal-link').classList.add('hidden'); this._enterTitle(); }, 900);
+      } catch (e) {
+        $('link-msg').textContent = e instanceof Error ? e.message : 'パスキー認証に失敗しました';
+        btn.disabled = false;
+      }
+    };
     this.initLinkNudge();
     this.initSessionRecovery();
   },
 
   initLinkNudge() {
+    $('btn-nudge-passkey').onclick = async () => {
+      const btn = $<HTMLButtonElement>('btn-nudge-passkey');
+      btn.disabled = true;
+      $('nudge-msg').textContent = 'パスキー登録中…';
+      try {
+        await Meta.registerPasskey();
+        $('nudge-msg').textContent = 'パスキーを登録しました。';
+        this.clearLinkNudgeSnooze();
+        btn.classList.add('hidden');
+        $<HTMLButtonElement>('btn-nudge-issue').classList.add('hidden');
+        $('btn-nudge-later').textContent = '閉じる';
+      } catch (e) {
+        $('nudge-msg').textContent = e instanceof Error ? e.message : 'パスキー登録に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    };
     $('btn-nudge-issue').onclick = async () => {
       const btn = $<HTMLButtonElement>('btn-nudge-issue');
       btn.disabled = true;
@@ -204,6 +251,7 @@ export const MenuUI = {
         $('nudge-msg').textContent = '発行しました。このコードをメモして保管してください。';
         this.clearLinkNudgeSnooze();
         btn.classList.add('hidden');
+        $<HTMLButtonElement>('btn-nudge-passkey').classList.add('hidden');
         $('btn-nudge-later').textContent = '閉じる';
       } catch (e) {
         $('nudge-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
@@ -213,8 +261,7 @@ export const MenuUI = {
     };
     $('btn-nudge-later').onclick = () => {
       AudioSys.play('click');
-      if (!$('nudge-code-display').classList.contains('hidden')) {
-        /* 発行済みで閉じる場合は催促不要 */
+      if (!$('nudge-code-display').classList.contains('hidden') || Meta.data.hasPasskey) {
         this.clearLinkNudgeSnooze();
       } else {
         this.snoozeLinkNudge();
@@ -224,14 +271,32 @@ export const MenuUI = {
   },
 
   initSessionRecovery() {
+    const setBusy = (busy: boolean) => {
+      $<HTMLButtonElement>('btn-recovery-redeem').disabled = busy;
+      $<HTMLButtonElement>('btn-recovery-new').disabled = busy;
+      const pk = document.getElementById('btn-recovery-passkey') as HTMLButtonElement | null;
+      if (pk) pk.disabled = busy;
+    };
+    $('btn-recovery-passkey').onclick = async () => {
+      setBusy(true);
+      $('recovery-msg').textContent = 'パスキー認証中…';
+      try {
+        await Meta.recoverWithPasskey();
+        $('recovery-msg').textContent = '復元しました。タイトルに戻ります。';
+        setTimeout(() => {
+          $('modal-session-recovery').classList.add('hidden');
+          this._enterTitle();
+        }, 700);
+      } catch (e) {
+        $('recovery-msg').textContent = e instanceof Error ? e.message : '復元に失敗しました';
+        setBusy(false);
+      }
+    };
     $('btn-recovery-redeem').onclick = async () => {
       const input = $<HTMLInputElement>('recovery-code-input');
       const code = input.value.trim();
       if (!code) { $('recovery-msg').textContent = 'コードを入力してください'; return; }
-      const btn = $<HTMLButtonElement>('btn-recovery-redeem');
-      const newBtn = $<HTMLButtonElement>('btn-recovery-new');
-      btn.disabled = true;
-      newBtn.disabled = true;
+      setBusy(true);
       $('recovery-msg').textContent = '復元中…';
       try {
         await Meta.recoverWithLinkCode(code);
@@ -242,16 +307,12 @@ export const MenuUI = {
         }, 700);
       } catch (e) {
         $('recovery-msg').textContent = e instanceof Error ? e.message : '復元に失敗しました';
-        btn.disabled = false;
-        newBtn.disabled = false;
+        setBusy(false);
       }
     };
     $('btn-recovery-new').onclick = async () => {
-      if (!confirm('新しい進行で始めます。引き継ぎコードがない限り、以前のデータには戻れません。よろしいですか？')) return;
-      const btn = $<HTMLButtonElement>('btn-recovery-new');
-      const redeemBtn = $<HTMLButtonElement>('btn-recovery-redeem');
-      btn.disabled = true;
-      redeemBtn.disabled = true;
+      if (!confirm('新しい進行で始めます。パスキーや引き継ぎコードがない限り、以前のデータには戻れません。よろしいですか？')) return;
+      setBusy(true);
       $('recovery-msg').textContent = '準備中…';
       try {
         await Meta.startFreshGuest();
@@ -259,8 +320,7 @@ export const MenuUI = {
         this._enterTitle();
       } catch (e) {
         $('recovery-msg').textContent = e instanceof Error ? e.message : '開始に失敗しました';
-        btn.disabled = false;
-        redeemBtn.disabled = false;
+        setBusy(false);
       }
     };
   },
@@ -269,7 +329,16 @@ export const MenuUI = {
     $('link-msg').textContent = '';
     $('link-code-display').classList.add('hidden');
     $<HTMLInputElement>('link-code-input').value = '';
+    this.refreshPasskeyButtons();
     $('modal-link').classList.remove('hidden');
+  },
+
+  refreshPasskeyButtons() {
+    const ok = passkeySupported() && Meta.data.online;
+    const has = Meta.data.hasPasskey;
+    $('btn-passkey-register').classList.toggle('hidden', !ok || has);
+    $('passkey-registered-note').classList.toggle('hidden', !has);
+    $('btn-passkey-login').classList.toggle('hidden', !ok);
   },
 
   openSessionRecovery() {
@@ -278,10 +347,13 @@ export const MenuUI = {
     $<HTMLInputElement>('recovery-code-input').value = '';
     $<HTMLButtonElement>('btn-recovery-redeem').disabled = false;
     $<HTMLButtonElement>('btn-recovery-new').disabled = false;
+    const pk = $<HTMLButtonElement>('btn-recovery-passkey');
+    pk.disabled = false;
+    pk.classList.toggle('hidden', !passkeySupported());
     $('modal-session-recovery').classList.remove('hidden');
   },
 
-  /* ゲストかつオンボーディング済みなら、数日おきに引き継ぎコードを催促 */
+  /* ゲストかつオンボーディング済みなら、数日おきに引き継ぎを催促 */
   maybeShowLinkNudge() {
     if (!Meta.data.online || !Meta.data.isGuest || !Meta.data.onboardingDone) return;
     if (!this.shouldShowLinkNudge()) return;
@@ -291,6 +363,9 @@ export const MenuUI = {
     const issueBtn = $<HTMLButtonElement>('btn-nudge-issue');
     issueBtn.classList.remove('hidden');
     issueBtn.disabled = false;
+    const pkBtn = $<HTMLButtonElement>('btn-nudge-passkey');
+    pkBtn.classList.toggle('hidden', !passkeySupported());
+    pkBtn.disabled = false;
     $('btn-nudge-later').textContent = 'あとで';
     $('modal-link-nudge').classList.remove('hidden');
   },

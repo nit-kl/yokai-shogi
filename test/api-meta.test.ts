@@ -64,7 +64,7 @@ function install(opts: { offline?: boolean } = {}) {
     if (authed !== `Bearer ${server.validAccess}`) return errBody('UNAUTHORIZED', 401);
 
     if (path === '/v1/me') return json({
-      userId: 'u_1', name: 'プレイヤー', isGuest: true,
+      userId: 'u_1', name: 'プレイヤー', isGuest: true, hasPasskey: false,
       tickets: server.tickets, yoryoku: server.yoryoku,
       onboardingDone: server.onboardingDone,
       ...(server.onboardingDone ? { loginBonus: { day: 1, tickets: 1 } } : {}),
