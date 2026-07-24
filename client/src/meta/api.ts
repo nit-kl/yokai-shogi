@@ -119,6 +119,10 @@ export class ApiMeta implements MetaProvider {
     return this.client.post2<HyakkiProgress>('/v1/solo/hyakki/start', {});
   }
 
+  hyakkiStatus(): Promise<HyakkiProgress | null> {
+    return this.client.get<HyakkiProgress>('/v1/solo/hyakki/status');
+  }
+
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null> {
     return this.client.post2<HyakkiProgress>('/v1/solo/hyakki/result', { win });
   }

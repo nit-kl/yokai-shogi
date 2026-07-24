@@ -187,6 +187,7 @@ export class LocalMeta implements MetaProvider {
 
   /* 百鬼夜行ランキングはサーバー専用機能。オフラインでは参加も閲覧もしない */
   async hyakkiStart(): Promise<HyakkiProgress | null> { return null; }
+  async hyakkiStatus(): Promise<HyakkiProgress | null> { return null; }
   async hyakkiResult(_win: boolean): Promise<HyakkiProgress | null> { return null; }
   async hyakkiRanking(): Promise<HyakkiRanking | null> { return null; }
   async adsStatus(): Promise<AdsStatus | null> { return null; }

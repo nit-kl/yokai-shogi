@@ -1,6 +1,6 @@
 /* 百鬼夜行 週間連勝ランキング(doc 21)— サーバー/クライアント共有の定数と型 */
 
-/** ランキング対象の難易度(上級のみ: doc 21) */
+/** ソロ対戦(百鬼夜行)のAI難易度。ランキング対象と同一 */
 export const HYAKKI_RANK_DIFFICULTY = 'hard';
 /** 今週ランキングの掲載数 */
 export const HYAKKI_RANKING_TOP = 20;

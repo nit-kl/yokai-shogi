@@ -336,29 +336,146 @@ html, body {
   color: #6e6590; font-size: 0.78rem; letter-spacing: 0.15em; z-index: 2;
 }
 
-/* ---------- ソロ対戦選択 ---------- */
+/* ---------- 百鬼夜行(ソロ連戦) ---------- */
 #screen-solo { flex-direction: column; }
-.solo-col { width: min(98vw, 780px); }
-.solo-note { color: #9a8fc0; font-size: 0.82rem; }
-.solo-mode-select { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(100%, 500px); }
-.solo-mode {
-  display: flex; flex-direction: column; gap: 2px; padding: 7px 12px;
-  color: #988dac; border: 1px solid rgba(200,138,255,0.2); border-radius: 9px;
-  background: rgba(20,16,31,0.8); cursor: pointer;
+.solo-col { width: min(98vw, 520px); }
+.solo-hyakki-lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 420px);
+  padding: 22px 18px 18px;
+  border: 1px solid rgba(232,196,106,0.28);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(42,35,66,0.96), rgba(20,16,31,0.96));
+  box-shadow: 0 0 24px rgba(200,120,255,0.12);
 }
-.solo-mode b { color: var(--paper); font: 0.82rem "Yu Mincho", serif; letter-spacing: 0.15em; }
-.solo-mode span { font-size: 0.6rem; }
-.solo-mode.active { border-color: rgba(232,196,106,0.7); background: rgba(58,41,72,0.88); box-shadow: 0 0 14px rgba(232,196,106,0.18); }
-#solo-progress {
-  align-self: flex-end;
-  padding: 4px 10px;
+.solo-hyakki-mark {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
   color: #ffe9a0;
-  border: 1px solid rgba(232,196,106,0.3);
-  border-radius: 999px;
-  background: rgba(20,16,31,0.75);
+  border: 1px solid rgba(232,196,106,0.35);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, rgba(80,62,116,0.95), rgba(20,16,31,0.95));
+  box-shadow: inset 0 1px rgba(255,255,255,0.08), 0 0 18px rgba(200,120,255,0.18);
+  font: 700 2.7rem "Yu Mincho", serif;
+  text-shadow: 0 0 12px rgba(232,196,106,0.45);
+}
+.solo-streak-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.solo-streak-label {
+  color: #ffe9a0;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+}
+.solo-streak-hero b {
+  color: var(--gold);
+  font: 700 clamp(2.8rem, 12vw, 4.2rem) / 1 "Yu Mincho", serif;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 24px rgba(232,196,106,0.35);
+}
+.solo-standing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.solo-standing-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid rgba(200,138,255,0.22);
+  border-radius: 10px;
+  background: rgba(14,10,24,0.55);
+  color: #9a8fc0;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
+  text-align: center;
 }
+.solo-standing-item b {
+  color: #fff0ad;
+  font: 700 1.05rem "Yu Mincho", serif;
+  letter-spacing: 0.06em;
+}
+.solo-note {
+  margin: 0;
+  color: #b3a8d6;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.solo-lobby-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.solo-lobby-links .btn { width: 100%; padding: 10px 8px; font-size: 0.78rem; }
+
+/* ---------- 百鬼夜行 次戦プレビュー ---------- */
+#screen-hyakki-preview { flex-direction: column; }
+.hyakki-preview-col { width: min(98vw, 480px); }
+.hyakki-preview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 400px);
+  padding: 22px 18px 20px;
+  border: 1px solid rgba(232,196,106,0.3);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(42,35,66,0.96), rgba(20,16,31,0.96));
+  box-shadow: 0 0 28px rgba(200,120,255,0.14);
+  animation: resultIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.hyakki-preview-round {
+  color: var(--gold);
+  font: 0.95rem "Yu Mincho", serif;
+  letter-spacing: 0.22em;
+}
+.hyakki-preview-boss {
+  width: min(38vw, 150px);
+  height: min(38vw, 150px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 18px rgba(200,120,255,0.35));
+}
+.hyakki-preview-boss-name {
+  color: var(--paper);
+  font: 1.2rem "Yu Mincho", serif;
+  letter-spacing: 0.14em;
+}
+.hyakki-preview-label {
+  margin: 4px 0 0;
+  color: #9a8fc0;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+}
+.hyakki-preview-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 280px;
+  margin-bottom: 6px;
+}
+.hyakki-preview-pieces img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: rgba(10,8,18,0.45);
+}
+#btn-hyakki-fight { width: min(100%, 240px); margin-top: 4px; }
+
 /* ---------- ランキング ---------- */
 .ranking-col {
   justify-content: flex-start;
@@ -460,76 +577,6 @@ html, body {
 #hyakki-ranking li b { color: #ffe9a0; }
 #hyakki-ranking-me { margin: 6px 0 0; color: #9a8fc0; font-size: 0.7rem; }
 #btn-hyakki-name { margin-top: 6px; padding: 6px 12px; font-size: 0.72rem; }
-
-#solo-stages {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  width: 100%;
-}
-.solo-stage-card {
-  min-width: 0;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(232,196,106,0.25);
-  background: linear-gradient(160deg, rgba(42,35,66,0.96), rgba(20,16,31,0.96));
-  color: var(--paper);
-  cursor: pointer;
-  text-align: left;
-  transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
-}
-.solo-stage-card:hover { transform: translateY(-2px); border-color: rgba(232,196,106,0.65); }
-.solo-stage-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(232,196,106,0.35); }
-.solo-stage-card > img { display: block; width: 86px; height: 86px; object-fit: contain; margin: 0 auto 4px; }
-.solo-stage-random-boss {
-  display: grid;
-  place-items: center;
-  width: 86px;
-  height: 86px;
-  margin: 0 auto 4px;
-  color: #ffe9a0;
-  border: 1px solid rgba(232,196,106,0.35);
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, rgba(80,62,116,0.95), rgba(20,16,31,0.95));
-  box-shadow: inset 0 1px rgba(255,255,255,0.08), 0 0 18px rgba(200,120,255,0.18);
-  font: 700 2.7rem "Yu Mincho", serif;
-  text-shadow: 0 0 12px rgba(232,196,106,0.45);
-}
-.solo-stage-head { display: flex; align-items: center; gap: 6px; font-family: "Yu Mincho", serif; }
-.solo-stage-head span {
-  padding: 2px 6px; border-radius: 4px; background: rgba(255,210,74,0.18);
-  color: var(--gold); font-size: 0.65rem; font-family: sans-serif;
-}
-.solo-stage-head b { font-size: 0.88rem; }
-.solo-stage-boss { margin-top: 4px; color: #ff9b6a; font-size: 0.72rem; }
-.solo-stage-card p { min-height: 3.2em; margin: 5px 0; color: #b3a8d6; font-size: 0.7rem; line-height: 1.5; }
-.solo-stage-pieces { display: flex; flex-wrap: wrap; gap: 2px; }
-.solo-stage-pieces img { width: 22px; height: 22px; object-fit: contain; }
-.solo-stage-clears { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 7px; }
-.solo-stage-clears span {
-  padding: 2px 5px;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 999px;
-  color: #756b8c;
-  font-size: 0.56rem;
-}
-.solo-stage-clears span.cleared {
-  color: #fff0ad;
-  border-color: rgba(232,196,106,0.45);
-  background: rgba(232,196,106,0.12);
-}
-.solo-difficulty-wrap { width: 100%; }
-.solo-difficulty-wrap h3 { margin-bottom: 6px; color: var(--gold); font: 0.9rem "Yu Mincho", serif; letter-spacing: 0.2em; }
-#solo-difficulties { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.solo-difficulty {
-  display: flex; flex-direction: column; gap: 3px;
-  padding: 8px; border-radius: 8px; cursor: pointer;
-  border: 1px solid rgba(88,182,255,0.25); background: rgba(22,17,38,0.9); color: #b3a8d6;
-}
-.solo-difficulty b { color: var(--paper); font-family: "Yu Mincho", serif; }
-.solo-difficulty span { font-size: 0.65rem; }
-.solo-difficulty small { color: #756b8c; font-size: 0.58rem; }
-.solo-difficulty.selected { border-color: var(--p-blue); box-shadow: 0 0 14px rgba(88,182,255,0.3); }
 
 /* ---------- バトル画面 ---------- */
 #screen-battle {
@@ -1377,6 +1424,43 @@ html, body {
   grid-column: 1 / -1; color: #ffd76a; border-color: rgba(232,196,106,0.45);
   font: 0.9rem "Yu Mincho", serif; letter-spacing: 0.14em;
 }
+.result-hyakki-streak {
+  margin: 0.15em 0 0.35em;
+  color: var(--gold);
+  font: 700 clamp(1.6rem, 6.5vw, 2.6rem) / 1.2 "Yu Mincho", serif;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 22px rgba(232,196,106,0.4);
+}
+.result-hyakki-streak.is-broken {
+  color: #c9bfd8;
+  text-shadow: none;
+}
+.result-hyakki-details {
+  width: min(92vw, 420px);
+  margin: 0 auto 1em;
+  color: #9a8fc0;
+  font-size: 0.72rem;
+  text-align: left;
+}
+.result-hyakki-details summary {
+  cursor: pointer;
+  letter-spacing: 0.12em;
+  text-align: center;
+  list-style: none;
+}
+.result-hyakki-details summary::-webkit-details-marker { display: none; }
+.result-hyakki-details[open] summary { margin-bottom: 8px; color: #ffe9a0; }
+#result-hyakki-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(80px, 1fr)); gap: 6px;
+}
+.hyakki-result-actions {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(92vw, 320px);
+  margin: 0 auto;
+}
+.hyakki-result-actions .btn { width: 100%; }
 
 /* ---------- モーダル ---------- */
 .modal {
@@ -2405,18 +2489,6 @@ html, body {
   .pieces-toolbar { grid-template-columns: 1fr 1fr; }
   .pieces-search { grid-column: 1 / -1; }
   #pieces-list { grid-template-columns: 1fr; }
-  #solo-stages { grid-template-columns: 1fr; overflow-y: auto; }
-  .solo-stage-card { display: flex; align-items: center; gap: 8px; }
-  .solo-stage-card > img { width: 68px; height: 68px; margin: 0; flex: 0 0 auto; }
-  .solo-stage-random-boss {
-    width: 68px;
-    height: 68px;
-    margin: 0;
-    flex: 0 0 auto;
-    font-size: 2.15rem;
-  }
-  .solo-stage-card p { min-height: 0; }
-  #solo-difficulties { grid-template-columns: 1fr 1fr 1fr; }
 }
 @media (max-height: 700px) {
   .title-center { transform: scale(0.88); }
@@ -2741,6 +2813,26 @@ html, body {
   color: #cfc6f2;
   pointer-events: none;
   transition: box-shadow 0.4s, border-color 0.4s;
+}
+#hyakki-round-hud {
+  position: absolute;
+  top: 4px; left: 6px;
+  z-index: 6;
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(42, 28, 18, 0.92), rgba(18, 12, 10, 0.92));
+  border: 1px solid rgba(232, 196, 106, 0.4);
+  font-family: "Yu Mincho", serif;
+  font-size: clamp(0.58rem, 1.55vh, 0.74rem);
+  letter-spacing: 0.1em;
+  color: #cfc3e8;
+  pointer-events: none;
+}
+#hyakki-round-hud b {
+  color: #ffe9a0;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 #moon-icon { font-size: 1.15em; line-height: 1; filter: drop-shadow(0 0 4px rgba(185, 168, 255, 0.6)); }
 #moon-hud.full-moon {

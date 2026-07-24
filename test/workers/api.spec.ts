@@ -416,6 +416,18 @@ describe('百鬼夜行 週間連勝ランキング(doc 21)', () => {
     expect(lose.body).toEqual({ currentStreak: 0, bestStreak: 2, rank: 1 });
   });
 
+  it('statusはpendingを立てずに現在連勝を返す', async () => {
+    const g = await createGuest();
+    await hyakkiWin(g);
+    await hyakkiWin(g);
+    const before = await api('/v1/solo/hyakki/status', { token: g.accessToken });
+    expect(before.body).toEqual({ currentStreak: 2, bestStreak: 2, rank: 1 });
+    const again = await api('/v1/solo/hyakki/status', { token: g.accessToken });
+    expect(again.body.currentStreak).toBe(2);
+    const start = await hyakkiStart(g.accessToken);
+    expect(start.body.currentStreak).toBe(2);
+  });
+
   it('開始から30秒未満の勝利報告は負け扱い(連打対策)', async () => {
     const g = await createGuest();
     await hyakkiStart(g.accessToken);

@@ -92,7 +92,7 @@
       <div class="title-sub-top"><i></i>百鬼夜行の盤上決戦<i></i></div>
       <h1 class="title-logo"><span>妖怪</span><span>将棋</span></h1>
       <div class="title-main-actions">
-        <button id="btn-start" class="btn title-action-primary"><small>ソロで遊ぶ</small>ソロ対戦</button>
+        <button id="btn-start" class="btn title-action-primary"><small>連勝に挑む</small>百鬼夜行</button>
         <button id="btn-online" class="btn title-action-online hidden"><small>猛者と競う</small>オンライン対戦</button>
       </div>
       <p id="title-registration-stats" class="title-registration-stats hidden">登録プレイヤー <b id="title-registration-count">0</b> 人</p>
@@ -116,26 +116,50 @@
     </div>
   </div>
 
-  <!-- ソロ対戦選択画面 -->
+  <!-- 百鬼夜行(ソロ連戦)ロビー -->
   <div id="screen-solo" class="screen">
     <div class="menu-col solo-col">
       <div class="menu-head">
         <button id="btn-solo-back" class="tool-btn" title="戻る">←</button>
-        <h2 class="menu-title">ソロ対戦</h2>
+        <h2 class="menu-title">百鬼夜行</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p class="solo-note">挑戦する軍勢と難易度を選んでください。</p>
-      <div class="solo-mode-select">
-        <button id="btn-solo-single" class="solo-mode active"><b>通常戦</b><span>選んだ軍勢と一局勝負</span></button>
-        <button id="btn-solo-streak" class="solo-mode"><b>連戦</b><span>百鬼夜行を相手に連勝へ挑む</span></button>
+      <div class="solo-hyakki-lobby">
+        <div class="solo-hyakki-mark" aria-hidden="true">?</div>
+        <div class="solo-streak-hero">
+          <span class="solo-streak-label">現在の連勝</span>
+          <b id="solo-current-streak">0</b>
+        </div>
+        <div class="solo-standing">
+          <div class="solo-standing-item">今週ベスト<b id="solo-best-streak">—</b></div>
+          <div class="solo-standing-item">今週順位<b id="solo-rank">—</b></div>
+        </div>
+        <p class="solo-note">挑戦するたびに対戦相手が変化する百鬼夜行<br>負けると連勝はリセット<br>連勝を重ねて週間ランキングを目指そう。</p>
+        <button id="btn-solo-battle" class="btn btn-gold">挑戦する</button>
+        <div class="solo-lobby-links">
+          <button type="button" id="btn-solo-formation" class="btn btn-dark btn-sub">編成を整える</button>
+          <button type="button" id="btn-solo-ranking" class="btn btn-dark btn-sub">週間ランキング</button>
+        </div>
       </div>
-      <div id="solo-progress"></div>
-      <div id="solo-stages"></div>
-      <div class="solo-difficulty-wrap">
-        <h3>難易度</h3>
-        <div id="solo-difficulties"></div>
+    </div>
+  </div>
+
+  <!-- 百鬼夜行 次戦プレビュー -->
+  <div id="screen-hyakki-preview" class="screen">
+    <div class="menu-col hyakki-preview-col">
+      <div class="menu-head">
+        <button id="btn-hyakki-preview-back" class="tool-btn" title="戻る">←</button>
+        <h2 class="menu-title">次の軍勢</h2>
+        <div class="menu-head-spacer"></div>
       </div>
-      <button id="btn-solo-battle" class="btn btn-gold">対戦開始</button>
+      <div class="hyakki-preview-card">
+        <div id="hyakki-preview-round" class="hyakki-preview-round">第 1 戦</div>
+        <img id="hyakki-preview-boss" class="hyakki-preview-boss" src="" alt="" width="140" height="140" draggable="false">
+        <div id="hyakki-preview-boss-name" class="hyakki-preview-boss-name"></div>
+        <p class="hyakki-preview-label">敵軍の編成</p>
+        <div id="hyakki-preview-pieces" class="hyakki-preview-pieces"></div>
+        <button id="btn-hyakki-fight" class="btn btn-gold">開戦</button>
+      </div>
     </div>
   </div>
 
@@ -147,7 +171,7 @@
         <h2 class="menu-title">ランキング</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p class="ranking-note">ソロ対戦の連戦「上級」で記録した、今週の百鬼夜行ベスト連勝数です。</p>
+      <p class="ranking-note">百鬼夜行で記録した、今週のベスト連勝数です。</p>
       <button type="button" id="hyakki-reward" class="hyakki-reward">
         <img id="hyakki-reward-img" class="hyakki-reward-img" alt="" width="96" height="96">
         <span class="hyakki-reward-body">
@@ -157,7 +181,7 @@
         </span>
       </button>
       <div id="hyakki-ranking">
-        <h3>今週の百鬼夜行 <small>上級 連勝ランキング(月曜リセット)</small></h3>
+        <h3>今週の百鬼夜行 <small>連勝ランキング(月曜リセット)</small></h3>
         <p id="hyakki-ranking-note" class="hyakki-note"></p>
         <ol id="hyakki-ranking-list"></ol>
         <p id="hyakki-ranking-me"></p>
@@ -303,6 +327,7 @@
           <div id="board-pieces"></div>
         </div>
         <div id="moon-hud" class="hidden"><span id="moon-icon">🌑</span><span id="moon-label">新月</span></div>
+        <div id="hyakki-round-hud" class="hidden"><span>百鬼夜行</span><b id="hyakki-round-label">1戦目</b></div>
         <div id="turn-banner"></div>
         <div id="thinking" class="hidden"><span></span>相手思考中…</div>
       </div>
@@ -368,12 +393,22 @@
     <div class="result-inner">
       <img id="result-boss" src="" alt="" draggable="false">
       <div id="result-title"></div>
+      <div id="result-hyakki-streak" class="result-hyakki-streak hidden"></div>
       <div id="result-sub"></div>
       <div id="result-stats" class="hidden"></div>
+      <details id="result-hyakki-details" class="result-hyakki-details hidden">
+        <summary>この局の戦績</summary>
+        <div id="result-hyakki-stats"></div>
+      </details>
       <div id="result-reward" class="hidden"></div>
-      <div class="title-buttons">
+      <div id="result-actions-online" class="title-buttons">
         <button id="btn-retry" class="btn btn-gold">再 戦</button>
         <button id="btn-title" class="btn btn-dark">タイトルへ</button>
+      </div>
+      <div id="result-actions-hyakki" class="title-buttons hyakki-result-actions hidden">
+        <button id="btn-hyakki-continue" class="btn btn-gold">次の軍勢へ</button>
+        <button id="btn-hyakki-retry" class="btn btn-gold hidden">もう一度挑む</button>
+        <button id="btn-hyakki-retire" class="btn btn-dark">ロビーへ戻る</button>
       </div>
     </div>
   </div>
@@ -566,7 +601,7 @@
         <p><b>成り:</b> 大将以外の駒が敵陣(奥2段)に入ると自動で<b>成り</b>、攻撃力1.5倍&amp;動きが強化されます。</p>
         <p><b>SSR覚醒:</b> 駒の取り合いで覚醒ゲージが溜まります。満タンになると<b>覚醒する</b>ボタンが出現し、手番を使って盤上の自軍SSRを1局1回だけ強化できます。</p>
         <h3>遊べるモードと報酬</h3>
-        <p><b>ソロ対戦:</b> 通常戦は選んだ軍勢と一局勝負。連戦「百鬼夜行」は挑戦ごとに敵軍が変わり、上級のベスト連勝数が週間ランキングに記録されます。先週1位には限定異装「覇者・九尾」が授与されます（初回のみ・既所持なら追加なし）。</p>
+        <p><b>百鬼夜行:</b> ソロの連戦施設です。挑戦前に次の軍勢を確認し、勝利後は続けて挑むかロビーへ退けます。連勝は週間ランキングに記録され、先週1位には限定異装「覇者・九尾」が授与されます（初回のみ・既所持なら追加なし）。</p>
         <p><b>オンライン対戦:</b> ランダムマッチは毎日20:00〜22:00に開放されます。フレンドルームは6桁コードでいつでも対戦できます。</p>
         <p><b>オンライン対戦:</b> ランダムマッチはいつでも挑戦できます。毎日20:00〜22:00（逢魔が時）は対戦相手が集まりやすい時間です。一定手数以上プレイして完走すると、1日1回チケットを獲得できます。土曜の逢魔が時は土曜対戦会として報酬が増え、限定妖怪の初回入手もあります。</p>
         <p><b>妖怪ガチャ:</b> チケットで妖怪を召喚できます。10連はSR以上1枠確定。被りは妖力になり、妖力300でチケット1枚に交換できます。</p>

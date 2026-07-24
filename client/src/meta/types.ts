@@ -58,8 +58,10 @@ export interface MetaProvider {
   pickBoss(bossId: string): Promise<string | null>;
   /** 初回オンボーディング完了。ログインボーナスがあれば返す */
   completeOnboarding(): Promise<LoginBonus | null>;
-  /** 百鬼夜行(連戦・上級)の対局開始申告(doc 21)。オフライン版は null */
+  /** 百鬼夜行(連戦)の対局開始申告(doc 21)。オフライン版は null */
   hyakkiStart(): Promise<HyakkiProgress | null>;
+  /** 百鬼夜行の現在連勝・今週ベスト(ロビー用・開始はしない) */
+  hyakkiStatus(): Promise<HyakkiProgress | null>;
   /** 百鬼夜行の結果申告。オフライン版は null */
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null>;
   /** 百鬼夜行 週間ランキング取得。オフライン版は null */

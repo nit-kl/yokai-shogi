@@ -81,6 +81,7 @@ class MetaFacade {
     return bonus;
   }
   hyakkiStart(): Promise<HyakkiProgress | null> { return this.provider.hyakkiStart(); }
+  hyakkiStatus(): Promise<HyakkiProgress | null> { return this.provider.hyakkiStatus(); }
   hyakkiResult(win: boolean): Promise<HyakkiProgress | null> { return this.provider.hyakkiResult(win); }
   hyakkiRanking(): Promise<HyakkiRanking | null> { return this.provider.hyakkiRanking(); }
   adsStatus(): Promise<AdsStatus | null> { return this.provider.adsStatus(); }
