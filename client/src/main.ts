@@ -348,7 +348,7 @@ function wireButtons() {
   $('btn-pieces-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-mute').onclick = () => {
     AudioSys.init();
-    $('btn-mute').textContent = AudioSys.toggle() ? '🔊' : '🔇';
+    MenuUI.openAudioSettings();
   };
   $('btn-awaken').onclick = () => {
     if (!G || G.winner || busy || G.turn !== 'p' || !Game.awakenReady(G, 'p')) return;

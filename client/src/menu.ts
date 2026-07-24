@@ -41,6 +41,7 @@ export const MenuUI = {
     $('btn-form-save').onclick = () => { AudioSys.play('click'); void this.saveFormation(); };
     this.initLinkCode();
     this.initProfile();
+    this.initAudioSettings();
     SupportUI.init();
   },
 
@@ -52,6 +53,61 @@ export const MenuUI = {
     $<HTMLInputElement>('profile-name-input').onkeydown = ev => {
       if (ev.key === 'Enter') void this.saveProfile();
     };
+  },
+
+  /* ============================== 音量設定 ============================== */
+  initAudioSettings() {
+    const syncMuteBtn = () => {
+      const icon = AudioSys.enabled ? '🔊' : '🔇';
+      const muteBtn = document.getElementById('btn-mute');
+      const titleBtn = document.getElementById('btn-audio');
+      if (muteBtn) muteBtn.textContent = icon;
+      if (titleBtn) titleBtn.textContent = icon;
+    };
+    const syncForm = () => {
+      const bgm = Math.round(AudioSys.bgmVolume * 100);
+      const se = Math.round(AudioSys.seVolume * 100);
+      $<HTMLInputElement>('audio-mute').checked = !AudioSys.enabled;
+      $<HTMLInputElement>('audio-bgm').value = String(bgm);
+      $<HTMLInputElement>('audio-se').value = String(se);
+      $('audio-bgm-val').textContent = String(bgm);
+      $('audio-se-val').textContent = String(se);
+      $<HTMLInputElement>('audio-bgm').disabled = !AudioSys.enabled;
+      $<HTMLInputElement>('audio-se').disabled = !AudioSys.enabled;
+      syncMuteBtn();
+    };
+    this._syncAudioUi = syncForm;
+    $('btn-audio').onclick = () => { AudioSys.play('click'); this.openAudioSettings(); };
+    $('btn-audio-close').onclick = () => { AudioSys.play('click'); $('modal-audio').classList.add('hidden'); };
+    $<HTMLInputElement>('audio-mute').onchange = ev => {
+      AudioSys.init();
+      AudioSys.setEnabled(!(ev.target as HTMLInputElement).checked);
+      syncForm();
+    };
+    $<HTMLInputElement>('audio-bgm').oninput = ev => {
+      AudioSys.init();
+      const v = Number((ev.target as HTMLInputElement).value);
+      AudioSys.setBgmVolume(v / 100);
+      $('audio-bgm-val').textContent = String(v);
+    };
+    $<HTMLInputElement>('audio-se').oninput = ev => {
+      AudioSys.init();
+      const v = Number((ev.target as HTMLInputElement).value);
+      AudioSys.setSeVolume(v / 100);
+      $('audio-se-val').textContent = String(v);
+    };
+    $<HTMLInputElement>('audio-se').onchange = () => {
+      if (AudioSys.enabled && AudioSys.seVolume > 0) AudioSys.play('click');
+    };
+    syncForm();
+  },
+
+  _syncAudioUi() {},
+
+  openAudioSettings() {
+    AudioSys.init();
+    this._syncAudioUi();
+    $('modal-audio').classList.remove('hidden');
   },
 
   openProfile() {

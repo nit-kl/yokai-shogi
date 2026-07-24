@@ -82,6 +82,7 @@
     <div class="title-currency">
       <span class="cur-tickets">🎟 ×0</span>
       <span class="cur-yoryoku">妖力 0</span>
+      <button type="button" id="btn-audio" class="title-audio-btn" title="音量設定">🔊</button>
     </div>
     <button id="btn-profile" class="title-profile" title="プレイヤーネームを変更">
       <span>プレイヤー</span><b id="title-player-name">プレイヤー</b>
@@ -354,7 +355,7 @@
             <div class="online-timer-track"><div id="online-disconnect-fill"></div></div>
           </div>
         </div>
-        <button id="btn-mute" class="tool-btn" title="サウンド">🔊</button>
+        <button id="btn-mute" class="tool-btn" title="音量設定">🔊</button>
         <button id="btn-resign" class="tool-btn" title="投了">🏳</button>
         <button id="btn-rules2" class="tool-btn" title="遊び方">❔</button>
         <button id="btn-support-battle" class="tool-btn" title="お問い合わせ">✉</button>
@@ -421,6 +422,29 @@
       <div id="profile-msg" class="link-msg"></div>
       <button id="btn-profile-save" class="btn btn-gold">保存</button>
       <button id="btn-profile-close" class="btn btn-dark btn-sub">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 音量設定モーダル -->
+  <div id="modal-audio" class="modal hidden">
+    <div class="modal-box audio-box">
+      <h2>音量設定</h2>
+      <label class="audio-mute-row" for="audio-mute">
+        <input id="audio-mute" type="checkbox">
+        <span>ミュート</span>
+      </label>
+      <div class="audio-slider-row">
+        <label for="audio-bgm">BGM</label>
+        <input id="audio-bgm" type="range" min="0" max="100" step="1" value="100">
+        <span id="audio-bgm-val" class="audio-val">100</span>
+      </div>
+      <div class="audio-slider-row">
+        <label for="audio-se">効果音</label>
+        <input id="audio-se" type="range" min="0" max="100" step="1" value="100">
+        <span id="audio-se-val" class="audio-val">100</span>
+      </div>
+      <p class="link-desc">設定はこの端末に保存されます。</p>
+      <button id="btn-audio-close" class="btn btn-gold">閉じる</button>
     </div>
   </div>
 

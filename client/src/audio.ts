@@ -4,11 +4,50 @@
 
 type BgmMode = 'title' | 'battle';
 
+const STORAGE_KEY = 'yokaiShogi.audio.v1';
+const SE_BASE = 0.9;
+const BGM_TITLE_BASE = 0.28;
+const BGM_BATTLE_BASE = 0.32;
+
 const BATTLE_BGM_SOURCES = [
   '/assets/audio/battle-bgm.mp3',
   '/assets/audio/battle-bgm-1.mp3',
   '/assets/audio/battle-bgm-2.mp3',
 ];
+
+type AudioSettings = {
+  enabled: boolean;
+  bgmVolume: number;
+  seVolume: number;
+};
+
+function clamp01(n: number): number {
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(1, Math.max(0, n));
+}
+
+function loadSettings(): AudioSettings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { enabled: true, bgmVolume: 1, seVolume: 1 };
+    const parsed = JSON.parse(raw) as Partial<AudioSettings>;
+    return {
+      enabled: parsed.enabled !== false,
+      bgmVolume: clamp01(parsed.bgmVolume ?? 1),
+      seVolume: clamp01(parsed.seVolume ?? 1),
+    };
+  } catch {
+    return { enabled: true, bgmVolume: 1, seVolume: 1 };
+  }
+}
+
+function saveSettings(settings: AudioSettings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch { /* 容量超過等は黙って諦める */ }
+}
+
+const initial = loadSettings();
 
 export const AudioSys = {
   ctx: null as AudioContext | null,
@@ -16,26 +55,42 @@ export const AudioSys = {
   bgmTitle: null as HTMLAudioElement | null,
   bgmBattle: null as HTMLAudioElement | null,
   bgmMode: null as BgmMode | null,
-  enabled: true,
+  enabled: initial.enabled,
+  bgmVolume: initial.bgmVolume,
+  seVolume: initial.seVolume,
 
   init() {
     if (this.ctx) return;
     try {
       this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.9;
       this.master.connect(this.ctx.destination);
-      this.bgmTitle = this._makeBgm('/assets/audio/title-bgm.mp3', 0.28);
-      this.bgmBattle = this._makeBgm('/assets/audio/battle-bgm.mp3', 0.32);
+      this.bgmTitle = this._makeBgm('/assets/audio/title-bgm.mp3');
+      this.bgmBattle = this._makeBgm('/assets/audio/battle-bgm.mp3');
+      this._applyVolumes();
     } catch { /* 音なしでも動作 */ }
   },
 
-  _makeBgm(src: string, volume: number): HTMLAudioElement {
+  _makeBgm(src: string): HTMLAudioElement {
     const audio = new Audio(src);
     audio.loop = true;
     audio.preload = 'auto';
-    audio.volume = volume;
     return audio;
+  },
+
+  _persist() {
+    saveSettings({
+      enabled: this.enabled,
+      bgmVolume: this.bgmVolume,
+      seVolume: this.seVolume,
+    });
+  },
+
+  _applyVolumes() {
+    if (this.master) this.master.gain.value = this.enabled ? SE_BASE * this.seVolume : 0;
+    if (this.bgmTitle) this.bgmTitle.volume = BGM_TITLE_BASE * this.bgmVolume;
+    if (this.bgmBattle) this.bgmBattle.volume = BGM_BATTLE_BASE * this.bgmVolume;
+    this._syncBgmMute();
   },
 
   resume() {
@@ -43,10 +98,26 @@ export const AudioSys = {
   },
 
   toggle(): boolean {
-    this.enabled = !this.enabled;
-    if (this.master) this.master.gain.value = this.enabled ? 0.9 : 0;
-    this._syncBgmMute();
+    this.setEnabled(!this.enabled);
     return this.enabled;
+  },
+
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    this._applyVolumes();
+    this._persist();
+  },
+
+  setBgmVolume(volume: number) {
+    this.bgmVolume = clamp01(volume);
+    this._applyVolumes();
+    this._persist();
+  },
+
+  setSeVolume(volume: number) {
+    this.seVolume = clamp01(volume);
+    this._applyVolumes();
+    this._persist();
   },
 
   _syncBgmMute() {
@@ -65,7 +136,7 @@ export const AudioSys = {
       other.currentTime = 0;
     }
     this.bgmMode = mode;
-    this._syncBgmMute();
+    this._applyVolumes();
     void next.play().catch(() => { /* 自動再生ポリシー等 */ });
   },
 
@@ -131,7 +202,7 @@ export const AudioSys = {
 
   /* コンボ音: 数が伸びるほど音程が上がる */
   playCombo(n: number) {
-    if (!this.ctx || !this.enabled) return;
+    if (!this.ctx || !this.enabled || this.seVolume <= 0) return;
     this.resume();
     const t = this.ctx.currentTime + 0.01;
     const base = 520 * Math.pow(1.12, Math.min(n, 8) - 2);
@@ -142,7 +213,7 @@ export const AudioSys = {
 
   /* ---------- SE ---------- */
   play(name: string) {
-    if (!this.ctx || !this.enabled) return;
+    if (!this.ctx || !this.enabled || this.seVolume <= 0) return;
     this.resume();
     const t = this.ctx.currentTime + 0.01;
     switch (name) {
