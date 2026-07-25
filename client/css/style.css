@@ -599,8 +599,10 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: none;
 }
 .battle-col {
   position: relative;
@@ -608,10 +610,12 @@ html, body {
   align-items: center; justify-content: flex-start;
   gap: clamp(4px, 1vh, 10px);
   width: 100%;
+  max-width: 100%;
   min-height: 100%;
   height: auto;
   padding: clamp(6px, 1.2vh, 14px) 8px clamp(10px, 1.5vh, 18px);
   flex-shrink: 0;
+  overflow-x: hidden;
 }
 .battle-col.shake { animation: shakeAnim 0.4s; }
 @keyframes shakeAnim {
@@ -638,7 +642,7 @@ html, body {
 .hud {
   position: relative;
   display: flex; align-items: center; gap: 10px;
-  width: min(96vw, 560px);
+  width: min(100%, 560px);
   padding: 6px 10px;
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(38, 30, 64, 0.85), rgba(20, 15, 36, 0.85));
@@ -748,7 +752,14 @@ html, body {
 @keyframes comboPop { from { transform: scale(2.2) rotate(-6deg); } to { transform: scale(1) rotate(0); } }
 
 /* ---------- 盤 (妖界ステージ) ---------- */
-#board-wrap { position: relative; flex-shrink: 1; min-height: 0; }
+#board-wrap {
+  position: relative;
+  flex-shrink: 1;
+  min-height: 0;
+  max-width: 100%;
+  /* 召喚陣(132%)のはみ出しで横スクロール領域が広がらないようにする */
+  overflow: hidden;
+}
 /* 盤の背後で回転する召喚陣 */
 #board-wrap::before {
   content: "";
@@ -2489,7 +2500,7 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    width: min(96vw, 560px);
+    width: min(100%, 560px);
     min-height: 46px;
     padding: 4px 8px;
     border-top: 1px solid rgba(232,196,106,0.2);
