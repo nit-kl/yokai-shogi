@@ -477,11 +477,20 @@ html, body {
 #btn-hyakki-fight { width: min(100%, 240px); margin-top: 4px; }
 
 /* ---------- ランキング ---------- */
+#screen-ranking {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
 .ranking-col {
   justify-content: flex-start;
   width: min(96vw, 620px);
+  max-height: 100%;
+  overflow: hidden;
 }
+.ranking-col > .menu-head { flex-shrink: 0; }
 .ranking-note {
+  flex-shrink: 0;
   width: min(100%, 500px);
   color: #b3a8d6;
   font-size: 0.82rem;
@@ -492,8 +501,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
   width: min(100%, 500px);
-  margin: 10px 0 12px;
+  margin: 4px 0 0;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--reward-primary, #d4a017) 55%, transparent);
   border-radius: 12px;
@@ -548,11 +558,17 @@ html, body {
 
 /* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
 #hyakki-ranking {
+  flex: 1;
+  min-height: 0;
   width: min(100%, 500px);
-  padding: 10px 14px;
+  padding: 10px 14px 14px;
   border: 1px solid rgba(200,138,255,0.25);
   border-radius: 12px;
   background: linear-gradient(160deg, rgba(42,35,66,0.96), rgba(20,16,31,0.96));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 #hyakki-ranking h3 {
   margin: 0 0 6px;
