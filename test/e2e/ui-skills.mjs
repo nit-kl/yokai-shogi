@@ -38,22 +38,23 @@ await page.waitForTimeout(1300);
 await page.screenshot({ path: path.join(dir, 'shot-s1-heal.png') });
 await page.waitForTimeout(3500); // AI応手を待つ
 
-/* 鬼火の道連れ演出(プレイヤーが敵の鬼火を取ってしまう) */
+/* 鬼火の道連れ演出(プレイヤーが敵の鬼火を取ってしまう)
+   猫又は斜めのみなので、前1マスで取れる小鬼を使う */
 await page.evaluate(() => {
   const { yk } = window;
   yk.G.winner = null; yk.G.turn = 'p'; yk.busy = false;
   yk.G.board[2][1] = { uid: 902, id: 'onibi', owner: 'e', promoted: false };
-  yk.G.board[3][1] = { uid: 903, id: 'nekomata', owner: 'p', promoted: false };
+  yk.G.board[3][1] = { uid: 903, id: 'kooni', owner: 'p', promoted: false };
   yk.renderAll();
   yk.doAction({ kind: 'move', from: { x: 1, y: 3 }, to: { x: 1, y: 2 } });
 });
+/* applyAction は doAction 先頭で同期実行される。演出・AI応手前に道連れ結果を確認する */
+const gone = await page.evaluate(() => window.yk.G.board[2][1] === null && !window.yk.G.hands.p.onibi);
+if (!gone) errors.push('道連れ処理が盤面に反映されていない');
 await page.waitForTimeout(1100);
 await page.screenshot({ path: path.join(dir, 'shot-s2-explode-cutin.png') });
 await page.waitForTimeout(2200);
 await page.screenshot({ path: path.join(dir, 'shot-s3-explode-after.png') });
-
-const gone = await page.evaluate(() => window.yk.G.board[2][1] === null && !window.yk.G.hands.p.onibi);
-if (!gone) errors.push('道連れ処理が盤面に反映されていない');
 
 await browser.close();
 if (errors.length) {
