@@ -3,7 +3,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { startSoloBattle } from './helpers.mjs';
+import { attachPageErrorCollectors, startSoloBattle } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
@@ -11,8 +11,7 @@ const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
 const errors = [];
-page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+attachPageErrorCollectors(page, errors);
 
 await page.goto(BASE_URL);
 await page.evaluate(() => localStorage.removeItem('yokaiShogi.save.v1'));
