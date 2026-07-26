@@ -354,6 +354,18 @@ function wireButtons() {
     AudioSys.play('click');
     openPieceZoom($<HTMLImageElement>('piece-detail-img').src, $('piece-detail-name').textContent || '');
   };
+  $('btn-piece-info-close').onclick = ev => {
+    ev.stopPropagation();
+    AudioSys.play('click');
+    hideInfo();
+  };
+  /* 盤面外タップでも選択・利き・駒説明を外す（セル／持ち駒／操作ボタンは除外） */
+  $('screen-battle').addEventListener('click', ev => {
+    const t = ev.target;
+    if (!(t instanceof Element)) return;
+    if (t.closest('.cell, .hand-chip, #piece-info, .battle-tools, .btn-awaken, button, a, input, textarea, select')) return;
+    clearBattleFocus();
+  });
   const closeZoom = () => { AudioSys.play('click'); closePieceZoom(); };
   $('modal-piece-zoom').onclick = closeZoom;
   $('btn-piece-zoom-close').onclick = ev => { ev.stopPropagation(); closeZoom(); };
@@ -363,7 +375,11 @@ function wireButtons() {
       closePieceZoom();
       return;
     }
-    if (!$('modal-piece-detail').classList.contains('hidden')) closePieceDetail();
+    if (!$('modal-piece-detail').classList.contains('hidden')) {
+      closePieceDetail();
+      return;
+    }
+    if (!$('piece-info').classList.contains('hidden')) hideInfo();
   });
   $('btn-pieces').onclick = () => {
     AudioSys.play('click');
@@ -820,6 +836,11 @@ function buildBoardCells() {
       c.dataset.x = String(x); c.dataset.y = String(y);
       c.appendChild(Object.assign(document.createElement('div'), { className: 'hl' }));
       c.addEventListener('click', () => onCellClick(x, y));
+      bindLongPress(c, () => {
+        const pc = G?.board[y][x];
+        if (!pc) return;
+        showInfo(pc.id, pc.promoted);
+      });
       wrap.appendChild(c);
     }
   }
@@ -984,10 +1005,8 @@ function renderHand(side: Side) {
     if (sel && sel.kind === 'hand' && sel.id === id && side === 'p') chip.classList.add('chip-selected');
     chip.innerHTML = `<img src="${YOKAI[id].imgSm}" alt="${YOKAI[id].name}" draggable="false">` +
       (n > 1 ? `<span class="chip-n">×${n}</span>` : '');
-    chip.addEventListener('click', () => {
-      if (side === 'p') onHandClick(id);
-      else showInfo(id, false);
-    });
+    if (side === 'p') chip.addEventListener('click', () => onHandClick(id));
+    bindLongPress(chip, () => showInfo(id, false));
     tray.appendChild(chip);
   }
 }
@@ -1026,7 +1045,10 @@ function updateComboHeat() {
   }
 }
 
-/* ---------- 駒情報パネル ---------- */
+/* ---------- 駒情報パネル（長押しで表示） ---------- */
+const LONG_PRESS_MS = 480;
+const LONG_PRESS_MOVE_PX = 14;
+
 function showInfo(id: string, promoted: boolean) {
   const def = YOKAI[id];
   const ti = TYPE_INFO[def.type];
@@ -1039,8 +1061,53 @@ function showInfo(id: string, promoted: boolean) {
   $('info-move').textContent = def.moveText;
   $('info-skill-name').textContent = `【${def.skill.name}】`;
   $('info-skill-desc').textContent = def.skill.desc;
+  AudioSys.play('select');
 }
 function hideInfo() { $('piece-info').classList.add('hidden'); }
+
+/** 長押し検知。発火後の click は抑止して着手と分離する */
+function bindLongPress(el: HTMLElement, onLongPress: () => void) {
+  let timer: number | null = null;
+  let startX = 0;
+  let startY = 0;
+  let fired = false;
+
+  const clearTimer = () => {
+    if (timer == null) return;
+    clearTimeout(timer);
+    timer = null;
+  };
+
+  el.addEventListener('pointerdown', ev => {
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    fired = false;
+    startX = ev.clientX;
+    startY = ev.clientY;
+    clearTimer();
+    timer = window.setTimeout(() => {
+      timer = null;
+      fired = true;
+      onLongPress();
+    }, LONG_PRESS_MS);
+  });
+  el.addEventListener('pointermove', ev => {
+    if (timer == null) return;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if (dx * dx + dy * dy > LONG_PRESS_MOVE_PX * LONG_PRESS_MOVE_PX) clearTimer();
+  });
+  el.addEventListener('pointerup', clearTimer);
+  el.addEventListener('pointercancel', clearTimer);
+  el.addEventListener('click', ev => {
+    if (!fired) return;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    fired = false;
+  }, true);
+  el.addEventListener('contextmenu', ev => {
+    if (fired || timer != null) ev.preventDefault();
+  });
+}
 
 /* ============================== 入力 ============================== */
 const HL_CLASSES = [
@@ -1052,6 +1119,13 @@ function clearSel() {
   sel = null;
   document.querySelectorAll('.cell').forEach(c => c.classList.remove(...HL_CLASSES));
   if (G) renderHand('p');
+}
+
+/** 選択ハイライト・敵利き・駒説明をまとめて外す */
+function clearBattleFocus() {
+  if (!G) return;
+  clearSel();
+  hideInfo();
 }
 
 /** 敵駒の移動・攻撃範囲を盤上にプレビュー（着手はしない） */
@@ -1070,8 +1144,6 @@ function onCellClick(x: number, y: number) {
   if (!G) return;
 
   const pc = G.board[y][x];
-  if (pc) showInfo(pc.id, pc.promoted);
-
   const canAct = !G.winner && !busy && G.turn === 'p';
 
   /* 移動先 / 打ち先 / 覚醒対象として有効か */
@@ -1097,8 +1169,7 @@ function onCellClick(x: number, y: number) {
   }
 
   if (!pc) {
-    clearSel();
-    hideInfo();
+    clearBattleFocus();
     return;
   }
 
@@ -1115,9 +1186,8 @@ function onCellClick(x: number, y: number) {
 
 function onHandClick(id: string) {
   if (!G) return;
-  showInfo(id, false);
   if (G.winner || busy || G.turn !== 'p') return;
-  if (sel && sel.kind === 'hand' && sel.id === id) { clearSel(); hideInfo(); return; }
+  if (sel && sel.kind === 'hand' && sel.id === id) { clearSel(); return; }
   clearSel();
   const drops = Game.getDrops(G, 'p', id);
   if (drops.length === 0) return;

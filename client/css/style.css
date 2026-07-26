@@ -477,11 +477,20 @@ html, body {
 #btn-hyakki-fight { width: min(100%, 240px); margin-top: 4px; }
 
 /* ---------- ランキング ---------- */
+#screen-ranking {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
 .ranking-col {
   justify-content: flex-start;
   width: min(96vw, 620px);
+  max-height: 100%;
+  overflow: hidden;
 }
+.ranking-col > .menu-head { flex-shrink: 0; }
 .ranking-note {
+  flex-shrink: 0;
   width: min(100%, 500px);
   color: #b3a8d6;
   font-size: 0.82rem;
@@ -492,8 +501,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
   width: min(100%, 500px);
-  margin: 10px 0 12px;
+  margin: 4px 0 0;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--reward-primary, #d4a017) 55%, transparent);
   border-radius: 12px;
@@ -548,11 +558,17 @@ html, body {
 
 /* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
 #hyakki-ranking {
+  flex: 1;
+  min-height: 0;
   width: min(100%, 500px);
-  padding: 10px 14px;
+  padding: 10px 14px 14px;
   border: 1px solid rgba(200,138,255,0.25);
   border-radius: 12px;
   background: linear-gradient(160deg, rgba(42,35,66,0.96), rgba(20,16,31,0.96));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 #hyakki-ranking h3 {
   margin: 0 0 6px;
@@ -583,8 +599,10 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: none;
 }
 .battle-col {
   position: relative;
@@ -592,14 +610,12 @@ html, body {
   align-items: center; justify-content: flex-start;
   gap: clamp(4px, 1vh, 10px);
   width: 100%;
+  max-width: 100%;
   min-height: 100%;
   height: auto;
   padding: clamp(6px, 1.2vh, 14px) 8px clamp(10px, 1.5vh, 18px);
   flex-shrink: 0;
-}
-/* 駒情報表示時は盤を少し縮めて全体をビューポート内に収める */
-.battle-col:has(#piece-info:not(.hidden)) #board-frame {
-  --bw: min(92vw, 46vh);
+  overflow-x: hidden;
 }
 .battle-col.shake { animation: shakeAnim 0.4s; }
 @keyframes shakeAnim {
@@ -626,7 +642,7 @@ html, body {
 .hud {
   position: relative;
   display: flex; align-items: center; gap: 10px;
-  width: min(96vw, 560px);
+  width: min(100%, 560px);
   padding: 6px 10px;
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(38, 30, 64, 0.85), rgba(20, 15, 36, 0.85));
@@ -736,7 +752,14 @@ html, body {
 @keyframes comboPop { from { transform: scale(2.2) rotate(-6deg); } to { transform: scale(1) rotate(0); } }
 
 /* ---------- 盤 (妖界ステージ) ---------- */
-#board-wrap { position: relative; flex-shrink: 1; min-height: 0; }
+#board-wrap {
+  position: relative;
+  flex-shrink: 1;
+  min-height: 0;
+  max-width: 100%;
+  /* 召喚陣(132%)のはみ出しで横スクロール領域が広がらないようにする */
+  overflow: hidden;
+}
 /* 盤の背後で回転する召喚陣 */
 #board-wrap::before {
   content: "";
@@ -1035,26 +1058,64 @@ html, body {
 }
 @keyframes thinkBlink { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 
-/* 駒情報パネル */
+/*
+  駒情報ポップアップ:
+  - position:fixed でレイアウトを押さない（自軍HUDが見切れない）
+  - 画面上部（敵HUD帯）に重ね、盤と自軍HUDは触れるまま
+*/
 #piece-info {
-  display: flex; align-items: flex-start; gap: 10px;
-  width: min(96vw, 560px);
-  padding: 5px 10px;
-  border-radius: 8px;
-  background: rgba(22, 17, 38, 0.92);
-  border: 1px solid rgba(232,196,106,0.25);
-  font-size: clamp(0.65rem, 1.6vh, 0.8rem);
-  animation: infoIn 0.2s ease-out;
-  flex-shrink: 0;
+  position: fixed;
+  left: 50%;
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 90;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: min(96vw, 520px);
+  max-height: min(28vh, 160px);
+  overflow: auto;
+  padding: 8px 30px 8px 10px;
+  border-radius: 10px;
+  background: linear-gradient(165deg, rgba(36, 28, 58, 0.97), rgba(14, 10, 24, 0.97));
+  border: 1px solid rgba(232,196,106,0.42);
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.55),
+    0 0 20px rgba(232, 196, 106, 0.12);
+  font-size: clamp(0.62rem, 1.45vh, 0.76rem);
+  transform: translateX(-50%);
+  animation: infoPop 0.18s ease-out;
+  -webkit-overflow-scrolling: touch;
 }
-@keyframes infoIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-#info-img { width: clamp(34px, 5.4vh, 46px); height: clamp(34px, 5.4vh, 46px); object-fit: contain; }
+@keyframes infoPop {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.piece-info-close {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #c9bfd8;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.piece-info-close:hover,
+.piece-info-close:focus-visible {
+  color: var(--gold);
+  outline: none;
+}
+#info-img { width: clamp(30px, 4.8vh, 42px); height: clamp(30px, 4.8vh, 42px); object-fit: contain; flex: 0 0 auto; }
 .info-body { flex: 1; min-width: 0; }
-.info-line1 { display: flex; align-items: center; gap: 8px; font-family: "Yu Mincho", serif; letter-spacing: 0.1em; }
+.info-line1 { display: flex; align-items: center; gap: 8px; font-family: "Yu Mincho", serif; letter-spacing: 0.1em; flex-wrap: wrap; }
 #info-atk { color: #ff9b6a; font-weight: bold; font-family: sans-serif; }
-.info-move { color: #b3a8d6; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+.info-move { color: #b3a8d6; margin-top: 1px; display: flex; gap: 8px; flex-wrap: wrap; }
 .info-move > span:first-child { color: var(--p-blue); font-weight: bold; }
-.info-skill { color: #b3a8d6; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+.info-skill { color: #b3a8d6; margin-top: 1px; display: flex; gap: 8px; flex-wrap: wrap; }
 #info-skill-name { color: var(--gold); font-weight: bold; }
 
 .type-chip {
@@ -2439,7 +2500,7 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    width: min(96vw, 560px);
+    width: min(100%, 560px);
     min-height: 46px;
     padding: 4px 8px;
     border-top: 1px solid rgba(232,196,106,0.2);

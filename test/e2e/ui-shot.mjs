@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-import { skipOnboarding, waitForBattleInput } from './helpers.mjs';
+import { attachPageErrorCollectors, skipOnboarding, waitForBattleInput } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
@@ -12,8 +12,7 @@ const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 1100 } });
 const errors = [];
-page.on('pageerror', e => errors.push('pageerror: ' + e.message));
-page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+attachPageErrorCollectors(page, errors);
 
 await page.goto(BASE_URL);
 await page.waitForSelector('#screen-title.active, #modal-onboarding-boss:not(.hidden)', { timeout: 30000 });
@@ -59,13 +58,18 @@ if (await page.locator('#vs-label-p').textContent() !== '九尾使い') errors.p
 await waitForBattleInput(page);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 
-// 小鬼(x=1,y=4)を選択 → 移動ハイライト確認
+// 小鬼(x=1,y=4)を短タップで選択 → 移動ハイライト確認
 // #board-frame の boardFloat でセルが常に動くため、Playwright の stable 判定を force で迂回する
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
 await cell(1, 4).click({ force: true });
-if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
 if (!await cell(1, 4).evaluate(el => el.classList.contains('hl-selected'))) {
   errors.push('自駒選択のハイライトが付いていない');
+}
+// 駒説明は長押しで表示（短タップは選択・移動専用）
+await cell(1, 4).click({ force: true, delay: 600 });
+if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
+if (await page.locator('#piece-info').evaluate(el => el.classList.contains('hidden'))) {
+  errors.push('長押しで駒説明パネルが開いていない');
 }
 await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-3-select.png') });

@@ -332,15 +332,6 @@
         <div id="thinking" class="hidden"><span></span>相手思考中…</div>
       </div>
 
-      <div id="piece-info" class="hidden">
-        <img id="info-img" src="" alt="">
-        <div class="info-body">
-          <div class="info-line1"><span id="info-type" class="type-chip"></span><span id="info-name"></span><span id="info-atk"></span></div>
-          <div class="info-move"><span>動き</span><span id="info-move"></span></div>
-          <div class="info-skill"><span id="info-skill-name"></span><span id="info-skill-desc"></span></div>
-        </div>
-      </div>
-
       <div id="player-hud" class="hud hud-player">
         <div class="hud-avatar"><img id="player-avatar" src="" alt="九尾の狐" draggable="false"></div>
         <div class="hud-mid">
@@ -384,6 +375,16 @@
         <button id="btn-resign" class="tool-btn" title="投了">🏳</button>
         <button id="btn-rules2" class="tool-btn" title="遊び方">❔</button>
         <button id="btn-support-battle" class="tool-btn" title="お問い合わせ">✉</button>
+      </div>
+    </div>
+
+    <div id="piece-info" class="hidden" role="dialog" aria-label="駒の説明">
+      <button type="button" id="btn-piece-info-close" class="piece-info-close" aria-label="閉じる">×</button>
+      <img id="info-img" src="" alt="">
+      <div class="info-body">
+        <div class="info-line1"><span id="info-type" class="type-chip"></span><span id="info-name"></span><span id="info-atk"></span></div>
+        <div class="info-move"><span>動き</span><span id="info-move"></span></div>
+        <div class="info-skill"><span id="info-skill-name"></span><span id="info-skill-desc"></span></div>
       </div>
     </div>
   </div>
@@ -630,6 +631,7 @@
         <h3>対局の基本</h3>
         <p><b>勝利条件:</b> 相手の<b>魂力(HP)を0</b>にするか、相手の<b>大将(ボス駒)を取る</b>と勝ち。合法手がない場合も敗北します。</p>
         <p><b>駒を取る:</b> 敵の駒を取ると、<b>取った自分の駒の攻撃力</b>をもとに相手の魂力へダメージを与えます。</p>
+        <p><b>駒の説明:</b> 盤上や持ち駒を<b>長押し</b>すると、動きとスキルの説明が表示されます。短いタップは選択・移動用です。</p>
         <p><b>コンボ:</b> 自分の手番で連続して駒を取り続けるとダメージ倍率が上昇します(最大2倍)。取らない手や召喚、覚醒でリセットされます。</p>
         <p><b>持ち駒:</b> 取った敵の妖怪は自分の配下になります。手駒を選び、空きマスへ召喚できます。一部の駒は相手最奥への召喚制限があります。</p>
         <p><b>成り:</b> 大将以外の駒が敵陣(奥2段)に入ると自動で<b>成り</b>、攻撃力1.5倍&amp;動きが強化されます。</p>

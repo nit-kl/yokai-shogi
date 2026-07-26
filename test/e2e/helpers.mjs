@@ -1,5 +1,22 @@
 /* e2e共通: オンライン版の初回同意を処理する */
 
+/** AdSense 等の第三者スクリプト由来で、アプリ不具合ではない console ノイズ */
+const IGNORE_CONSOLE_RE = /Content Security Policy|frame-ancestors|googlesyndication|doubleclick\.net|adsbygoogle/i;
+
+/**
+ * pageerror と自前由来の console.error を errors に溜める。
+ * 第三者 iframe の CSP report-only などは無視する。
+ */
+export function attachPageErrorCollectors(page, errors) {
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() !== 'error') return;
+    const text = m.text();
+    if (IGNORE_CONSOLE_RE.test(text)) return;
+    errors.push('console: ' + text);
+  });
+}
+
 /** 同意モーダルが出ていれば「オンライン利用」で進める */
 export async function acceptConsentIfNeeded(page) {
   const consent = page.locator('#modal-consent:not(.hidden)');

@@ -109,7 +109,7 @@ npm run pages:deploy:staging # クライアント(staging API接続版)を Cloud
 npm run typecheck      # tsc(client) + tsc(server)
 npm test               # vitest(エンジン・スキル・メタ・APIクライアント配線)
 npm run test:workers   # vitest-pool-workers(実Workersランタイム+ローカルD1でAPI統合テスト)
-npm run test:e2e       # playwright e2e(オフライン経路。要: 事前に npm run build)
+npm run test:e2e       # playwright 煙突e2e(ui-shot/ui-gacha。要: 事前に npm run build)
 ```
 
 API接続先は `vite.config.ts` の define で注入する(`build:online`=本番 / `VITE_API_URL=... build`=任意 / 既定=オフライン)。
