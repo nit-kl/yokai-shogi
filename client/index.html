@@ -326,8 +326,6 @@
           <div id="board-cells"></div>
           <div id="board-pieces"></div>
         </div>
-        <div id="moon-hud" class="hidden"><span id="moon-icon">🌑</span><span id="moon-label">新月</span></div>
-        <div id="hunger-hud" class="hidden"><span id="hunger-label">飢餓まであと8</span></div>
         <div id="hyakki-round-hud" class="hidden"><span>百鬼夜行</span><b id="hyakki-round-label">1戦目</b></div>
         <div id="turn-banner"></div>
         <div id="thinking" class="hidden"><span></span>相手思考中…</div>
@@ -370,6 +368,22 @@
               <b id="online-disconnect-time">1:00</b>
             </div>
             <div class="online-timer-track"><div id="online-disconnect-fill"></div></div>
+          </div>
+        </div>
+        <div class="battle-status-wrap">
+          <button type="button" id="btn-battle-status" class="tool-btn" title="対局ステータス" aria-expanded="false" aria-controls="battle-status-panel">
+            状<span id="battle-status-badge" class="battle-status-badge hidden" aria-hidden="true"></span>
+          </button>
+          <div id="battle-status-panel" class="battle-status-panel hidden" role="dialog" aria-label="対局ステータス">
+            <div class="battle-status-title">対局ステータス</div>
+            <div id="moon-hud" class="battle-status-row hidden">
+              <span class="battle-status-key">月齢</span>
+              <span class="battle-status-val"><span id="moon-icon">🌑</span><span id="moon-label">新月</span></span>
+            </div>
+            <div id="hunger-hud" class="battle-status-row">
+              <span class="battle-status-key">飢餓</span>
+              <span class="battle-status-val" id="hunger-label">飢餓まであと8</span>
+            </div>
           </div>
         </div>
         <button id="btn-mute" class="tool-btn" title="音量設定">🔊</button>

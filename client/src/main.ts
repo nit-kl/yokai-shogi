@@ -353,6 +353,19 @@ function wireButtons() {
   $('btn-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-rules2').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-support-battle').onclick = () => { AudioSys.play('click'); SupportUI.open('対局中'); };
+  $('btn-battle-status').onclick = ev => {
+    ev.stopPropagation();
+    AudioSys.play('click');
+    const panel = $('battle-status-panel');
+    const open = panel.classList.contains('hidden');
+    setBattleStatusOpen(open);
+  };
+  document.addEventListener('click', ev => {
+    const t = ev.target;
+    if (!(t instanceof Element)) return;
+    if (t.closest('.battle-status-wrap')) return;
+    setBattleStatusOpen(false);
+  });
   $('btn-close-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.add('hidden'); };
   $('btn-piece-detail-close').onclick = () => { AudioSys.play('click'); closePieceDetail(); };
   $('btn-piece-detail-zoom').onclick = () => {
@@ -382,6 +395,10 @@ function wireButtons() {
     }
     if (!$('modal-piece-detail').classList.contains('hidden')) {
       closePieceDetail();
+      return;
+    }
+    if (!$('battle-status-panel').classList.contains('hidden')) {
+      setBattleStatusOpen(false);
       return;
     }
     if (!$('piece-info').classList.contains('hidden')) hideInfo();
@@ -806,6 +823,7 @@ async function startOnlineBattle() {
   pieceEls.clear();
   hideInfo();
   clearSel();
+  setBattleStatusOpen(false);
   showScreen('screen-battle');
   const boss = YOKAI[Meta.bossId()];
   $<HTMLImageElement>('player-avatar').src = boss.img;
@@ -978,9 +996,29 @@ function updateHUD() {
   updateHungerHUD();
 }
 
+function setBattleStatusOpen(open: boolean) {
+  $('battle-status-panel').classList.toggle('hidden', !open);
+  $('btn-battle-status').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function moonSkillInvolved(): boolean {
+  if (!G) return false;
+  return G.board.flat().some(pc => pc && YOKAI[pc.id].skill.kind === 'moon')
+    || (['p', 'e'] as const).some(side => Object.keys(G!.hands[side]).some(id => YOKAI[id].skill.kind === 'moon'));
+}
+
+function updateBattleStatusBadge() {
+  const badge = $('battle-status-badge');
+  if (!G) { badge.classList.add('hidden'); return; }
+  const hunger = Game.hungerActive(G);
+  const full = moonSkillInvolved() && Game.moonPhase(G) === MOON_CYCLE - 1;
+  badge.classList.toggle('hidden', !(hunger || full));
+  badge.classList.toggle('alert-moon', full && !hunger);
+}
+
 function updateHungerHUD() {
   const hud = $('hunger-hud');
-  if (!G) { hud.classList.add('hidden'); return; }
+  if (!G) { hud.classList.add('hidden'); updateBattleStatusBadge(); return; }
   hud.classList.remove('hidden');
   const active = Game.hungerActive(G);
   hud.classList.toggle('hunger-active', active);
@@ -990,23 +1028,25 @@ function updateHungerHUD() {
     const left = Game.hungerTurnsLeft(G);
     $('hunger-label').textContent = left === 0 ? '飢餓まであと0' : `飢餓まであと${left}`;
   }
+  updateBattleStatusBadge();
 }
 
-/* 月齢表示: moonスキル持ちが対局に絡む時だけ出す。満月は盤ごと月光に染める */
+/* 月齢表示: moonスキル持ちが対局に絡む時だけパネルに出す。満月は盤ごと月光に染める */
 const MOON_ICONS = ['🌑', '🌓', '🌔', '🌕'] as const;
 function updateMoonHUD() {
   const hud = $('moon-hud');
-  const involved = G!.board.flat().some(pc => pc && YOKAI[pc.id].skill.kind === 'moon')
-    || (['p', 'e'] as const).some(side => Object.keys(G!.hands[side]).some(id => YOKAI[id].skill.kind === 'moon'));
+  const involved = moonSkillInvolved();
   hud.classList.toggle('hidden', !involved);
   const full = involved && Game.moonPhase(G!) === MOON_CYCLE - 1;
   $('board-frame').classList.toggle('moonlit', full);
-  if (!involved) return;
-  const phase = Game.moonPhase(G!);
-  $('moon-icon').textContent = MOON_ICONS[phase] ?? MOON_ICONS[0];
-  const nights = Game.nightsUntilFullMoon(G!);
-  $('moon-label').textContent = full ? '満月 ― 会心確定!' : `${MOON_PHASES[phase]}(満月まで${nights}夜)`;
+  if (involved) {
+    const phase = Game.moonPhase(G!);
+    $('moon-icon').textContent = MOON_ICONS[phase] ?? MOON_ICONS[0];
+    const nights = Game.nightsUntilFullMoon(G!);
+    $('moon-label').textContent = full ? '満月 ― 会心確定!' : `${MOON_PHASES[phase]}(満月まで${nights}夜)`;
+  }
   hud.classList.toggle('full-moon', full);
+  updateBattleStatusBadge();
 }
 
 /* 覚醒ゲージ: 取り合いで両陣営に溜まる。自分は満タンでボタン点灯 */
@@ -1379,6 +1419,7 @@ async function startBattle() {
   pieceEls.clear();
   hideInfo();
   clearSel();
+  setBattleStatusOpen(false);
   document.querySelectorAll('.cell').forEach(c => c.classList.remove('hl-last'));
   showScreen('screen-battle');
   const boss = YOKAI[Meta.bossId()];
@@ -1851,6 +1892,7 @@ function showBanner(side: Side) {
 /* ============================== リザルト ============================== */
 function showResult() {
   busy = true;
+  setBattleStatusOpen(false);
   AudioSys.stopBgm();
   $('combo-vignette').className = '';
   const draw = onlineEndReason === 'draw' || G!.reason === 'draw';
