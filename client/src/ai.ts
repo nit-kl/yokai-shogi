@@ -3,7 +3,7 @@
    評価関数 + αβ探索 + 静止探索(取り合い延長)
    ============================================================ */
 
-import { YOKAI, ROWS } from '../../shared/data';
+import { YOKAI, COLS, ROWS } from '../../shared/data';
 import { Game, HUNGER_GRACE, AWAKEN_MAX } from '../../shared/game';
 import type { Action, GameState, Piece, Side } from '../../shared/game';
 
