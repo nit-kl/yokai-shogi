@@ -56,15 +56,17 @@ AdSense 承認待ちの間は、本番はオフのまま / staging は `mock` �
 
 AdSense は「中身のある公開サイト」を見る。申し込み前に揃える。
 
-- [x] 利用規約・プライバシーのリポジトリ正本を更新(`docs/legal/` と `client/public/legal/`)
+- [x] 利用規約・プライバシーのリポジトリ正本を更新(`docs/legal/` と `client/public/legal/` と `ops/apex-site/legal/`)
+- [x] `nit-games.com` 案内ポータル(`ops/apex-site/`) — ホーム / 遊び方 / 駒とシステム / 運営者 / 問い合わせ
 - [ ] 本番デプロイ後、以下が最新であること
+  - https://nit-games.com/ および /guide.html /about.html /contact.html /legal/*
   - https://yokai-shogi.nit-games.com/legal/terms.html
   - https://yokai-shogi.nit-games.com/legal/privacy.html
 - [x] ゲーム内お知らせでリワード広告を告知する(`shared/announcements.ts` の `2026-07-10-rewarded-ads`)
   - 現状は **準備中** 文言。本番フラグオン時に「開始しました」へ差し替える
-- [ ] フッター等から規約・プライバシーへ常時リンクできること(既にタイトル画面にある)
+- [x] フッター等から規約・プライバシー・ガイド・問い合わせへ常時リンクできること
 - [ ] サイトが `https://yokai-shogi.nit-games.com` で安定して開けること
-- [ ] 問い合わせ手段が明示されていること(X: `@nit_zunda_dev`)
+- [x] 問い合わせ手段が明示されていること(X: `@nit_zunda_dev` / apex `/contact.html`)
 - [ ] 不安があれば、外部送信の記載について短時間の弁護士相談
 
 ---
@@ -75,57 +77,42 @@ AdSense は「中身のある公開サイト」を見る。申し込み前に揃
 
 > **重要:** AdSense 初回登録のサイト URL は **サブドメイン不可**。  
 > `yokai-shogi.nit-games.com` は弾かれ、`nit-games.com`(ルート)が必要。  
-> ルートにポータルが無い間は、下の **B-0** でゲームへリダイレクトする。
+> 収益の本線は承認後にゲーム本体(リワード)へ載せる。ルートは審査用の案内サイトとして維持する。
 
-#### B-0. `nit-games.com` → ゲームへリダイレクト(Cloudflare・暫定)
+#### B-0. `nit-games.com` 案内ポータル(Worker + 静的HTML)
 
-目的: `https://nit-games.com` を開くと `https://yokai-shogi.nit-games.com` へ飛ぶようにする。  
-将来ポータルを置くときは、この Redirect Rule を止めてポータル配信に切り替える。
+目的: AdSense が評価できる **独自の静的コンテンツ** をルートに置き、ゲームへ誘導する。  
+薄い1枚ゲートや、Googleクローラーへ全パス同一HTMLを返す実装は審査落ちの原因になるため使わない。
 
-**1. DNS(プロキシ必須)**
+ソース:
 
-Cloudflare Dashboard → ドメイン `nit-games.com` → **DNS** → **Records**
+- 静的ページ: `ops/apex-site/`(ホーム / 遊び方 / 駒とシステム / 運営者 / 問い合わせ / 規約 / PP)
+- Worker: `ops/nit-games-apex-worker.js`
+- デプロイ: `npm run apex:deploy`
 
-1. [ ] ルート `@` (または名前欄が空 / `nit-games.com`) の **A** レコードを追加  
-   - IPv4: `192.0.2.1`(Cloudflare 公式の「オリジン無しリダイレクト用」ダミー)  
-   - **Proxy status: Proxied**(オレンジ雲)  
-   - 既存の競合する `@` レコードがあれば整理する
-2. [ ] `www` も同様に **A** `192.0.2.1` + Proxied(または `@` への CNAME + Proxied)
+ページ要件(再審査前チェック):
 
-> プロキシがグレー(DNS only)だと Redirect Rule が効かない。必ずオレンジ雲。
+1. [x] ホーム・ガイド・システム解説・運営者・問い合わせ・規約・PP がそれぞれ独立URL
+2. [x] 共通ナビで相互リンク
+3. [x] ルートでは `adsbygoogle.js` を読まない(所有権確認済み。meta + `ads.txt` のみ)
+4. [x] Googleクローラーにも実ページ本文を返す
+5. [ ] Cloudflare の旧 Redirect Rule(`apex-to-yokai-shogi` 等)が残っていれば **無効化**
 
-**2. Redirect Rule**
-
-Cloudflare Dashboard → `nit-games.com` → **Rules** → **Overview** → **Create rule** → **Redirect Rule**
-
-1. [ ] Rule name 例: `apex-to-yokai-shogi`
-2. [ ] When incoming requests match → **Custom filter expression**(または Hostname 条件が使える UI)
-3. [ ] 条件(どちらか一方でよい):
-
-```text
-(http.host eq "nit-games.com") or (http.host eq "www.nit-games.com")
+```bash
+npm run apex:deploy
 ```
 
-4. [ ] Then → URL redirect  
-   - Type: **Dynamic**  
-   - Expression: `concat("https://yokai-shogi.nit-games.com", http.request.uri.path)`  
-   - Status code: **301**  
-   - Preserve query string: **On**
-5. [ ] **Deploy**
-
-静的でよければ Type: **Static** / Target: `https://yokai-shogi.nit-games.com/` / 301 でも可(パスは引き継がれない)。
-
-**3. 確認**
+確認:
 
 ```powershell
-# ブラウザでも可。301 で yokai-shogi に飛ぶこと
-Invoke-WebRequest https://nit-games.com/ -MaximumRedirection 0 -ErrorAction SilentlyContinue | Select-Object StatusCode, Headers
+# いずれも 200 で本文があること(薄い誘導文だけになっていないこと)
+Invoke-WebRequest https://nit-games.com/ -UseBasicParsing | Select-Object StatusCode
+Invoke-WebRequest https://nit-games.com/guide.html -UseBasicParsing | Select-Object StatusCode
+Invoke-WebRequest https://nit-games.com/legal/terms.html -UseBasicParsing | Select-Object StatusCode
+Invoke-WebRequest https://nit-games.com/ads.txt -UseBasicParsing | Select-Object StatusCode, Content
+# www は apex へ 301
 Invoke-WebRequest https://www.nit-games.com/ -MaximumRedirection 0 -ErrorAction SilentlyContinue | Select-Object StatusCode, Headers
 ```
-
-1. [ ] `https://nit-games.com` がゲーム(またはその URL)へリダイレクトされる
-2. [ ] `https://www.nit-games.com` も同様
-3. [ ] リダイレクト先でゲーム・規約・プライバシーが開ける
 
 #### B-1. 申し込み
 
@@ -139,54 +126,35 @@ Invoke-WebRequest https://www.nit-games.com/ -MaximumRedirection 0 -ErrorAction 
 
 #### B-2. サイトへの接続確認(審査でよく求められる)
 
-> **よくある失敗:** `nit-games.com` が **301 リダイレクトのみ**だと、AdSense は `<head>` のコードを見つけられず  
-> 「サイトは確認できませんでした」になる。ゲーム側にコードがあってもルートが 301 だと落ちることがある。
+> **よくある失敗:** `nit-games.com` が **301 リダイレクトのみ**、または **本文の薄いゲートだけ**だと、  
+> 所有権は通っても「有用性の低いコンテンツ」「パブリッシャーコンテンツのない画面」で拒否される。
 
-**推奨: ルートは 200 でゲート HTML を返す**(Redirect Rule の代わりに Worker)
+接続・維持の正:
 
-ダッシュボードの Hello World が編集できない場合は、**CLI で上書き**する(推奨)。
+1. [x] `npm run apex:deploy` でポータルを配信
+2. [x] `https://nit-games.com/` → **200** で十分な本文 + `google-adsense-account`
+3. [x] `https://nit-games.com/ads.txt` →  
+   `google.com, pub-3213960617040193, DIRECT, f08c47fec0942fa0`
+4. [x] ゲーム側 `client/index.html` にも meta / スニペット + `client/public/ads.txt`(承認後のサブドメイン用)
+5. [ ] 所有権が既に緑なら、ルートでは **adsbygoogle.js を増やさない**(薄いページでの広告扱いを避ける)
 
-```bash
-# 先に Redirect Rule「apex to yokai shogi」を無効化
-npm run apex:deploy
-```
-
-手動の場合:
-
-1. [ ] Cloudflare の Redirect Rule(`apex to yokai shogi`)を **無効化または削除**
-2. [ ] Workers & Pages → **Create** → Hello World で名前 `nit-games-apex` をデプロイしてよい
-3. [ ] コード編集できないときは上記 `npm run apex:deploy` で中身を差し替える
-4. [ ] DNS の `@` / `www` は Proxied のまま(カスタムドメインは deploy 時に付く)
-5. [ ] 確認:
-   - `https://nit-games.com/` → **200** でソースに `ca-pub-3213960617040193` があること
-   - `https://nit-games.com/ads.txt` → テキスト1行(HTML ではない)  
-     `google.com, pub-3213960617040193, DIRECT, f08c47fec0942fa0`
-
-AdSense 管理画面では次のいずれか(**画面で選んだ方式**):
-
-1. [ ] **AdSense コード スニペット** — ゲート HTML とゲーム `client/index.html` の両方に配置済み
-2. [ ] **ads.txt** — `client/public/ads.txt` と Worker の `/ads.txt` に配置。AdSense が表示する行と一致させる
-3. [ ] **メタタグ** — ゲート HTML に `google-adsense-account` 済み。ゲーム側にも足す場合は管理画面の値を使う
-
-確認手順:
-
-1. [ ] 上記ゲートが 200 でコードを返すことを確認
-2. [ ] ゲーム Pages も最新デプロイ(スニペット + `ads.txt`)
-3. [ ] AdSense で「コードを配置しました」→ **確認**
-4. [ ] 成功したら **審査をリクエスト**
-
-> ads.txt の中身は **AdSense 画面が表示する行を正**とする。不一致なら画面の行に合わせて両所を更新する。
-
-#### B-3. 審査待ち・合格の目安
+#### B-3. 審査待ち・不合格時・再申請
 
 1. [ ] AdSense 管理画面が「準備完了 / サイトが承認されました」等になるまで待つ(数日〜数週間かかることがある)
 2. [ ] 不合格の場合は理由を読み、コンテンツ・規約・ナビゲーション・ポリシー違反を直して再申請
 3. [ ] **自分のサイトの広告を自分で連打クリックしない**(アカウント停止の典型原因)
 
+「有用性の低いコンテンツ」で落ちたときの再申請前チェック:
+
+1. [ ] ルートにガイド等の静的ページが揃い、各ページに十分な独自本文がある
+2. [ ] 運営者情報・問い合わせ・規約・PP が独立URLで辿れる
+3. [ ] ポータルを数日公開した状態を維持してから「問題を修正しました」→審査リクエスト
+4. [ ] 承認後に `yokai-shogi.nit-games.com` をサイト追加し、収益はゲーム側リワードへ(本線)
+
 審査を通しやすくする実務メモ:
 
 - 規約・プライバシーが古い／404 だと不利
-- 中身がほぼ空の LP だけ、よりゲームとして遊べる状態の方がよい
+- SPAのゲームUIだけでは不十分。ルートに読める解説を置く
 - 極端に新規・トラフィックゼロでも通ることはあるが、時間がかかることがある
 - サイトの主言語・ターゲットは日本向けで一貫させる
 
