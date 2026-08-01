@@ -6,8 +6,7 @@ import type { AppEnv } from '../env';
 import { apiError } from '../lib/errors';
 import { gameDate, prevGameDate } from '../lib/time';
 import {
-  currencyLogStmt, getOwnedSet, getProfile, isConstraintError,
-  RELEASE_GIFT_CAMPAIGN_ID, RELEASE_GIFT_TICKETS,
+  CAMPAIGN_GIFTS, currencyLogStmt, getOwnedSet, getProfile, isConstraintError,
   STREAK_BONUS_TICKETS, TICKETS_CAP,
 } from '../db';
 import { authRequired } from '../middleware';
@@ -27,7 +26,7 @@ meRoutes.get('/me', async c => {
 
   const today = gameDate();
   let loginBonus: { day: number; tickets: number } | null = null;
-  let releaseGift: { tickets: number } | null = null;
+  let releaseGift: { tickets: number; title: string; subtitle: string } | null = null;
 
   const onboardingDone = !!p.onboarding_done;
 
@@ -56,28 +55,40 @@ meRoutes.get('/me', async c => {
     }
   }
 
-  /* リリース記念: オンボーディング完了後に1回だけ自動付与 */
+  /* キャンペーン配布: オンボーディング完了後に各campaign_idごと1回だけ自動付与 */
   if (onboardingDone) {
-    const grant = Math.min(RELEASE_GIFT_TICKETS, Math.max(0, TICKETS_CAP - p.tickets));
-    try {
-      const stmts = [
-        db.prepare('INSERT INTO campaign_grants (user_id, campaign_id, tickets) VALUES (?1, ?2, ?3)')
-          .bind(userId, RELEASE_GIFT_CAMPAIGN_ID, grant),
-      ];
-      if (grant > 0) {
-        const newBalance = p.tickets + grant;
-        stmts.push(
-          db.prepare('UPDATE user_profiles SET tickets = MIN(tickets + ?2, ?3) WHERE user_id = ?1')
-            .bind(userId, grant, TICKETS_CAP),
-          currencyLogStmt(db, userId, 'tickets', grant, newBalance, 'compensation', RELEASE_GIFT_CAMPAIGN_ID),
-        );
+    const granted: { tickets: number; title: string; subtitle: string }[] = [];
+    for (const camp of CAMPAIGN_GIFTS) {
+      const grant = Math.min(camp.tickets, Math.max(0, TICKETS_CAP - p.tickets));
+      try {
+        const stmts = [
+          db.prepare('INSERT INTO campaign_grants (user_id, campaign_id, tickets) VALUES (?1, ?2, ?3)')
+            .bind(userId, camp.id, grant),
+        ];
+        if (grant > 0) {
+          const newBalance = p.tickets + grant;
+          stmts.push(
+            db.prepare('UPDATE user_profiles SET tickets = MIN(tickets + ?2, ?3) WHERE user_id = ?1')
+              .bind(userId, grant, TICKETS_CAP),
+            currencyLogStmt(db, userId, 'tickets', grant, newBalance, 'compensation', camp.id),
+          );
+        }
+        await db.batch(stmts);
+        if (grant > 0) granted.push({ tickets: grant, title: camp.title, subtitle: camp.subtitle });
+        p = (await getProfile(db, userId))!;
+      } catch (e) {
+        if (!isConstraintError(e)) throw e;
+        p = (await getProfile(db, userId))!;
       }
-      await db.batch(stmts);
-      if (grant > 0) releaseGift = { tickets: grant };
-      p = (await getProfile(db, userId))!;
-    } catch (e) {
-      if (!isConstraintError(e)) throw e;
-      p = (await getProfile(db, userId))!;
+    }
+    if (granted.length === 1) {
+      releaseGift = granted[0];
+    } else if (granted.length > 1) {
+      releaseGift = {
+        tickets: granted.reduce((sum, g) => sum + g.tickets, 0),
+        title: '記念チケット配布',
+        subtitle: 'キャンペーン特典をまとめて付与しました',
+      };
     }
   }
 

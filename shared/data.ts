@@ -33,7 +33,12 @@ export type Skill =
   /* SSR専用スキル(会心の「運任せ」を「狙って出す」に置き換える: doc 08) */
   | { kind: 'moon'; name: string; desc: string; mult: number }                // 満月の手番は会心確定(それ以外は不発)
   | { kind: 'heads'; name: string; desc: string; step: number; max: number }  // この駒の撃破数だけ与ダメ成長
-  | { kind: 'legion'; name: string; desc: string; per: number; cap: number }; // 盤上の味方数で与ダメ加算
+  | { kind: 'legion'; name: string; desc: string; per: number; cap: number } // 盤上の味方数で与ダメ加算
+  /* 攻め改善: 食い逃げ・残火(phase2-v3) */
+  | { kind: 'retreat'; name: string; desc: string }                           // 取ったあと自動で元マスへ戻る
+  | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
+  | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap'; value: number; span: number }
+  | { kind: 'veil'; name: string; desc: string };                             // SSR: 残留/帰影/影遁を選択
 
 export interface YokaiDef {
   id: string;
@@ -94,7 +99,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'kyubi', name: '九尾の狐', type: 'boss', atk: 400, rarity: 'SSR',
     img: img('kyubi'), imgSm: imgSm('kyubi'),
     moveText: '全方向に1マス',
-    skill: { kind: 'moon', name: '妖狐の業火', desc: '満月の夜に駒を取ると、狐火が燃え上がり、必ずダメージ2倍(月齢は盤の脇に表示)', mult: 2 },
+    skill: { kind: 'moon', name: '妖狐の業火', desc: '満月の夜に駒を取ると、狐火が燃え上がり、必ずダメージ2倍(月齢は対局ステータスで確認)', mult: 2 },
     moves: { steps: STEPS_ALL8 },
     awakenName: '九尾開眼',
   },
@@ -261,7 +266,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'tamamo', name: '玉藻前', type: 'attack', atk: 450, rarity: 'SSR', gachaOnly: true,
     img: img('tamamo'), imgSm: imgSm('tamamo'),
     moveText: '全方向に1マス',
-    skill: { kind: 'moon', name: '傾国の妖炎', desc: '満月の夜に駒を取ると、九尾の狐火が舞い、必ずダメージ2.2倍(月齢は盤の脇に表示)', mult: 2.2 },
+    skill: { kind: 'moon', name: '傾国の妖炎', desc: '満月の夜に駒を取ると、九尾の狐火が舞い、必ずダメージ2.2倍(月齢は対局ステータスで確認)', mult: 2.2 },
     moves: { steps: STEPS_ALL8 },
     awakenName: '傾国乱世',
   },
@@ -474,6 +479,73 @@ export const YOKAI: Record<string, YokaiDef> = {
     moves: { steps: STEPS_GOLD },
     promoted: { steps: STEPS_ALL8 },
     awakenName: '両面宿儺',
+  },
+
+  /* ---------- 攻め改善ラインナップ(食い逃げ・残火) ---------- */
+  makuragaeshi: {
+    id: 'makuragaeshi', name: '枕返し', type: 'transform', atk: 170, rarity: 'R', gachaOnly: true,
+    img: img('makuragaeshi'), imgSm: imgSm('makuragaeshi'),
+    moveText: '前3方向と後ろに1マス(成:金の動き)',
+    skill: { kind: 'retreat', name: '枕の帰影', desc: 'この駒で取ったあと、自動で元いたマスへ戻る' },
+    moves: { steps: [[0,-1],[1,-1],[-1,-1],[0,1]] },
+    promoted: { steps: STEPS_GOLD },
+  },
+  rinka: {
+    id: 'rinka', name: '燐火', type: 'support', atk: 140, rarity: 'R', gachaOnly: true,
+    img: img('rinka'), imgSm: imgSm('rinka'),
+    moveText: '縦横に1マス(成:全方向1マス)',
+    skill: {
+      kind: 'ember', name: '燐の残り火',
+      desc: '取ったマスに4手残る燐火を置く。味方がそのマスに入る／取る／打つと魂力+150',
+      mode: 'heal', value: 150, span: 4,
+    },
+    moves: { steps: STEPS_ORTHO4 },
+    promoted: { steps: STEPS_ALL8 },
+  },
+  tsurube: {
+    id: 'tsurube', name: '釣瓶落とし', type: 'attack', atk: 210, rarity: 'R', gachaOnly: true,
+    img: img('tsurube'), imgSm: imgSm('tsurube'),
+    moveText: '前にどこまでも(成:+横・後ろ1マス)',
+    skill: {
+      kind: 'ember', name: '闇への落とし口',
+      desc: '取ったマスに4手残る落とし穴を置く。相手がそのマスに入ると魂力80ダメージ(穴は消える)',
+      mode: 'trap', value: 80, span: 4,
+    },
+    moves: { slides: [[0,-1]] },
+    promoted: { slides: [[0,-1]], steps: [[1,0],[-1,0],[0,1]] },
+    dropLimit: 1,
+  },
+  shiranui: {
+    id: 'shiranui', name: '不知火', type: 'attack', atk: 260, rarity: 'SR', gachaOnly: true,
+    img: img('shiranui'), imgSm: imgSm('shiranui'),
+    moveText: '斜めに1マス(成:斜め+前後)',
+    skill: {
+      kind: 'ember', name: '不知火の残火',
+      desc: '取ったマスに4手残る鬼火を置く。味方がそのマスで取るとダメージ+120',
+      mode: 'atk', value: 120, span: 4,
+    },
+    moves: { steps: STEPS_DIAG4 },
+    promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
+  },
+  enenra: {
+    id: 'enenra', name: '煙々羅', type: 'transform', atk: 200, rarity: 'SR', gachaOnly: true,
+    img: img('enenra'), imgSm: imgSm('enenra'),
+    moveText: '斜めに1マス(成:+前後1マス)',
+    skill: { kind: 'phase', name: '煙の影遁', desc: 'この駒で取ったあと、隣の空きマスへ1マス逃げられる(任意。取ったマスに残ってもよい)' },
+    moves: { steps: STEPS_DIAG4 },
+    promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
+  },
+  ingyo: {
+    id: 'ingyo', name: '隱神刑部', type: 'transform', atk: 360, rarity: 'SSR', gachaOnly: true,
+    img: img('ingyo'), imgSm: imgSm('ingyo'),
+    moveText: '金の動き(成:全方向1マス)',
+    skill: {
+      kind: 'veil', name: '隱形の術',
+      desc: 'この駒で取ったあと、(1)その場に残る (2)元いたマスへ戻る (3)隣の空きマスへ逃げる、のいずれかを選べる',
+    },
+    moves: { steps: STEPS_GOLD },
+    promoted: { steps: STEPS_ALL8 },
+    awakenName: '真・隱形',
   },
 };
 

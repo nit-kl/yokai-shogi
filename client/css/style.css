@@ -1595,6 +1595,7 @@ html, body {
   color: #d8d2e4;
   font-size: 0.82rem;
   line-height: 1.65;
+  white-space: pre-line;
 }
 
 .rule-piece { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
@@ -2516,6 +2517,12 @@ html, body {
     width: 42px;
     height: 42px;
   }
+  .battle-status-panel {
+    top: auto;
+    bottom: calc(100% + 8px);
+    right: 50%;
+    transform: translateX(50%);
+  }
   .title-center {
     width: min(94vw, 520px);
     padding: 16px 11px 13px;
@@ -2858,23 +2865,109 @@ html, body {
    SSR体験改修: 月齢HUD・覚醒ゲージ・因縁共鳴(doc 08)
    ============================================================ */
 
-/* ---------- 月齢HUD ---------- */
-#moon-hud {
-  position: absolute;
-  top: 4px; right: 6px;
-  z-index: 6;
-  display: flex; align-items: center; gap: 5px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(28, 22, 52, 0.9), rgba(14, 10, 30, 0.9));
-  border: 1px solid rgba(185, 168, 255, 0.35);
-  font-family: "Yu Mincho", serif;
-  font-size: clamp(0.6rem, 1.6vh, 0.78rem);
-  letter-spacing: 0.08em;
-  color: #cfc6f2;
-  pointer-events: none;
-  transition: box-shadow 0.4s, border-color 0.4s;
+/* ---------- 対局ステータス(ボタンで開く) ---------- */
+.battle-status-wrap {
+  position: relative;
 }
+#btn-battle-status {
+  position: relative;
+  font-family: "Yu Mincho", serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+}
+.battle-status-badge {
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #ff9a3c;
+  box-shadow: 0 0 6px rgba(255, 140, 60, 0.8);
+}
+.battle-status-badge.alert-moon {
+  background: #ffd24a;
+  box-shadow: 0 0 6px rgba(255, 210, 74, 0.85);
+}
+.battle-status-panel {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 8px);
+  width: min(72vw, 240px);
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, rgba(28, 22, 44, 0.97), rgba(12, 10, 20, 0.97));
+  border: 1px solid rgba(232, 196, 106, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  z-index: 30;
+}
+.battle-status-title {
+  font-family: "Yu Mincho", serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.battle-status-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.battle-status-row.hidden { display: none !important; }
+.battle-status-key {
+  flex: 0 0 auto;
+  color: #b8aed0;
+  letter-spacing: 0.08em;
+}
+.battle-status-val {
+  flex: 1 1 auto;
+  text-align: right;
+  color: #efe8ff;
+}
+#moon-hud .battle-status-val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+#moon-hud.full-moon .battle-status-val { color: #fff3c8; }
+#hunger-hud.hunger-active .battle-status-val {
+  color: #ffd0a0;
+  font-weight: 600;
+}
+.battle-status-note {
+  margin: 6px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.62rem;
+  line-height: 1.45;
+  color: #9a90b4;
+  letter-spacing: 0.04em;
+}
+.ember-mark {
+  position: absolute;
+  left: 50%; top: 72%;
+  width: 28%; height: 22%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.85;
+}
+.ember-atk { background: radial-gradient(circle, #ffb060 0%, #ff6020 55%, transparent 75%); box-shadow: 0 0 8px #ff8040; }
+.ember-heal { background: radial-gradient(circle, #a8ffc8 0%, #40c878 55%, transparent 75%); box-shadow: 0 0 8px #60e090; }
+.ember-trap { background: radial-gradient(circle, #2a1830 0%, #100818 60%, transparent 80%); box-shadow: inset 0 0 6px #000, 0 0 4px #604080; }
+.hl-phase {
+  outline: 2px solid rgba(180, 200, 255, 0.85);
+  outline-offset: -2px;
+  background: rgba(140, 170, 255, 0.22) !important;
+}
+
+/* ---------- 月齢(パネル内表示用) ---------- */
+#moon-icon { font-size: 1.05em; line-height: 1; filter: drop-shadow(0 0 4px rgba(185, 168, 255, 0.6)); }
 #hyakki-round-hud {
   position: absolute;
   top: 4px; left: 6px;
@@ -2894,17 +2987,6 @@ html, body {
   color: #ffe9a0;
   font-weight: 700;
   letter-spacing: 0.06em;
-}
-#moon-icon { font-size: 1.15em; line-height: 1; filter: drop-shadow(0 0 4px rgba(185, 168, 255, 0.6)); }
-#moon-hud.full-moon {
-  color: #fff3c8;
-  border-color: rgba(255, 226, 150, 0.75);
-  box-shadow: 0 0 14px rgba(255, 220, 130, 0.45), inset 0 0 8px rgba(255, 220, 130, 0.18);
-  animation: fullMoonPulse 1.4s ease-in-out infinite alternate;
-}
-@keyframes fullMoonPulse {
-  from { box-shadow: 0 0 10px rgba(255, 220, 130, 0.35), inset 0 0 6px rgba(255, 220, 130, 0.12); }
-  to   { box-shadow: 0 0 22px rgba(255, 220, 130, 0.65), inset 0 0 12px rgba(255, 220, 130, 0.28); }
 }
 
 /* 満月の夜: 盤が月光に染まり、moon駒(九尾・玉藻前)が輝く */

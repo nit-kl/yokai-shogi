@@ -419,6 +419,8 @@ export const MenuUI = {
     };
 
     if (gift) {
+      $('release-gift-title').textContent = gift.title || '記念チケット配布';
+      $('release-gift-subtitle').textContent = gift.subtitle || 'キャンペーン特典を付与しました';
       $('release-gift-tickets').textContent = `×${gift.tickets}`;
       $('modal-release-gift').classList.remove('hidden');
       $('btn-release-gift-ok').onclick = () => {
