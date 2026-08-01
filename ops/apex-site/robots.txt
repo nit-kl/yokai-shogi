@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nit-games.com/sitemap.xml
