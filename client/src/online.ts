@@ -1,6 +1,6 @@
 import { COLS, ROWS } from '../../shared/data';
 import type { Side } from '../../shared/data';
-import type { Action, GameEvent, GameState, Pos } from '../../shared/game';
+import type { Action, Ember, GameEvent, GameState, Pos } from '../../shared/game';
 import type { ServerBattleMessage } from '../../shared/battle';
 
 const flipSide = (side: Side): Side => side === 'p' ? 'e' : 'p';
@@ -9,10 +9,22 @@ const flipPos = (pos: Pos): Pos => ({ x: COLS - 1 - pos.x, y: ROWS - 1 - pos.y }
 export function actionToServer(action: Action, side: Side): Action {
   if (side === 'p') return action;
   switch (action.kind) {
-    case 'move': return { kind: 'move', from: flipPos(action.from), to: flipPos(action.to) };
+    case 'move':
+      return action.phaseTo
+        ? { kind: 'move', from: flipPos(action.from), to: flipPos(action.to), phaseTo: flipPos(action.phaseTo) }
+        : { kind: 'move', from: flipPos(action.from), to: flipPos(action.to) };
     case 'drop': return { kind: 'drop', id: action.id, to: flipPos(action.to) };
     case 'awaken': return { kind: 'awaken', to: flipPos(action.to) };
   }
+}
+
+function flipEmbers(embers: Ember[] | undefined): Ember[] {
+  return (embers ?? []).map(e => ({
+    ...e,
+    side: flipSide(e.side),
+    x: COLS - 1 - e.x,
+    y: ROWS - 1 - e.y,
+  }));
 }
 
 export function stateForView(state: GameState, side: Side): GameState {
@@ -30,6 +42,8 @@ export function stateForView(state: GameState, side: Side): GameState {
     awaken: state.awaken
       ? { p: { ...state.awaken.e }, e: { ...state.awaken.p } }
       : { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } },
+    lastCapturePly: state.lastCapturePly ?? 0,
+    embers: flipEmbers(state.embers),
   };
 }
 
@@ -41,7 +55,8 @@ export function eventsForView(events: GameEvent[], side: Side): GameEvent[] {
       case 'drop': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
       case 'promote': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
       case 'awaken': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
-      case 'gameover': return { ...event, winner: flipSide(event.winner) };
+      case 'hunger': return { ...event, hp: { p: event.hp.e, e: event.hp.p } };
+      case 'gameover': return { ...event, winner: event.winner ? flipSide(event.winner) : null };
       case 'capture':
         return {
           ...event,

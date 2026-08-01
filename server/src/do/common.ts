@@ -6,7 +6,7 @@ import type { BattlePlayer, ServerBattleMessage } from '../../../shared/battle';
 
 export const TURN_MS = 60_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v2'; // v2: 月齢/首成長/百鬼の陣・覚醒・因縁共鳴(SSR体験改修)
+export const RULE_VERSION = 'phase2-v3'; // v3: 飢餓の夜・帰影/影遁/殘火・新駒6体
 
 export function send(ws: WebSocket, message: ServerBattleMessage): void {
   try { ws.send(JSON.stringify(message)); } catch { /* closed socket */ }

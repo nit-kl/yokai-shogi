@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { YOKAI, COLS, ROWS } from '../../shared/data';
-import { Game } from '../../shared/game';
+import { Game, HUNGER_GRACE } from '../../shared/game';
 import type { Action, GameState, Piece } from '../../shared/game';
 
 export type AIDifficulty = 'easy' | 'normal' | 'hard';
@@ -21,6 +21,8 @@ export const AI = {
     if (def.skill.kind === 'counter') v += 60;
     if (def.skill.kind === 'explode') v += 50;   // 取られても道連れにできる
     if (def.skill.kind === 'heads') v += (pc.kills ?? 0) * 80; // 育った首は失いたくない
+    if (def.skill.kind === 'retreat' || def.skill.kind === 'phase' || def.skill.kind === 'veil') v += 70;
+    if (def.skill.kind === 'ember') v += 55;
     return v;
   },
 
@@ -69,6 +71,14 @@ export const AI = {
 
       /* 位置評価 */
       score += this.positionBonus(state, sim, act);
+
+      /* 飢餓の夜: 無取りが続くほど捕獲を優先 */
+      const idle = Game.hungerIdle(state);
+      if (act.kind === 'move' && state.board[act.to.y][act.to.x]) {
+        if (idle >= HUNGER_GRACE - 2) score += 40 + idle * 6;
+      } else if (idle > HUNGER_GRACE) {
+        score -= 35; // 飢餓中の非取りは損
+      }
 
       /* 揺らぎ(毎回同じ手にならないように) */
       score += Math.random() * noise;

@@ -8,7 +8,7 @@ import {
   RESONANCES, MOON_PHASES, baseIdOf,
 } from '../../shared/data';
 import type { Rarity, Side, YokaiType } from '../../shared/data';
-import { AWAKEN_ATK, AWAKEN_MAX, Game, MOON_CYCLE } from '../../shared/game';
+import { AWAKEN_ATK, AWAKEN_MAX, Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
 import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
 import { AI } from './ai';
@@ -40,6 +40,7 @@ type Sel =
   | { kind: 'piece'; x: number; y: number; moves: MoveTarget[] }
   | { kind: 'hand'; id: string; drops: Pos[] }
   | { kind: 'awaken'; targets: Pos[] }
+  | { kind: 'phase'; from: Pos; to: Pos; options: Pos[] } // 影遁/隱形の退避先選択(残留=to自身)
   | null;
 let sel: Sel = null;            // 選択中
 const pieceEls = new Map<number, HTMLElement>(); // uid -> DOM要素
@@ -112,6 +113,10 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
   moon: ['#f2ecff', '#b9a8ff', '#6157d6'],    // 月光の藍紫
   heads: ['#ffe2b8', '#ff8a3c', '#8d1f1f'],   // 大蛇の劫火
   legion: ['#dbe7ff', '#8ba0e8', '#d98945'],  // 百鬼夜行の宵闇
+  retreat: ['#e8e0ff', '#a898e0', '#6a5acd'], // 帰影
+  phase: ['#dde8f0', '#9ab0c0', '#5a7080'],   // 影遁の煙
+  ember: ['#ffe8c8', '#ff9a4a', '#e85a20'],   // 残火
+  veil: ['#f0e8ff', '#c0a8e8', '#7a58c0'],    // 隱形
 };
 /* 会心系(発動="当たり")として扱うスキル */
 const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads']);
@@ -689,7 +694,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     updateHUD();
     await announceResonances();
     onlineSeq = message.seq;
-    if (G && !G.winner) busy = G.turn !== 'p';
+    if (G && !G.winner && G.reason !== 'draw') busy = G.turn !== 'p';
     renderOnlineTimers();
   } else if (message.t === 'your_turn') {
     setOnlineTurnTimer(message.remainMs);
@@ -940,6 +945,19 @@ function renderAll() {
   for (const [uid, el] of pieceEls) {
     if (!seen.has(uid)) { el.remove(); pieceEls.delete(uid); }
   }
+  renderEmbers();
+}
+
+function renderEmbers() {
+  document.querySelectorAll('.ember-mark').forEach(el => el.remove());
+  if (!G?.embers) return;
+  for (const e of G.embers) {
+    if (e.until < (G.plies ?? 0)) continue;
+    const mark = document.createElement('div');
+    mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`;
+    mark.title = e.mode === 'atk' ? `残火 +${e.value}` : e.mode === 'heal' ? `燐火 +${e.value}` : `落とし穴 ${e.value}`;
+    cellEl(e.x, e.y).appendChild(mark);
+  }
 }
 
 /* ============================== HUD ============================== */
@@ -957,6 +975,21 @@ function updateHUD() {
   }
   updateMoonHUD();
   updateAwakenHUD();
+  updateHungerHUD();
+}
+
+function updateHungerHUD() {
+  const hud = $('hunger-hud');
+  if (!G) { hud.classList.add('hidden'); return; }
+  hud.classList.remove('hidden');
+  const active = Game.hungerActive(G);
+  hud.classList.toggle('hunger-active', active);
+  if (active) {
+    $('hunger-label').textContent = `飢餓の夜 -${HUNGER_DRAIN}`;
+  } else {
+    const left = Game.hungerTurnsLeft(G);
+    $('hunger-label').textContent = left === 0 ? '飢餓まであと0' : `飢餓まであと${left}`;
+  }
 }
 
 /* 月齢表示: moonスキル持ちが対局に絡む時だけ出す。満月は盤ごと月光に染める */
@@ -1111,7 +1144,7 @@ function bindLongPress(el: HTMLElement, onLongPress: () => void) {
 
 /* ============================== 入力 ============================== */
 const HL_CLASSES = [
-  'hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken',
+  'hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken', 'hl-phase',
   'hl-enemy-move', 'hl-enemy-capture', 'hl-enemy-selected',
 ] as const;
 
@@ -1140,6 +1173,22 @@ function showEnemyRange(x: number, y: number) {
   }
 }
 
+function beginPhaseSelect(from: Pos, to: Pos) {
+  if (!G) return;
+  const pc = G.board[from.y][from.x];
+  if (!pc) return;
+  const kind = YOKAI[pc.id].skill.kind;
+  if (kind !== 'phase' && kind !== 'veil') return;
+  const options = Game.escapeDests(G, from, to, kind);
+  /* 残留(to)も選択可 */
+  const all = [{ ...to }, ...options];
+  clearSel();
+  sel = { kind: 'phase', from, to, options: all };
+  AudioSys.play('select');
+  cellEl(to.x, to.y).classList.add('hl-selected');
+  for (const p of all) cellEl(p.x, p.y).classList.add('hl-phase');
+}
+
 function onCellClick(x: number, y: number) {
   if (!G) return;
 
@@ -1148,10 +1197,31 @@ function onCellClick(x: number, y: number) {
 
   /* 移動先 / 打ち先 / 覚醒対象として有効か */
   if (canAct && sel) {
+    if (sel.kind === 'phase') {
+      const opt = sel.options.find(p => p.x === x && p.y === y);
+      if (opt) {
+        const stay = opt.x === sel.to.x && opt.y === sel.to.y;
+        doAction(stay
+          ? { kind: 'move', from: sel.from, to: sel.to }
+          : { kind: 'move', from: sel.from, to: sel.to, phaseTo: opt });
+        return;
+      }
+      clearBattleFocus();
+      return;
+    }
     if (sel.kind === 'piece') {
       const { x: sx, y: sy } = sel;
       const m = sel.moves.find(m => m.x === x && m.y === y);
-      if (m) { doAction({ kind: 'move', from: { x: sx, y: sy }, to: { x, y } }); return; }
+      if (m) {
+        const attacker = G.board[sy][sx];
+        const sk = attacker ? YOKAI[attacker.id].skill.kind : '';
+        if (m.capture && (sk === 'phase' || sk === 'veil')) {
+          beginPhaseSelect({ x: sx, y: sy }, { x, y });
+          return;
+        }
+        doAction({ kind: 'move', from: { x: sx, y: sy }, to: { x, y } });
+        return;
+      }
     } else if (sel.kind === 'hand') {
       const id = sel.id;
       const d = sel.drops.find(d => d.x === x && d.y === y);
@@ -1354,7 +1424,7 @@ async function doAction(action: Action) {
   await announceResonances(); // 打ち込みで因縁ペアが揃った場合
   cellEl(action.to.x, action.to.y).classList.add('hl-last');
 
-  if (G!.winner) { await sleep(750); showResult(); return; }
+  if (G!.winner || G!.reason === 'draw') { await sleep(750); showResult(); return; }
 
   if (G!.turn === 'e') {
     showBanner('e');
@@ -1518,6 +1588,13 @@ async function animEvent(ev: GameEvent) {
         setTimeout(() => el.classList.remove('promoted-burst'), 520);
       }
       await sleep(700);
+      break;
+    }
+    case 'hunger': {
+      AudioSys.play('hit');
+      FX.flash('rgba(40, 20, 60, 0.35)', 220);
+      updateHUD();
+      await sleep(280);
       break;
     }
     case 'gameover': break; // doAction側で処理
@@ -1776,7 +1853,7 @@ function showResult() {
   busy = true;
   AudioSys.stopBgm();
   $('combo-vignette').className = '';
-  const draw = onlineEndReason === 'draw';
+  const draw = onlineEndReason === 'draw' || G!.reason === 'draw';
   const win = G!.winner === 'p';
   const solo = !onlineSide;
   trackLandingEvent('result_view', {
@@ -1895,9 +1972,15 @@ function reasonsFor(win: boolean, enemyBossName: string): string {
     resign: '投了した…',
     timeout: win ? '相手の持ち時間が切れた' : '持ち時間が切れた…',
     disconnect: win ? '相手の再接続猶予が切れた' : '再接続猶予が切れた…',
-    draw: '300手に達したため引き分け',
+    draw: onlineEndReason === 'draw' && G!.reason === 'draw'
+      ? '飢餓の夜で双方の魂力が尽きた' : '300手に達したため引き分け',
+    hunger: win ? '飢餓の夜で敵の魂力が尽きた!' : '飢餓の夜で魂力が尽きた…',
   };
-  return reasons[onlineEndReason || G!.reason || ''] || '';
+  const reasonKey = onlineEndReason || G!.reason || '';
+  if (reasonKey === 'draw') {
+    return G!.reason === 'draw' ? '飢餓の夜で双方の魂力が尽きた' : '300手に達したため引き分け';
+  }
+  return reasons[reasonKey] || '';
 }
 
 function renderHyakkiResultStats() {
@@ -1916,11 +1999,11 @@ function renderHyakkiResultStats() {
 const PIECE_CATALOG_ORDER = [
   'kyubi', 'kyubi_eclipse', 'kyubi_hasha', 'shuten', 'shuten_kishin', 'kooni', 'nekomata', 'ittan', 'nue',
   'kappa', 'nurikabe', 'tengu', 'rokuro', 'tamamo', 'tamamo_keikoku', 'nurarihyon',
-  'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'gashadokuro', 'sukuna',
+  'nurarihyon_hyakki', 'ibaraki', 'ibaraki_rashomon', 'yamata', 'gashadokuro', 'sukuna', 'ingyo',
   'aooni', 'kasha', 'kamaitachi', 'raiju', 'suiko', 'oonyudo',
   'karakasa', 'daitengu', 'hitouban', 'yukionna', 'tsuchigumo', 'sunakake', 'baku', 'zashiki', 'chochin', 'tanuki', 'onibi',
-  'aoandon', 'umibozu', 'wanyudo', 'yatagarasu', 'oomyukade', 'inugami', 'tenome', 'nopperabo',
-  'bakezouri', 'sunekosuri', 'kodama',
+  'aoandon', 'umibozu', 'wanyudo', 'yatagarasu', 'oomyukade', 'shiranui', 'enenra', 'inugami', 'tenome', 'nopperabo',
+  'makuragaeshi', 'rinka', 'tsurube', 'bakezouri', 'sunekosuri', 'kodama',
 ];
 const PIECE_TYPE_ORDER: YokaiType[] = ['boss', 'attack', 'defense', 'ambush', 'debuff', 'support', 'transform', 'trap'];
 const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
@@ -1945,6 +2028,8 @@ function ssrIntroLines(id: string): string[] {
     lines.push(`布陣: 盤上の味方1体ごとに与ダメ+${Math.round(def.skill.per * 100)}%(最大+${Math.round(def.skill.cap * 100)}%)`);
   } else if (def.skill.kind === 'crit') {
     lines.push(`会心: 駒を取った時${Math.round(def.skill.chance * 100)}%でダメージ×${def.skill.mult}`);
+  } else if (def.skill.kind === 'veil') {
+    lines.push('隱形: 取ったあと残留／帰影／隣接影遁を選べる');
   }
   if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 3手番ATK×${AWAKEN_ATK}`);
   const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(id)));

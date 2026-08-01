@@ -23,9 +23,19 @@ export interface Piece {
 }
 
 export type Hands = Record<string, number>;
-export type GameOverReason = 'boss' | 'hp' | 'explode' | 'nomoves' | 'resign';
+export type GameOverReason = 'boss' | 'hp' | 'explode' | 'nomoves' | 'resign' | 'hunger' | 'draw';
 
 export interface AwakenState { gauge: number; used: boolean }
+
+/** 残火(ember): 取ったマスに残る自軍マーカー */
+export interface Ember {
+  side: Side;
+  x: number;
+  y: number;
+  until: number; // plies 期限
+  mode: 'atk' | 'heal' | 'trap';
+  value: number;
+}
 
 export interface GameState {
   board: (Piece | null)[][];
@@ -39,6 +49,8 @@ export interface GameState {
   nextUid: number; // 駒uid採番(モジュール変数ではなく状態側で持つ: 1プロセスで複数対局を扱うため)
   plies: number;   // 適用済みの手数(月齢・覚醒期限の基準)
   awaken: Record<Side, AwakenState>; // 覚醒ゲージ(SSR必殺技: 1局1回)
+  lastCapturePly: number; // 直近捕獲の手数(飢餓の夜)
+  embers: Ember[];        // 残火
 }
 
 /* 覚醒(SSR必殺技): 駒の取り合いで両陣営に+1、満タンで手番を消費して自軍SSRを覚醒できる */
@@ -49,8 +61,12 @@ export const AWAKEN_ATK = 1.5; // 覚醒中のATK倍率
 /* 月齢(moonスキル): 1夜=2手(両者1手ずつ)、4夜周期の4夜目が満月 */
 export const MOON_CYCLE = 4;
 
+/* 飢餓の夜: 無取りが続くと双方の魂力が削れる */
+export const HUNGER_GRACE = 8;
+export const HUNGER_DRAIN = 50;
+
 export type Action =
-  | { kind: 'move'; from: Pos; to: Pos }
+  | { kind: 'move'; from: Pos; to: Pos; phaseTo?: Pos } // phaseTo: 影遁/隱形の退避先
   | { kind: 'drop'; id: string; to: Pos }
   | { kind: 'awaken'; to: Pos }; // 自軍SSR駒(to)を覚醒させる(手番を消費)
 
@@ -84,6 +100,8 @@ export interface CaptureEvent {
   hp: Record<Side, number>;
   /* foxBond(妖狐相伝): この捕獲で相方が激怒した(uid=激怒した駒) */
   enrage?: { uid: number; id: string; owner: Side; name: string } | null;
+  emberBonus?: number; // 残火(atk)による最終ダメ加算
+  trapDmg?: number;    // 残火(trap)を踏んだダメージ
 }
 
 export type GameEvent =
@@ -92,7 +110,8 @@ export type GameEvent =
   | { t: 'promote'; uid: number; to: Pos; id: string; owner: Side }
   | { t: 'awaken'; uid: number; id: string; owner: Side; to: Pos; name: string; until: number }
   | CaptureEvent
-  | { t: 'gameover'; winner: Side; reason: GameOverReason };
+  | { t: 'hunger'; drain: number; hp: Record<Side, number> }
+  | { t: 'gameover'; winner: Side | null; reason: GameOverReason };
 
 export interface ApplyOptions {
   /** false で確率スキルを期待値計算(AI読み用)。既定 true */
@@ -100,6 +119,8 @@ export interface ApplyOptions {
   /** 乱数の注入(サーバーは対局シード由来のPRNG、クライアントは既定の Math.random) */
   rand?: () => number;
 }
+
+const posKey = (p: Pos) => `${p.x},${p.y}`;
 
 export const Game = {
   /* playerRows: 自軍2段(手前から2段目, 最奥段)、enemyRows: 敵軍2段(最奥段, 前段) */
@@ -131,6 +152,8 @@ export const Game = {
       nextUid: uid,
       plies: 0,
       awaken: { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } },
+      lastCapturePly: 0,
+      embers: [],
     };
   },
 
@@ -149,24 +172,37 @@ export const Game = {
       awaken: s.awaken
         ? { p: { ...s.awaken.p }, e: { ...s.awaken.e } }
         : { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } },
+      lastCapturePly: s.lastCapturePly ?? 0,
+      embers: (s.embers ?? []).map(e => ({ ...e })),
     };
   },
 
-  /* 旧スナップショット(plies/awaken導入前)を正規化。復元された進行中対局との互換用 */
+  /* 旧スナップショットを正規化。復元された進行中対局との互換用 */
   ensureMeta(s: GameState): void {
     if (typeof s.plies !== 'number') s.plies = 0;
     if (!s.awaken) s.awaken = { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } };
+    if (typeof s.lastCapturePly !== 'number') s.lastCapturePly = 0;
+    if (!Array.isArray(s.embers)) s.embers = [];
   },
 
   /* ---------- 月齢(moonスキル) ---------- */
-  /* ply(適用前の手数)が属する夜の月齢インデックス(0..MOON_CYCLE-1、最終値=満月) */
   moonPhaseOfPly(ply: number): number { return Math.floor(ply / 2) % MOON_CYCLE; },
-  /* 次に指す手の月齢(HUD表示用) */
   moonPhase(s: GameState): number { return this.moonPhaseOfPly(s.plies ?? 0); },
   isFullMoonPly(ply: number): boolean { return this.moonPhaseOfPly(ply) === MOON_CYCLE - 1; },
-  /* 満月まであと何夜か(0=今が満月) */
   nightsUntilFullMoon(s: GameState): number {
     return (MOON_CYCLE - 1) - this.moonPhase(s);
+  },
+
+  /* ---------- 飢餓の夜 ---------- */
+  hungerIdle(s: GameState): number {
+    this.ensureMeta(s);
+    return Math.max(0, (s.plies ?? 0) - (s.lastCapturePly ?? 0));
+  },
+  hungerActive(s: GameState): boolean {
+    return this.hungerIdle(s) > HUNGER_GRACE;
+  },
+  hungerTurnsLeft(s: GameState): number {
+    return Math.max(0, HUNGER_GRACE - this.hungerIdle(s));
   },
 
   /* ---------- 覚醒(SSR必殺技) ---------- */
@@ -177,7 +213,6 @@ export const Game = {
   isAwakened(pc: Piece, ply: number): boolean {
     return pc.awakenUntil !== undefined && ply <= pc.awakenUntil;
   },
-  /* side の覚醒対象(盤上の自軍SSR)一覧 */
   awakenTargets(s: GameState, side: Side): Pos[] {
     const out: Pos[] = [];
     for (let y = 0; y < ROWS; y++) {
@@ -192,7 +227,6 @@ export const Game = {
   },
 
   /* ---------- 因縁共鳴 ---------- */
-  /* side の盤上で id の共鳴相方が生きていれば、その共鳴定義を返す */
   activeResonance(s: GameState, side: Side, id: string): Resonance | null {
     const base = baseIdOf(id);
     for (const rs of RESONANCES) {
@@ -207,7 +241,6 @@ export const Game = {
     }
     return null;
   },
-  /* 盤上から相方の駒を探す(foxBondの激怒付与用) */
   findPartnerPiece(s: GameState, side: Side, rs: Resonance, capturedBase: string): { pc: Piece; at: Pos } | null {
     const partner = rs.pair[0] === capturedBase ? rs.pair[1] : rs.pair[0];
     for (let y = 0; y < ROWS; y++) {
@@ -226,12 +259,10 @@ export const Game = {
     return pc.promoted ? Math.round(base * 1.5) : base;
   },
 
-  /* 敵陣(成りゾーン)判定 */
   inZone(owner: Side, y: number): boolean {
     return owner === 'p' ? y < ZONE_DEPTH : y >= ROWS - ZONE_DEPTH;
   },
 
-  /* (x,y)の駒の移動先一覧 */
   getMoves(s: GameState, x: number, y: number): MoveTarget[] {
     const pc = s.board[y][x];
     if (!pc) return [];
@@ -244,7 +275,7 @@ export const Game = {
       const occ = s.board[ny][nx];
       if (occ && occ.owner === pc.owner) return false;
       out.push({ x: nx, y: ny, capture: !!occ });
-      return !occ; // 進行可能か(スライド用)
+      return !occ;
     };
     if (mv.steps) for (const [dx, dy] of mv.steps) tryAdd(x + dx, y + dy * sign);
     if (mv.jumps) for (const [dx, dy] of mv.jumps) tryAdd(x + dx, y + dy * sign);
@@ -258,15 +289,14 @@ export const Game = {
     return out;
   },
 
-  /* 持ち駒 id を打てるマス一覧 */
   getDrops(s: GameState, owner: Side, id: string): Pos[] {
     const def = YOKAI[id];
-    const limit = def.dropLimit || 0; // 相手陣最奥 n 段には打てない
+    const limit = def.dropLimit || 0;
     const out: Pos[] = [];
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
         if (s.board[y][x]) continue;
-        const depth = owner === 'p' ? y : ROWS - 1 - y; // 相手最奥からの距離
+        const depth = owner === 'p' ? y : ROWS - 1 - y;
         if (depth < limit) continue;
         out.push({ x, y });
       }
@@ -274,15 +304,45 @@ export const Game = {
     return out;
   },
 
-  /* 手番側の全行動 */
+  /* 捕獲後の影遁/隱形先(残留は含めない。残留は phaseTo 省略) */
+  escapeDests(s: GameState, from: Pos, to: Pos, kind: 'phase' | 'veil'): Pos[] {
+    const out: Pos[] = [];
+    const seen = new Set<string>();
+    const add = (p: Pos) => {
+      const k = posKey(p);
+      if (seen.has(k)) return;
+      if (p.x === to.x && p.y === to.y) return;
+      seen.add(k);
+      out.push(p);
+    };
+    if (kind === 'veil') add({ ...from });
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = to.x + dx, ny = to.y + dy;
+        if (!this.inBounds(nx, ny)) continue;
+        const occ = s.board[ny][nx];
+        if (!occ || (nx === from.x && ny === from.y)) add({ x: nx, y: ny });
+      }
+    }
+    return out;
+  },
+
   getAllActions(s: GameState, side: Side): Action[] {
     const acts: Action[] = [];
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
         const pc = s.board[y][x];
         if (!pc || pc.owner !== side) continue;
+        const sk = YOKAI[pc.id].skill.kind;
         for (const m of this.getMoves(s, x, y)) {
-          acts.push({ kind: 'move', from: { x, y }, to: { x: m.x, y: m.y } });
+          const base: Action = { kind: 'move', from: { x, y }, to: { x: m.x, y: m.y } };
+          acts.push(base);
+          if (m.capture && (sk === 'phase' || sk === 'veil')) {
+            for (const pt of this.escapeDests(s, { x, y }, { x: m.x, y: m.y }, sk)) {
+              acts.push({ kind: 'move', from: { x, y }, to: { x: m.x, y: m.y }, phaseTo: pt });
+            }
+          }
         }
       }
     }
@@ -298,7 +358,6 @@ export const Game = {
     return acts;
   },
 
-  /* 防御オーラ(守)+弱体オーラ(妨)による軽減率(受ける側 side) */
   defenseMult(s: GameState, side: Side): number {
     let m = 1;
     for (let y = 0; y < ROWS; y++) {
@@ -337,7 +396,6 @@ export const Game = {
     return effects;
   },
 
-  /* side 側の盤上に指定スキルの駒がいるか */
   hasSkill(s: GameState, side: Side, kind: string): boolean {
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
@@ -350,10 +408,61 @@ export const Game = {
 
   comboMult(n: number): number { return Math.min(2, 1 + 0.25 * (n - 1)); },
 
+  pruneEmbers(s: GameState): void {
+    this.ensureMeta(s);
+    s.embers = s.embers.filter(e => e.until >= s.plies);
+  },
+
+  findEmberAt(s: GameState, x: number, y: number, side?: Side): Ember | undefined {
+    this.ensureMeta(s);
+    return s.embers.find(e => e.x === x && e.y === y && e.until >= s.plies && (side === undefined || e.side === side));
+  },
+
+  placeEmber(s: GameState, side: Side, at: Pos, mode: Ember['mode'], value: number, span: number): void {
+    this.ensureMeta(s);
+    s.embers = s.embers.filter(e => !(e.side === side));
+    s.embers.push({ side, x: at.x, y: at.y, until: s.plies + span - 1, mode, value });
+  },
+
+  /* マス進入時の残火(trap/heal)。trapは進入側が被ダメして消滅 */
+  resolveEmberEnter(
+    s: GameState, side: Side, at: Pos, events: GameEvent[],
+    procs?: SkillProc[],
+  ): { trapDmg: number; heal: number } {
+    this.pruneEmbers(s);
+    let trapDmg = 0;
+    let heal = 0;
+    const mine = this.findEmberAt(s, at.x, at.y, side);
+    if (mine?.mode === 'heal') {
+      heal = Math.min(MAX_HP - s.hp[side], mine.value);
+      if (heal > 0) {
+        s.hp[side] += heal;
+        if (procs) {
+          procs.push({
+            name: '燐の残り火', owner: side, img: YOKAI.rinka.img,
+            text: `残火の癒やし +${heal}!`,
+          });
+        }
+      }
+    }
+    const foe: Side = side === 'p' ? 'e' : 'p';
+    const enemyTrap = this.findEmberAt(s, at.x, at.y, foe);
+    if (enemyTrap?.mode === 'trap') {
+      trapDmg = enemyTrap.value;
+      s.hp[side] = Math.max(0, s.hp[side] - trapDmg);
+      s.embers = s.embers.filter(e => !(e.x === at.x && e.y === at.y && e.side === foe));
+      if (procs) {
+        procs.push({
+          name: '闇への落とし口', owner: foe, img: YOKAI.tsurube.img,
+          text: `落とし穴 ${trapDmg}ダメージ!`,
+        });
+      }
+    }
+    return { trapDmg, heal };
+  },
+
   /* ------------------------------------------------------------
      行動を適用し、演出用イベント列を返す
-     opts.rng=false で確率スキルを期待値計算(AI読み用)
-     opts.rand で乱数を注入(省略時 Math.random)
      ------------------------------------------------------------ */
   applyAction(s: GameState, action: Action, opts: ApplyOptions = {}): GameEvent[] {
     const rng = opts.rng !== false;
@@ -362,7 +471,8 @@ export const Game = {
     const side = s.turn;
     const foe: Side = side === 'p' ? 'e' : 'p';
     this.ensureMeta(s);
-    const ply = s.plies; // この手の手数(月齢・覚醒期限の基準)
+    this.pruneEmbers(s);
+    const ply = s.plies;
     s.plies++;
 
     if (action.kind === 'awaken') {
@@ -383,6 +493,15 @@ export const Game = {
       if (s.hands[side][action.id] <= 0) delete s.hands[side][action.id];
       s.combo[side] = 0;
       events.push({ t: 'drop', uid: pc.uid, id: action.id, owner: side, to: { ...action.to } });
+      const enter = this.resolveEmberEnter(s, side, action.to, events);
+      if (enter.trapDmg > 0 || enter.heal > 0) {
+        /* drop 自体に capture イベントはないので hunger 前に勝敗だけ見る */
+      }
+      if (s.hp[side] <= 0) {
+        s.winner = foe; s.reason = 'hp';
+        events.push({ t: 'gameover', winner: foe, reason: 'hp' });
+        return events;
+      }
     } else {
       const { from, to } = action;
       const pc = s.board[from.y][from.x]!;
@@ -392,25 +511,60 @@ export const Game = {
       events.push({ t: 'move', uid: pc.uid, from: { ...from }, to: { ...to } });
 
       if (victim) {
-        const ended = this._resolveCapture(s, pc, victim, from, to, side, foe, ply, rng, rand, events);
-        if (ended) return events; // 勝敗決定
+        const ended = this._resolveCapture(
+          s, pc, victim, from, to, side, foe, ply, rng, rand, events, action.phaseTo,
+        );
+        if (ended) return events;
       } else {
         s.combo[side] = 0;
+        const enter = this.resolveEmberEnter(s, side, to, events);
+        if (s.hp[side] <= 0) {
+          s.winner = foe; s.reason = 'hp';
+          events.push({ t: 'gameover', winner: foe, reason: 'hp' });
+          return events;
+        }
+        void enter;
       }
 
-      /* 成り(鬼火の道連れで消えた駒は成れない) */
+      /* 成り: 捕獲マスが敵陣なら、帰影/影遁後も成る */
       const def = YOKAI[pc.id];
-      if (!pc.promoted && def.promoted && def.type !== 'boss' && this.inZone(side, to.y) && !s.winner &&
-          s.board[to.y][to.x] === pc) {
+      let cur: Pos | null = null;
+      for (let y = 0; y < ROWS && !cur; y++) {
+        for (let x = 0; x < COLS; x++) {
+          if (s.board[y][x] === pc) { cur = { x, y }; break; }
+        }
+      }
+      if (cur && !pc.promoted && def.promoted && def.type !== 'boss' && this.inZone(side, to.y) && !s.winner) {
         pc.promoted = true;
-        events.push({ t: 'promote', uid: pc.uid, to: { ...to }, id: pc.id, owner: side });
+        events.push({ t: 'promote', uid: pc.uid, to: { ...cur }, id: pc.id, owner: side });
       }
     }
 
     if (!s.winner) {
+      /* 飢餓の夜 */
+      const idle = s.plies - s.lastCapturePly;
+      if (idle > HUNGER_GRACE) {
+        s.hp.p = Math.max(0, s.hp.p - HUNGER_DRAIN);
+        s.hp.e = Math.max(0, s.hp.e - HUNGER_DRAIN);
+        events.push({ t: 'hunger', drain: HUNGER_DRAIN, hp: { ...s.hp } });
+        const pDead = s.hp.p <= 0;
+        const eDead = s.hp.e <= 0;
+        if (pDead && eDead) {
+          s.winner = null; s.reason = 'draw';
+          events.push({ t: 'gameover', winner: null, reason: 'draw' });
+        } else if (pDead) {
+          s.winner = 'e'; s.reason = 'hunger';
+          events.push({ t: 'gameover', winner: 'e', reason: 'hunger' });
+        } else if (eDead) {
+          s.winner = 'p'; s.reason = 'hunger';
+          events.push({ t: 'gameover', winner: 'p', reason: 'hunger' });
+        }
+      }
+    }
+
+    if (!s.winner && s.reason !== 'draw') {
       s.turn = foe;
       s.lastMove = { to: { ...action.to } };
-      /* 相手が指し手なし → 手番側勝利 */
       if (this.getAllActions(s, foe).length === 0) {
         s.winner = side;
         s.reason = 'nomoves';
@@ -423,15 +577,14 @@ export const Game = {
   _resolveCapture(
     s: GameState, attacker: Piece, victim: Piece, from: Pos, to: Pos,
     side: Side, foe: Side, ply: number, rng: boolean, rand: () => number, events: GameEvent[],
+    phaseTo?: Pos,
   ): boolean {
     const vDef = YOKAI[victim.id];
     const aDef = YOKAI[attacker.id];
     const procs: SkillProc[] = [];
     const effects: SkillEffect[] = [];
 
-    /* --- ダメージ計算 --- */
     let base = this.atkOf(attacker);
-    /* 覚醒中はATK1.5倍 */
     if (this.isAwakened(attacker, ply)) {
       base = Math.round(base * AWAKEN_ATK);
       procs.push({
@@ -441,17 +594,14 @@ export const Game = {
     }
     let mult = 1, bonus = 0;
     const sk = aDef.skill;
-    /* 妨(jam): 砂かけ婆がいる側への攻撃は会心系スキル(crit/moon/heads)が封じられる */
     const jammed = this.hasSkill(s, foe, 'jam');
     if (jammed && (sk.kind === 'crit' || sk.kind === 'moon' || sk.kind === 'heads')) {
       effects.push(...this.activeSkillEffects(s, foe, ['jam']));
     }
-    /* foxBond(妖狐相伝): 激怒中は次の会心が確定(この攻撃で消費) */
     const enraged = attacker.enraged === true;
     if (attacker.enraged) delete attacker.enraged;
 
     if (sk.kind === 'crit' && !jammed) {
-      /* oniFeast(鬼の宴): 相方が盤上にいる間、会心率+15% */
       let chance = sk.chance;
       const feast = this.activeResonance(s, side, attacker.id);
       if (feast?.effect === 'oniFeast') chance = Math.min(1, chance + 0.15);
@@ -464,10 +614,9 @@ export const Game = {
           }
         }
       } else {
-        mult *= enraged ? sk.mult : 1 + chance * (sk.mult - 1); // 期待値
+        mult *= enraged ? sk.mult : 1 + chance * (sk.mult - 1);
       }
     } else if (sk.kind === 'moon' && !jammed) {
-      /* 満月の夜(または激怒中)は会心確定。それ以外は不発 — 運でなく読みで出す */
       if (this.isFullMoonPly(ply) || enraged) {
         mult *= sk.mult;
         if (rng) {
@@ -478,7 +627,6 @@ export const Game = {
         }
       }
     } else if (sk.kind === 'heads') {
-      /* 撃破数だけ首が目覚めて成長(jamで封じられるが撃破数は貯まる) */
       const lvl = Math.min(attacker.kills ?? 0, sk.max);
       if (lvl > 0 && !jammed) {
         const headsMult = 1 + sk.step * lvl;
@@ -490,8 +638,7 @@ export const Game = {
       }
       attacker.kills = (attacker.kills ?? 0) + 1;
     } else if (sk.kind === 'legion') {
-      /* 盤上の味方数(自身を除く)で与ダメ加算。妨害不能だが軍勢を削られると弱る */
-      let allies = -1; // 自身を除く
+      let allies = -1;
       for (let y = 0; y < ROWS; y++) {
         for (let x = 0; x < COLS; x++) {
           if (s.board[y][x]?.owner === side) allies++;
@@ -517,7 +664,6 @@ export const Game = {
 
     s.combo[side]++;
     let cMult = this.comboMult(s.combo[side]);
-    /* 妨(chill): 雪女がいる側へのコンボ倍率は無効 */
     if (cMult > 1 && this.hasSkill(s, foe, 'chill')) {
       cMult = 1;
       effects.push(...this.activeSkillEffects(s, foe, ['chill']));
@@ -526,7 +672,20 @@ export const Game = {
     if (defMult < 1) effects.push(...this.activeSkillEffects(s, foe, ['aura', 'weaken']));
     let damage = Math.max(1, Math.round((base * mult + bonus) * cMult * defMult));
 
-    /* 化(decoy): 化け狸は取られてもダメージ半減 */
+    /* 残火(atk): 最終ダメへ平坦加算 */
+    let emberBonus = 0;
+    const atkEmber = this.findEmberAt(s, to.x, to.y, side);
+    if (atkEmber?.mode === 'atk') {
+      emberBonus = atkEmber.value;
+      damage += emberBonus;
+      if (rng) {
+        procs.push({
+          name: '不知火の残火', owner: side, img: YOKAI.shiranui.img,
+          text: `残火の追撃 +${emberBonus}!`,
+        });
+      }
+    }
+
     let decoy: CaptureEvent['decoy'] = null;
     if (vDef.skill.kind === 'decoy') {
       damage = Math.max(1, Math.round(damage * 0.5));
@@ -534,16 +693,18 @@ export const Game = {
     }
     s.hp[foe] = Math.max(0, s.hp[foe] - damage);
 
-    /* 援(heal): 駒を取ると自軍の魂力回復 */
     let heal = 0;
     if (sk.kind === 'heal') {
       heal = Math.min(MAX_HP - s.hp[side], sk.amount);
       s.hp[side] += heal;
       if (rng && heal > 0) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `魂力${heal}回復!` });
     }
+    /* 残火(heal) on capture square */
+    const healEnter = this.resolveEmberEnter(s, side, to, events, procs);
+    heal += healEnter.heal;
+    const trapDmg = healEnter.trapDmg;
     const hpAfterAttack = { ...s.hp };
 
-    /* --- 反撃(罠) --- */
     let counter: CaptureEvent['counter'] = null;
     if (vDef.skill.kind === 'counter') {
       const cDmg = Math.max(1, Math.round(vDef.skill.dmg * this.defenseMult(s, side)));
@@ -551,27 +712,23 @@ export const Game = {
       counter = { dmg: cDmg, name: vDef.skill.name, img: vDef.img, owner: foe, hp: { ...s.hp } };
     }
 
-    /* --- 持ち駒へ(化け狸と鬼火は消滅して渡らない) --- */
     const bossCaptured = vDef.type === 'boss';
     const vanish = vDef.skill.kind === 'decoy' || vDef.skill.kind === 'explode';
     if (!bossCaptured && !vanish) {
       s.hands[side][victim.id] = (s.hands[side][victim.id] || 0) + 1;
     }
 
-    /* --- 爆(explode): 鬼火は取った駒を道連れにする --- */
     let explode: CaptureEvent['explode'] = null;
     if (vDef.skill.kind === 'explode') {
       s.board[to.y][to.x] = null;
       explode = { name: vDef.skill.name, img: vDef.img, uid: attacker.uid };
     }
 
-    /* --- 覚醒ゲージ: 駒の取り合いで両陣営に+1(使用済みの側は溜まらない) --- */
     for (const sd of ['p', 'e'] as const) {
       const st = s.awaken[sd];
       if (!st.used) st.gauge = Math.min(AWAKEN_MAX, st.gauge + 1);
     }
 
-    /* --- foxBond(妖狐相伝): 相方を取られた狐が激怒し、次の攻撃が確定会心 --- */
     let enrage: CaptureEvent['enrage'] = null;
     const vBase = baseIdOf(victim.id);
     for (const rs of RESONANCES) {
@@ -580,6 +737,40 @@ export const Game = {
       if (partner && !partner.pc.enraged) {
         partner.pc.enraged = true;
         enrage = { uid: partner.pc.uid, id: partner.pc.id, owner: foe, name: rs.name };
+      }
+    }
+
+    s.lastCapturePly = s.plies;
+
+    /* 残火設置(捕獲マス。帰影してもマスに残る) */
+    if (!explode && sk.kind === 'ember') {
+      this.placeEmber(s, side, to, sk.mode, sk.value, sk.span);
+      if (rng) {
+        const label = sk.mode === 'atk' ? '残火を灯した' : sk.mode === 'heal' ? '燐火を残した' : '落とし穴を開いた';
+        procs.push({ name: sk.name, owner: side, img: aDef.img, text: label });
+      }
+    }
+
+    /* 帰影 / 影遁 / 隱形の行き先を先に確定(演出テキストも capture に含める) */
+    let escapeTo: Pos | null = null;
+    if (!explode && s.board[to.y][to.x] === attacker) {
+      if (sk.kind === 'retreat') {
+        escapeTo = { ...from };
+        if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: '元のマスへ帰影!' });
+      } else if ((sk.kind === 'phase' || sk.kind === 'veil') && phaseTo) {
+        const legal = this.escapeDests(s, from, to, sk.kind).some(
+          p => p.x === phaseTo.x && p.y === phaseTo.y,
+        );
+        if (legal) {
+          escapeTo = { ...phaseTo };
+          if (rng) {
+            const home = phaseTo.x === from.x && phaseTo.y === from.y;
+            procs.push({
+              name: sk.name, owner: side, img: aDef.img,
+              text: home ? '元のマスへ帰影!' : '影遁!',
+            });
+          }
+        }
       }
     }
 
@@ -592,9 +783,10 @@ export const Game = {
       combo: s.combo[side], comboMult: cMult,
       hp: hpAfterAttack,
       enrage,
+      emberBonus: emberBonus || undefined,
+      trapDmg: trapDmg || undefined,
     });
 
-    /* --- 勝敗判定 --- */
     if (bossCaptured) {
       s.winner = side; s.reason = 'boss';
       events.push({ t: 'gameover', winner: side, reason: 'boss' });
@@ -605,16 +797,23 @@ export const Game = {
       events.push({ t: 'gameover', winner: side, reason: 'hp' });
       return true;
     }
-    if (s.hp[side] <= 0) { // 反撃で自滅
+    if (s.hp[side] <= 0) {
       s.winner = foe; s.reason = 'hp';
       events.push({ t: 'gameover', winner: foe, reason: 'hp' });
       return true;
     }
-    if (explode && aDef.type === 'boss') { // 大将が鬼火を取ってしまった
+    if (explode && aDef.type === 'boss') {
       s.winner = foe; s.reason = 'explode';
       events.push({ t: 'gameover', winner: foe, reason: 'explode' });
       return true;
     }
+
+    if (escapeTo && (escapeTo.x !== to.x || escapeTo.y !== to.y) && s.board[to.y][to.x] === attacker) {
+      s.board[to.y][to.x] = null;
+      s.board[escapeTo.y][escapeTo.x] = attacker;
+      events.push({ t: 'move', uid: attacker.uid, from: { ...to }, to: { ...escapeTo } });
+    }
+
     return false;
   },
 };

@@ -101,8 +101,13 @@ export class BattleRoom {
     await this.scheduleAlarm();
     this.broadcast({ t: 'snapshot', state: this.game, remainMs: this.remainMs(), seq: this.seq });
     this.broadcast({ t: 'events', seq: this.seq, events });
+    if (this.game.reason === 'draw' || (this.game.reason === 'hunger' && !this.game.winner)) {
+      await this.finish('draw', 'draw');
+      return;
+    }
     if (this.game.winner) {
-      await this.finish(this.game.winner, this.game.reason!);
+      const reason = this.game.reason === 'hunger' ? 'hp' : this.game.reason!;
+      await this.finish(this.game.winner, reason);
       return;
     }
     if (this.seq >= 300) { await this.finish('draw', 'draw'); return; }

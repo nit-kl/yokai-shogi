@@ -1595,6 +1595,7 @@ html, body {
   color: #d8d2e4;
   font-size: 0.82rem;
   line-height: 1.65;
+  white-space: pre-line;
 }
 
 .rule-piece { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
@@ -2857,6 +2858,52 @@ html, body {
 /* ============================================================
    SSR体験改修: 月齢HUD・覚醒ゲージ・因縁共鳴(doc 08)
    ============================================================ */
+
+/* ---------- 飢餓の夜 / 残火 ---------- */
+#hunger-hud {
+  position: absolute;
+  top: 4px; right: 6px;
+  z-index: 6;
+  display: flex; align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(36, 24, 18, 0.92), rgba(16, 10, 8, 0.92));
+  border: 1px solid rgba(200, 140, 80, 0.4);
+  font-family: "Yu Mincho", serif;
+  font-size: clamp(0.58rem, 1.55vh, 0.74rem);
+  letter-spacing: 0.08em;
+  color: #e0c8a8;
+  pointer-events: none;
+}
+#hunger-hud.hunger-active {
+  color: #ffd0a0;
+  border-color: rgba(255, 140, 80, 0.7);
+  box-shadow: 0 0 12px rgba(255, 100, 40, 0.35);
+  animation: hungerPulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes hungerPulse {
+  from { box-shadow: 0 0 8px rgba(255, 100, 40, 0.25); }
+  to   { box-shadow: 0 0 16px rgba(255, 80, 30, 0.55); }
+}
+#moon-hud:not(.hidden) ~ #hunger-hud { top: 30px; }
+.ember-mark {
+  position: absolute;
+  left: 50%; top: 72%;
+  width: 28%; height: 22%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.85;
+}
+.ember-atk { background: radial-gradient(circle, #ffb060 0%, #ff6020 55%, transparent 75%); box-shadow: 0 0 8px #ff8040; }
+.ember-heal { background: radial-gradient(circle, #a8ffc8 0%, #40c878 55%, transparent 75%); box-shadow: 0 0 8px #60e090; }
+.ember-trap { background: radial-gradient(circle, #2a1830 0%, #100818 60%, transparent 80%); box-shadow: inset 0 0 6px #000, 0 0 4px #604080; }
+.hl-phase {
+  outline: 2px solid rgba(180, 200, 255, 0.85);
+  outline-offset: -2px;
+  background: rgba(140, 170, 255, 0.22) !important;
+}
 
 /* ---------- 月齢HUD ---------- */
 #moon-hud {
