@@ -756,7 +756,7 @@ export const Game = {
     if (!explode && s.board[to.y][to.x] === attacker) {
       if (sk.kind === 'retreat') {
         escapeTo = { ...from };
-        if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: '元のマスへ帰影!' });
+        if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: '元のマスへ戻った!' });
       } else if ((sk.kind === 'phase' || sk.kind === 'veil') && phaseTo) {
         const legal = this.escapeDests(s, from, to, sk.kind).some(
           p => p.x === phaseTo.x && p.y === phaseTo.y,
@@ -767,7 +767,7 @@ export const Game = {
             const home = phaseTo.x === from.x && phaseTo.y === from.y;
             procs.push({
               name: sk.name, owner: side, img: aDef.img,
-              text: home ? '元のマスへ帰影!' : '影遁!',
+              text: home ? '元のマスへ戻った!' : '隣のマスへ逃げた!',
             });
           }
         }

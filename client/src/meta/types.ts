@@ -30,7 +30,11 @@ export interface MetaState {
 }
 
 export interface LoginBonus { day: number; tickets: number; }
-export interface ReleaseGift { tickets: number }
+export interface ReleaseGift {
+  tickets: number;
+  title?: string;
+  subtitle?: string;
+}
 
 export const EXCHANGE_COST = 300; // 妖力→チケット1枚(doc 08)
 

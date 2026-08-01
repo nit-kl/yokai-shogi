@@ -11,9 +11,31 @@ export const STREAK_BONUS_TICKETS = 3; // 7日連続ごと
 export const SOLO_WIN_DAILY_CAP = 2;   // ソロ勝利報酬の日次上限(申告制のため低め: doc 07)
 export const AD_REWARD_DAILY_CAP = 2;  // リワード広告の日次上限(doc 08 / 22)
 
-/* リリース記念キャンペーン(オンライン・お一人様1回。GET /me で自動付与) */
+/* キャンペーン配布(オンライン・お一人様1回。GET /me で自動付与) */
+export interface CampaignGiftDef {
+  id: string;
+  tickets: number;
+  title: string;
+  subtitle: string;
+}
 export const RELEASE_GIFT_CAMPAIGN_ID = 'release-2026-07';
 export const RELEASE_GIFT_TICKETS = 100;
+export const NEW_PIECES_GIFT_CAMPAIGN_ID = 'pieces-2026-08';
+export const NEW_PIECES_GIFT_TICKETS = 50;
+export const CAMPAIGN_GIFTS: CampaignGiftDef[] = [
+  {
+    id: RELEASE_GIFT_CAMPAIGN_ID,
+    tickets: RELEASE_GIFT_TICKETS,
+    title: 'リリース記念',
+    subtitle: 'オンライン公開をお祝いして',
+  },
+  {
+    id: NEW_PIECES_GIFT_CAMPAIGN_ID,
+    tickets: NEW_PIECES_GIFT_TICKETS,
+    title: '新妖怪追加記念',
+    subtitle: '新駒リリースをお祝いして',
+  },
+];
 
 /* 新規アカウントはオンボーディングで大将・編成を決める */
 export const DEFAULT_FORMATION: (string | null)[][] = EMPTY_FORMATION.map(r => [...r]);

@@ -2070,10 +2070,9 @@ function ssrIntroLines(id: string): string[] {
     lines.push(`布陣: 盤上の味方1体ごとに与ダメ+${Math.round(def.skill.per * 100)}%(最大+${Math.round(def.skill.cap * 100)}%)`);
   } else if (def.skill.kind === 'crit') {
     lines.push(`会心: 駒を取った時${Math.round(def.skill.chance * 100)}%でダメージ×${def.skill.mult}`);
-  } else if (def.skill.kind === 'veil') {
-    lines.push('隱形: 取ったあと残留／帰影／隣接影遁を選べる');
   }
-  if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 3手番ATK×${AWAKEN_ATK}`);
+  /* veil のスキル本文が十分なため、SSR特性での重複要約は出さない */
+  if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 自分の手番3回のあいだATK×${AWAKEN_ATK}`);
   const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(id)));
   if (rs) lines.push(`因縁: ${rs.name}`);
   return lines;
@@ -2201,7 +2200,7 @@ function openPieceDetail(id: string) {
   let skillDesc = def.skill.desc;
   const introLines = ssrIntroLines(def.id);
   if (introLines.length > 0) skillDesc += `\n【SSR特性】${introLines.join('\n')}`;
-  if (def.awakenName && introLines.length === 0) skillDesc += `\n【覚醒技】${def.awakenName} ― 覚醒ゲージ満タンで発動、3手番の間ATK×${AWAKEN_ATK}`;
+  if (def.awakenName && introLines.length === 0) skillDesc += `\n【覚醒技】${def.awakenName} ― 覚醒ゲージ満タンで発動、自分の手番3回のあいだATK×${AWAKEN_ATK}`;
   const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(def.id)));
   if (rs) skillDesc += `\n【因縁効果】${rs.desc}`;
   if (records > 0) skillDesc += `\n通算発動 ${records}回`;
