@@ -683,12 +683,18 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-08-01-new-pieces-gift',
+      id: '2026-08-02-discord-community',
       type: 'campaign',
       priority: 'high',
-      title: '新妖怪追加記念！ガチャチケット🎟50枚配布',
+      title: '公式Discordコミュニティを開設しました',
     });
     expect(r.body.announcements).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: '2026-08-01-new-pieces-gift',
+        type: 'campaign',
+        priority: 'high',
+        title: '新妖怪追加記念！ガチャチケット🎟50枚配布',
+      }),
       expect.objectContaining({
         id: '2026-08-01-hunger-ember-pieces',
         type: 'update',
@@ -733,7 +739,7 @@ describe('共通', () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-08-01-new-pieces-gift',
+      id: '2026-08-02-discord-community',
       type: 'campaign',
       priority: 'high',
     });

@@ -34,6 +34,26 @@ function typeLabel(type: Announcement['type']): string {
   return 'アップデート';
 }
 
+/** 本文中の https URL だけを安全にリンク化する（HTMLは解釈しない） */
+const HTTPS_URL_RE = /(https:\/\/[^\s<>"'`]+)/g;
+
+function appendLinkedText(parent: HTMLElement, text: string): void {
+  const parts = text.split(HTTPS_URL_RE);
+  for (const part of parts) {
+    if (!part) continue;
+    if (part.startsWith('https://')) {
+      const link = document.createElement('a');
+      link.href = part;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = part;
+      parent.appendChild(link);
+      continue;
+    }
+    parent.appendChild(document.createTextNode(part));
+  }
+}
+
 async function fetchAnnouncements(): Promise<Announcement[]> {
   if (!__API_URL__) return currentAnnouncements();
   try {
@@ -132,7 +152,7 @@ export const AnnouncementsUI = {
       const title = document.createElement('h3');
       title.textContent = item.title;
       const body = document.createElement('p');
-      body.textContent = item.body;
+      appendLinkedText(body, item.body);
 
       card.append(meta, title, body);
       list.appendChild(card);
