@@ -300,6 +300,23 @@ html, body {
   line-height: 1.5;
 }
 .online-random-schedule.match-hour-open { color: #9ad7ff; }
+.online-discord-note {
+  margin: 0.15rem 0 0.55rem;
+  color: #a99dbd;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+.online-discord-note a,
+.support-box a,
+.announcement-card a {
+  color: #e8c46a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+.online-discord-note a:hover,
+.support-box a:hover,
+.announcement-card a:hover { color: #fff6d8; }
 .online-box .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .title-menu-label {
   display: flex; align-items: center; gap: 10px;

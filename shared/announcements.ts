@@ -1,3 +1,5 @@
+import { DISCORD_COMMUNITY_NAME, DISCORD_INVITE_URL } from './community';
+
 export type AnnouncementType = 'update' | 'maintenance' | 'campaign';
 export type AnnouncementPriority = 'normal' | 'high';
 
@@ -12,6 +14,23 @@ export interface Announcement {
 }
 
 export const ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: '2026-08-02-discord-community',
+    type: 'campaign',
+    title: '公式Discordコミュニティを開設しました',
+    body: [
+      `${DISCORD_COMMUNITY_NAME} を開設しました。`,
+      '',
+      '対戦募集、土曜対戦会の告知、編成の相談、不具合報告などにご利用ください。',
+      '毎日20:00〜22:00（逢魔が時）は対戦が集まりやすい時間です。Discordでも同じ時間帯で募集しています。',
+      '',
+      '参加は任意です。ゲームはそのままブラウザだけで遊べます。',
+      DISCORD_INVITE_URL,
+    ].join('\n'),
+    publishedAt: '2026-08-02T20:00:00+09:00',
+    priority: 'high',
+    showUntil: '2026-09-30T23:59:59+09:00',
+  },
   {
     id: '2026-08-01-new-pieces-gift',
     type: 'campaign',
