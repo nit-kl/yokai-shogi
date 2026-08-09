@@ -50,8 +50,8 @@
 | 順 | 作業 | 完了条件 |
 |---|---|---|
 | 1 | 本方針の docs 反映 | doc 01 / 06 / 08 / 11 / 12 / 23 / README — **完了** |
-| 2 | アセット権利・商標クリア | `asset-licenses.md`、商標調査メモ |
-| 3 | `PLATFORM` ビルドフラグと広告経路の完全分離 | Steam ビルドに広告 SDK が乗らない |
+| 2 | アセット権利・商標クリア | 駒・BGM OK(条件付き)。J-PlatPat 主要検索0件でクリア。Steam AI 開示は提出時 |
+| 3 | `PLATFORM` ビルドフラグと広告経路の完全分離 | `__PLATFORM__` + `npm run build:steam`。広告 UI/GPT/AdSense を Steam で無効化 — **完了** |
 | 4 | Tauri シェル + オフライン起動 | Windows でソロが動く |
 | 5 | Steam Auth + アカウント連携/マージ | Steam → API → 既存メタ復元 |
 | 6 | オンライン接続(同一 Matchmaker) | Web プレイヤーとマッチ成立 |
@@ -61,11 +61,11 @@
 
 ## 公開前チェック(抜粋)
 
-- [ ] アセット商用権利クリア(doc 11)
-- [ ] 商標調査
+- [x] アセット商用権利クリア（駒・BGM 主要。フォント等は任意残り）([asset-licenses.md](asset-licenses.md))
+- [x] 商標調査（主要パターン0件・[trademark-research.md](trademark-research.md)）
 - [ ] 利用規約・プラポリの Steam / DLC / Steam ID 追記
 - [ ] Steam Direct・年齢レーティング・税務情報
-- [ ] 広告コードが Steam ビルドに含まれないことの確認
+- [x] 広告コードが Steam ビルドに含まれないことの確認（`build:steam` で AdSense 除去・`adsAllowed()` ガード）
 - [ ] Web クロスプレイの接続スモーク
 - [ ] DLC 未購入でも全コンテンツがプレイ入手可能なことの確認
 

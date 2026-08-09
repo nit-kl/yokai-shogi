@@ -38,6 +38,8 @@
 | 21 | [百鬼夜行 週間連勝ランキング](21-hyakki-weekly-ranking.md) | ソロ連戦ランキングの仕様・DB・API・UI方針 |
 | 22 | [リワード広告](22-rewarded-ads.md) | 任意視聴リワード・日次上限・API・運営者の開設/有効化手順 |
 | 23 | [Steam配信方針](23-steam.md) | 無料本体・DLC・Web並行・技術方針・実装順 |
+| - | [アセット権利棚卸し](asset-licenses.md) | 駒・BGM の商用/Steam可否（要運営者記入） |
+| - | [商標先行調査メモ](trademark-research.md) | 「妖怪将棋」机上調査・J-PlatPat 記入欄 |
 | - | [Analytics Engine 確認クエリ](analytics-queries.md) | 登録・オンボーディング・対戦・ランキングの確認用SQL |
 
 ## 読み方

@@ -12,7 +12,6 @@ const BGM_BATTLE_BASE = 0.32;
 const BATTLE_BGM_SOURCES = [
   '/assets/audio/battle-bgm.mp3',
   '/assets/audio/battle-bgm-1.mp3',
-  '/assets/audio/battle-bgm-2.mp3',
 ];
 
 type AudioSettings = {

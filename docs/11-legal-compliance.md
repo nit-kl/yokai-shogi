@@ -60,9 +60,9 @@
 
 ## 知的財産
 
-- **画像アセットの権利確認は継続タスク**: `client/public/assets/pieces/` と候補置き場 `client/public/assets/pieces/stock/` の妖怪イラストについて、生成手段・利用規約上の商用/公開可否・権利帰属を棚卸しし、不明なものは差し替える
-- 音(WebAudio合成)・コードは自作のため問題なし
-- 「妖怪将棋」の名称: 商標の先行調査を行う(同名・類似の登録があれば改名はリリース前の方が安い)
+- **画像アセット**: 公開駒イラストは全件 ChatGPT GPT Images 生成。[asset-licenses.md](asset-licenses.md) で OK(条件付き)（OpenAI 規約上の Output 帰属・商用可。第三者IP・Steam AI開示の残リスクあり）
+- 音: SE は WebAudio 合成で問題なし(方針)。BGM 3曲は **Gemini 有料**（Lyria 系）で生成([asset-licenses.md](asset-licenses.md) バッチC) → OK(条件付き)。Steam 提出時に AI 生成開示を確認
+- 「妖怪将棋」の名称: 机上調査メモは [trademark-research.md](trademark-research.md)。**J-PlatPat 公式検索の記入が残タスク**。衝突時はリリース前の改名が安い
 - 妖怪の名称・伝承はパブリックドメイン(固有の創作キャラクター名は使用しない)
 
 ## サービス終了時の対応(規約に予告条項を入れる)
@@ -75,8 +75,8 @@
 
 - [x] 利用規約・プライバシーポリシーの初版作成・公開HTML・初回同意UI・問い合わせ窓口を実装
 - [x] ガチャ排出率表示(個別妖怪単位): `GET /v1/gacha/rates` で個別妖怪単位の確率まで公開済み(Phase 1)
-- [ ] アセットの権利棚卸し完了(asset-licenses.md) ※Steam 商用配信のブロッカー
-- [ ] 商標の先行調査 ※Steam 公開前必須
+- [x] アセットの権利棚卸し(主要): 駒=GPT Images、BGM=Gemini 有料で OK(条件付き)。フォント・Steam AI 開示は残タスク([asset-licenses.md](asset-licenses.md))
+- [x] 商標の先行調査（主要）※J-PlatPat で「妖怪将棋」第9/41/28・称呼単純一致は0件。[trademark-research.md](trademark-research.md)
 - [x] 問い合わせ窓口の開設(X: @nit_zunda_dev)
 - [ ] 退会(データ削除)機能の動作確認
 - [ ] Steam 向け利用規約・プラポリ追記(公開前)
