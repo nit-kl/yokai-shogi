@@ -144,9 +144,10 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 | match_found | `{ matchId, reconnectToken, side:'p'｜'e', opponent:{name,rating,bossId}, formations:{p,e} }` | 対局成立 |
 | game_start | `{ state }` | 初期局面スナップショット |
 | events | `{ seq, events:[...] }` | **現エンジン `applyAction` の戻り値と同形式**(move/drop/capture/promote/gameover)。seqは欠落検知用の連番 |
-| your_turn | `{ remainMs }` | 手番通知+残り時間 |
+| your_turn | `{ remainMs, phase:'main'｜'byoyomi' }` | 手番通知+残り時間 |
+| clock | `{ remainMs, phase:'main'｜'byoyomi' }` | 本時間→秒読みなど時計位相の更新 |
 | opponent_disconnected | `{ graceMs }` | 相手切断(猶予中) |
-| snapshot | `{ state, remainMs, seq }` | 再接続時の現局面 |
+| snapshot | `{ state, remainMs, phase:'main'｜'byoyomi', seq }` | 再接続時の現局面 |
 | game_end | `{ winner, reason, reward:{tickets}, rating:{before,after} }` | 終局。reason: boss/hp/explode/nomoves/resign/timeout/disconnect/draw |
 | error | `{ code, message }` | 不正な操作など |
 

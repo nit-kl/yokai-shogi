@@ -2347,15 +2347,70 @@ html, body {
 .online-timer-block { display: flex; flex-direction: column; gap: 4px; }
 .online-timer-line { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .online-timer-line span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c8bddb; }
-.online-timer-line b { color: #fff2a8; font: 700 0.8rem ui-monospace, "Courier New", monospace; }
+.online-timer-line b {
+  color: #fff2a8;
+  font: 700 0.8rem ui-monospace, "Courier New", monospace;
+  transition: color 0.2s, font-size 0.2s, transform 0.2s;
+}
 .online-timer-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,0.1); }
 #online-turn-fill, #online-disconnect-fill { width: 100%; height: 100%; transform-origin: left center; transition: width 0.25s linear, background 0.2s; }
 #online-turn-fill { background: linear-gradient(90deg, #58b6ff, #9ad7ff); }
 .online-status.opponent-turn #online-turn-fill { background: linear-gradient(90deg, #ff7373, #ffad8a); }
-.online-status.timer-low #online-turn-fill { background: linear-gradient(90deg, #ff4f4f, #ffd24a); animation: timerPulse 0.7s ease-in-out infinite; }
+.online-status.timer-warn {
+  border-color: rgba(255, 176, 72, 0.55);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,176,72,0.18);
+}
+.online-status.timer-warn #online-turn-time {
+  color: #ffc46a;
+  font-size: 1.2rem;
+}
+.online-status.timer-warn #online-turn-fill {
+  background: linear-gradient(90deg, #ff9a3c, #ffd24a);
+}
+.online-status.timer-low {
+  border-color: rgba(255, 72, 72, 0.72);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.38), 0 0 18px rgba(255,64,64,0.28);
+  animation: timerPanelPulse 0.75s ease-in-out infinite;
+}
+.online-status.timer-low #online-turn-time {
+  color: #ff6d6d;
+  font-size: 1.55rem;
+  letter-spacing: 0.02em;
+}
+.online-status.timer-low #online-turn-fill {
+  background: linear-gradient(90deg, #ff4f4f, #ffd24a);
+  animation: timerPulse 0.55s ease-in-out infinite;
+}
+.online-status.timer-byoyomi {
+  border-color: rgba(255, 48, 48, 0.9);
+  background: rgba(48, 8, 14, 0.94);
+}
+.online-status.timer-byoyomi #online-turn-label {
+  color: #ff9a9a;
+  font-weight: 700;
+}
+.online-status.timer-byoyomi #online-turn-time {
+  color: #ffe0e0;
+  text-shadow: 0 0 10px rgba(255, 80, 80, 0.55);
+}
 .online-disconnect-block { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,0.1); }
 #online-disconnect-fill { background: linear-gradient(90deg, #ff5d5d, #ffb35d); }
+#screen-battle.timer-urgent::after {
+  content: '';
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  box-shadow: inset 0 0 90px rgba(255, 36, 48, 0.38);
+  animation: urgentVignette 0.85s ease-in-out infinite;
+}
 @keyframes timerPulse { 50% { filter: brightness(1.65); } }
+@keyframes timerPanelPulse {
+  50% { box-shadow: 0 6px 22px rgba(0,0,0,0.38), 0 0 26px rgba(255,64,64,0.45); }
+}
+@keyframes urgentVignette {
+  50% { box-shadow: inset 0 0 120px rgba(255, 28, 40, 0.55); }
+}
 #turnstile-wrap { width: min(300px, 90vw); margin-top: 1rem; }
 .maintenance-banner {
   width: min(360px, 90vw);

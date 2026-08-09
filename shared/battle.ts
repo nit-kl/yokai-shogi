@@ -2,6 +2,7 @@ import type { Side } from './data';
 import type { Action, GameEvent, GameState } from './game';
 
 export type MatchMode = 'random' | 'friend';
+export type ClockPhase = 'main' | 'byoyomi';
 export type BattleEndReason =
   | 'boss' | 'hp' | 'explode' | 'nomoves' | 'resign'
   | 'timeout' | 'disconnect' | 'draw';
@@ -34,10 +35,11 @@ export type ServerBattleMessage =
     }
   | { t: 'game_start'; state: GameState }
   | { t: 'events'; seq: number; events: GameEvent[] }
-  | { t: 'your_turn'; remainMs: number }
+  | { t: 'your_turn'; remainMs: number; phase: ClockPhase }
+  | { t: 'clock'; remainMs: number; phase: ClockPhase }
   | { t: 'opponent_disconnected'; graceMs: number }
   | { t: 'opponent_reconnected' }
-  | { t: 'snapshot'; state: GameState; remainMs: number; seq: number }
+  | { t: 'snapshot'; state: GameState; remainMs: number; phase: ClockPhase; seq: number }
   | {
       t: 'game_end'; winner: Side | 'draw'; reason: BattleEndReason;
       /* tickets=勝利報酬 / participation=逢魔が時の完走報酬(勝敗不問・1日1回) /

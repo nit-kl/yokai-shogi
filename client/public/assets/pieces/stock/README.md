@@ -17,6 +17,12 @@
 
 `makuragaeshi` / `rinka` / `tsurube` / `shiranui` / `enenra` / `ingyo`
 
+## 差し替え済み（2026-08-09）— 既存駒イラスト更新
+
+`ibaraki` / `ibaraki-rashomon` / `tamamo` / `tamamo-keikoku`
+
+`node scripts/import-stock-pieces.mjs` で取り込み。透過済みPNGはそのままフィット、チェッカー背景のみ `remove-bg.mjs`、それ以外は rembg。
+
 ## ストック駒のイラストデザイン方針
 今後追加するストック駒のイラストは、以下のテイスト・雰囲気で統一します。
 

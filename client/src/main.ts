@@ -31,7 +31,7 @@ import { RegistrationStatsUI } from './registration-stats';
 import { MatchHourUI } from './match-hour';
 import { AnnouncementsUI } from './announcements';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
-import type { ServerBattleMessage } from '../../shared/battle';
+import type { ClockPhase, ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 
 let G: GameState | null = null; // ゲーム状態
@@ -53,9 +53,14 @@ let onlineParticipation = 0;
 let onlineEventYokai: string | null = null;
 let onlineSeq = 0;
 const ONLINE_TURN_MS = 60_000;
+const ONLINE_BYOYOMI_MS = 15_000;
 const ONLINE_DISCONNECT_MS = 60_000;
 const ONLINE_AI_OFFER_MS = 20_000;
+const ONLINE_TIMER_WARN_MS = 20_000;
+const ONLINE_TIMER_LOW_MS = 10_000;
 let onlineTurnDeadline = 0;
+let onlineClockPhase: ClockPhase = 'main';
+let onlineTimerTickSec = -1;
 let onlineDisconnectDeadline = 0;
 let onlineTimerId: ReturnType<typeof setInterval> | null = null;
 let onlineQueueTimerId: ReturnType<typeof setTimeout> | null = null;
@@ -702,7 +707,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     onlineSeq = message.seq;
     busy = G.turn !== 'p';
     setOnlineConnection('接続済み');
-    setOnlineTurnTimer(message.remainMs);
+    setOnlineTurnTimer(message.remainMs, message.phase);
   } else if (message.t === 'events') {
     if (!onlineSide) return;
     busy = true;
@@ -714,8 +719,15 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     if (G && !G.winner && G.reason !== 'draw') busy = G.turn !== 'p';
     renderOnlineTimers();
   } else if (message.t === 'your_turn') {
-    setOnlineTurnTimer(message.remainMs);
+    setOnlineTurnTimer(message.remainMs, message.phase);
     if (G?.turn === 'p') { busy = false; showBanner('p'); }
+  } else if (message.t === 'clock') {
+    const enteredByoyomi = onlineClockPhase !== 'byoyomi' && message.phase === 'byoyomi';
+    setOnlineTurnTimer(message.remainMs, message.phase);
+    if (enteredByoyomi && G?.turn === 'p') {
+      showByoyomiBanner();
+      AudioSys.play('byoyomi');
+    }
   } else if (message.t === 'opponent_disconnected') {
     setOpponentDisconnectTimer(message.graceMs);
   } else if (message.t === 'opponent_reconnected') {
@@ -760,8 +772,9 @@ function switchQueueToAi(): void {
   openHyakkiPreview();
 }
 
-function formatCountdown(ms: number): string {
+function formatCountdown(ms: number, compact = false): string {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
+  if (compact) return String(seconds);
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
@@ -774,12 +787,26 @@ function stopOnlineTimer(): void {
   if (onlineTimerId !== null) clearInterval(onlineTimerId);
   onlineTimerId = null;
   onlineTurnDeadline = 0;
+  onlineClockPhase = 'main';
+  onlineTimerTickSec = -1;
+  $('online-status').classList.remove('timer-warn', 'timer-low', 'timer-byoyomi', 'opponent-turn');
+  $('screen-battle').classList.remove('timer-urgent');
   clearOpponentDisconnectTimer();
 }
 
-function setOnlineTurnTimer(remainMs: number): void {
+function setOnlineTurnTimer(remainMs: number, phase: ClockPhase = 'main'): void {
   onlineTurnDeadline = Date.now() + Math.max(0, remainMs);
+  onlineClockPhase = phase;
+  onlineTimerTickSec = -1;
   ensureOnlineTimer();
+}
+
+function showByoyomiBanner(): void {
+  const b = $('turn-banner');
+  b.textContent = '秒読み！';
+  b.className = '';
+  void b.offsetWidth;
+  b.classList.add('show-p');
 }
 
 function setOpponentDisconnectTimer(graceMs: number): void {
@@ -802,11 +829,36 @@ function renderOnlineTimers(): void {
   const now = Date.now();
   const turnRemain = Math.max(0, onlineTurnDeadline - now);
   const ownTurn = G?.turn === 'p';
-  $('online-turn-label').textContent = ownTurn ? 'あなたの手番' : '相手の手番';
-  $('online-turn-time').textContent = formatCountdown(turnRemain);
-  $('online-turn-fill').style.width = `${Math.min(100, turnRemain / ONLINE_TURN_MS * 100)}%`;
-  $('online-status').classList.toggle('opponent-turn', !ownTurn);
-  $('online-status').classList.toggle('timer-low', turnRemain > 0 && turnRemain <= 10_000);
+  const byoyomi = onlineClockPhase === 'byoyomi';
+  const warn = !byoyomi && turnRemain > 0 && turnRemain <= ONLINE_TIMER_WARN_MS;
+  const low = byoyomi || (turnRemain > 0 && turnRemain <= ONLINE_TIMER_LOW_MS);
+  const spanMs = byoyomi ? ONLINE_BYOYOMI_MS : ONLINE_TURN_MS;
+  const compact = byoyomi || turnRemain <= ONLINE_TIMER_WARN_MS;
+
+  $('online-turn-label').textContent = byoyomi
+    ? (ownTurn ? '秒読み' : '相手の秒読み')
+    : (ownTurn ? 'あなたの手番' : '相手の手番');
+  $('online-turn-time').textContent = formatCountdown(turnRemain, compact);
+  $('online-turn-fill').style.width = `${Math.min(100, (turnRemain / spanMs) * 100)}%`;
+
+  const status = $('online-status');
+  status.classList.toggle('opponent-turn', !ownTurn);
+  status.classList.toggle('timer-warn', warn);
+  status.classList.toggle('timer-low', low);
+  status.classList.toggle('timer-byoyomi', byoyomi);
+  $('screen-battle').classList.toggle('timer-urgent', ownTurn && low);
+
+  if (ownTurn && low) {
+    const sec = Math.max(0, Math.ceil(turnRemain / 1000));
+    if (sec !== onlineTimerTickSec && sec > 0 && sec <= 10) {
+      onlineTimerTickSec = sec;
+      AudioSys.play('tick');
+    } else if (sec !== onlineTimerTickSec) {
+      onlineTimerTickSec = sec;
+    }
+  } else {
+    onlineTimerTickSec = -1;
+  }
 
   if (onlineDisconnectDeadline > 0) {
     const graceRemain = Math.max(0, onlineDisconnectDeadline - now);
@@ -2012,7 +2064,7 @@ function reasonsFor(win: boolean, enemyBossName: string): string {
     explode: win ? '鬼火が敵大将を道連れにした!' : '我が大将が鬼火の道連れに…',
     nomoves: win ? '敵軍は身動きが取れなくなった!' : '我が軍は身動きが取れなくなった…',
     resign: '投了した…',
-    timeout: win ? '相手の持ち時間が切れた' : '持ち時間が切れた…',
+    timeout: win ? '相手の秒読みが切れた' : '秒読みが切れた…',
     disconnect: win ? '相手の再接続猶予が切れた' : '再接続猶予が切れた…',
     draw: onlineEndReason === 'draw' && G!.reason === 'draw'
       ? '飢餓の夜で双方の魂力が尽きた' : '300手に達したため引き分け',
