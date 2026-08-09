@@ -9,6 +9,7 @@
 shared/      ルールエンジン+駒マスタ(TypeScript・依存ゼロ。クライアント/サーバー共用)
 client/      ゲーム本体(Vite + TypeScript。UI・AI・メタ進行・演出)
 server/      Cloudflare Workers API + Durable Objects + D1
+src-tauri/   Steam向けデスクトップシェル(Tauri 2)
 test/        vitest ユニットテスト + playwright e2e テスト
 scripts/     画像最適化などの開発スクリプト
 docs/        オンライン対戦版リリースに向けた設計・計画ドキュメント
@@ -20,6 +21,17 @@ docs/        オンライン対戦版リリースに向けた設計・計画ド�
 npm install
 npm run dev          # http://localhost:5173
 ```
+
+### デスクトップ(Tauri / Steam準備)
+
+Rust(stable) が必要。初回は依存のコンパイルに時間がかかる。
+
+```
+npm run tauri:dev    # オフラインSteam相当でウィンドウ起動
+npm run tauri:build  # Windowsインストーラ生成(NSIS)
+```
+
+詳細は `docs/23-steam.md`。
 
 ### ルール概要
 

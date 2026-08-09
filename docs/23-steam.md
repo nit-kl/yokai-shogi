@@ -1,6 +1,7 @@
 # 23. Steam 配信方針
 
-> 方針確定: 2026-08。実装は未着手。関連: doc 01 / 08 / 11 / 12。
+> 方針確定: 2026-08。関連: doc 01 / 08 / 11 / 12。  
+> Tauri シェル（オフライン起動）まで実装済み。
 
 ## 製品パッケージ(確定)
 
@@ -52,7 +53,7 @@
 | 1 | 本方針の docs 反映 | doc 01 / 06 / 08 / 11 / 12 / 23 / README — **完了** |
 | 2 | アセット権利・商標クリア | 駒・BGM OK(条件付き)。J-PlatPat 主要検索0件でクリア。Steam AI 開示は提出時 |
 | 3 | `PLATFORM` ビルドフラグと広告経路の完全分離 | `__PLATFORM__` + `npm run build:steam`。広告 UI/GPT/AdSense を Steam で無効化 — **完了** |
-| 4 | Tauri シェル + オフライン起動 | Windows でソロが動く |
+| 4 | Tauri シェル + オフライン起動 | `src-tauri/` + `npm run tauri:build`（steam-offline）— **完了** |
 | 5 | Steam Auth + アカウント連携/マージ | Steam → API → 既存メタ復元 |
 | 6 | オンライン接続(同一 Matchmaker) | Web プレイヤーとマッチ成立 |
 | 7 | 全駒解放 entitlement API | 購入反映が冪等に効く |
@@ -68,6 +69,25 @@
 - [x] 広告コードが Steam ビルドに含まれないことの確認（`build:steam` で AdSense 除去・`adsAllowed()` ガード）
 - [ ] Web クロスプレイの接続スモーク
 - [ ] DLC 未購入でも全コンテンツがプレイ入手可能なことの確認
+
+## Tauri 開発コマンド
+
+前提: Node 20+、Rust stable（`cargo` が PATH にあること）、Windows では WebView2（通常プリインストール）。
+
+| コマンド | 内容 |
+|---|---|
+| `npm run tauri:dev` | Vite(`steam-offline`・port 1420) + Tauri ウィンドウ。通常の `npm run dev`(5173) と共存可 |
+| `npm run tauri:build` | オフライン Steam クライアントをビルドし NSIS インストーラを生成 |
+| `npm run build:steam` | Web 資産のみ（本番 API・広告なし）。将来のオンライン梱包用 |
+
+`cargo: program not found` になるとき: Rust は `%USERPROFILE%\.cargo\bin` に入っている。**ターミナルを開き直す**か、PowerShell で次を実行してから再試行する。
+
+```powershell
+$env:Path = "$env:USERPROFILE\.cargo\bin;" + $env:Path
+npm run tauri:dev
+```
+
+`src-tauri/tauri.conf.json` の `beforeBuildCommand` は当面 `build:steam:offline`。オンライン梱包に切り替えるときは `build:steam` に変更する。
 
 ## 未決定の細部
 

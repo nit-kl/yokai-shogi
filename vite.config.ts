@@ -63,6 +63,10 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
+      watch: {
+        ignored: ['**/src-tauri/**'],
+      },
     },
+    clearScreen: false,
   };
 });

@@ -9,9 +9,18 @@ test/e2e/shot-*.png
 test/e2e/fx-*.png
 test/e2e/live-*.png
 
-# ビルド成果物(Phase 0以降: Vite / wrangler)
+# ビルド成果物(Phase 0以降: Vite / wrangler / Tauri)
 dist/
 .wrangler/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/app-icon.png
+# tauri icon 再生成時の余剰(Windows/Steam では不要)
+src-tauri/icons/ios/
+src-tauri/icons/android/
+src-tauri/icons/Square*.png
+src-tauri/icons/StoreLogo.png
+src-tauri/icons/icon.icns
 
 # 環境変数・シークレット
 .env

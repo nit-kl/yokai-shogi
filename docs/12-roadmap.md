@@ -55,7 +55,8 @@
 7. **Phase Steam**(doc 23)
    - 前提: アセット権利棚卸し・商標調査(doc 11)。棚卸し表・机上メモは作成済み。運営者による権利確定と J-PlatPat 記入が残り。
    - 済: `__PLATFORM__` / `npm run build:steam` と広告経路分離。
-   - 次: Tauri シェル、Steam Auth、同一 Matchmaker への接続、全駒解放 entitlement、ストア提出。
+   - 済: Tauri 2 シェル（`src-tauri/`）。`npm run tauri:dev` / `npm run tauri:build` で Windows オフライン起動。
+   - 次: Steam Auth、同一 Matchmaker への接続、全駒解放 entitlement、ストア提出。
    - 公開後に異装 DLC 第1弾。
 
 ## 縮小・停止基準
