@@ -52,12 +52,21 @@ POST /auth/login/link-code  → コードを検証して新しいトークンを
 
 現時点では未実装。実装する場合は `auth_identities` に `provider='passkey'` または `provider='google'` を追加し、既存のゲスト/引き継ぎコードと併存させる。
 
+### Steam(計画・doc 23)
+
+Steam 配信時は `provider='steam'` を追加する。
+
+1. クライアントが Steam Session Ticket を取得し API へ送る
+2. サーバーが Steam 側で検証し、Steam ID に紐づくユーザーを発行または復元する
+3. 既存の引き継ぎコードで Web 進行とマージできるようにする(二重進行の防止)
+4. DLC 所有は Steam entitlement 同期でサーバー権威の所持に反映する(doc 08)
+
 ### auth_identities テーブル
 ```sql
 CREATE TABLE auth_identities (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    TEXT NOT NULL REFERENCES users(id),
-  provider   TEXT NOT NULL,           -- 'link_code' / 'passkey' / 'google'
+  provider   TEXT NOT NULL,           -- 'link_code' / 'passkey' / 'google' / 'steam'(計画)
   subject    TEXT NOT NULL,           -- 引き継ぎコードSHA-256 / credential ID / OAuth sub
   public_key BLOB,
   counter    INTEGER,
