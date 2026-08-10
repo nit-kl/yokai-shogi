@@ -3,7 +3,11 @@
    - アクセストークン(JWT): メモリのみ
    - リフレッシュトークン: localStorage(ローテーション式)
    - 401時はrefreshを1回試行。失効時は新規ゲストを自動発行せず SessionExpiredError
+   - Steam ビルドは Session Ticket でログイン(doc 23)。RT失効時も Steam 再認証
    ============================================================ */
+
+import { isSteam } from '../platform';
+import { getSteamSessionTicket } from '../steam/auth';
 
 const RT_KEY = 'yokaiShogi.rt.v1';
 /** RT失効後、ユーザーが復元/新規開始を選ぶまで立てるフラグ */
@@ -27,7 +31,11 @@ export class SessionExpiredError extends Error {
 }
 
 interface TokenResponse { userId: string; accessToken: string; refreshToken: string; }
-interface AuthConfig { turnstileRequired: boolean; turnstileSiteKey?: string; }
+interface AuthConfig {
+  turnstileRequired: boolean;
+  turnstileSiteKey?: string;
+  steamAuth?: { mockAllowed: boolean; configured: boolean };
+}
 
 export class ApiClient {
   private accessToken: string | null = null;
@@ -103,7 +111,7 @@ export class ApiClient {
     this.setNeedsRecovery(true);
   }
 
-  /* ゲスト発行 or リフレッシュでセッションを確立。失効時は自動ゲスト発行しない */
+  /* ゲスト/Steam or リフレッシュでセッションを確立。Web では失効時に自動ゲスト発行しない */
   async ensureSession(getTurnstileToken?: (siteKey: string) => Promise<string>): Promise<void> {
     if (getTurnstileToken) this.turnstileProvider = getTurnstileToken;
     const rt = this.getRefreshToken();
@@ -111,12 +119,27 @@ export class ApiClient {
       await this.refreshOrExpire();
       return;
     }
+    if (isSteam()) {
+      await this.createSteamSession();
+      return;
+    }
     if (this.getNeedsRecovery()) throw new SessionExpiredError();
     await this.createGuestSession(getTurnstileToken);
   }
 
-  /* ユーザーが明示的に「新規開始」を選んだときだけ呼ぶ */
+  /* Steam Session Ticket でログイン(初回はアカウント作成) */
+  async createSteamSession(): Promise<void> {
+    const ticket = await getSteamSessionTicket();
+    const t = await this.post<TokenResponse>('/v1/auth/steam', { ticket });
+    this.applyTokens(t);
+  }
+
+  /* ユーザーが明示的に「新規開始」を選んだときだけ呼ぶ(Steam では同一 Steam ID へ再ログイン) */
   async createGuestSession(getTurnstileToken?: (siteKey: string) => Promise<string>): Promise<void> {
+    if (isSteam()) {
+      await this.createSteamSession();
+      return;
+    }
     if (getTurnstileToken) this.turnstileProvider = getTurnstileToken;
     let config: AuthConfig = { turnstileRequired: false };
     try {
@@ -131,6 +154,12 @@ export class ApiClient {
       turnstileToken = await this.turnstileProvider(config.turnstileSiteKey);
     }
     const t = await this.post<TokenResponse>('/v1/auth/guest', turnstileToken ? { turnstileToken } : {});
+    this.applyTokens(t);
+  }
+
+  /* 引き継ぎコード等の明示操作向けエイリアス */
+  async loginWithSteam(ticket: string): Promise<void> {
+    const t = await this.post<TokenResponse>('/v1/auth/steam', { ticket });
     this.applyTokens(t);
   }
 

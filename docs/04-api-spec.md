@@ -23,11 +23,14 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 
 | メソッド | パス | 内容 |
 |---|---|---|
-| GET | /auth/config | Turnstile要否とサイトキー取得 |
+| GET | /auth/config | Turnstile要否とサイトキー取得。`steamAuth: { mockAllowed, configured }` も含む |
 | POST | /auth/guest | ゲストアカウント作成。`{ userId, accessToken, refreshToken, expiresIn }` |
 | POST | /auth/refresh | トークン更新 |
+| POST | /auth/steam | Steam Session Ticket でログイン/作成。`{ ticket }` → `{ userId, steamId, accessToken, refreshToken, created }` |
 | POST | /auth/link-code | 引き継ぎコード発行。発行時にゲスト扱いから外れる |
 | POST | /auth/login/link-code | 引き継ぎコードでログイン |
+| GET | /steam/dlc | 付与済み Steam DLC 一覧 |
+| POST | /steam/dlc/sync | DLC 所有を同期。`{ dlcIds? }` → 冪等に `user_yokai` 付与(mock 時のみ申告を信頼) |
 
 ### プロフィール・進行
 

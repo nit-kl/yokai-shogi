@@ -1,4 +1,4 @@
-/* 認証: ゲスト発行・トークン更新・引き継ぎコード・パスキー(doc 06)
+/* 認証: ゲスト発行・トークン更新・引き継ぎコード・パスキー・Steam(doc 06 / 23)
    Google OAuth は将来候補 */
 
 import { Hono } from 'hono';
@@ -24,6 +24,7 @@ import {
   rpName,
   saveChallenge,
 } from '../lib/webauthn';
+import { steamMockAllowed, verifySteamSessionTicket } from '../lib/steam';
 
 const ACCESS_TTL_SEC = 15 * 60;          // 15分(doc 06)
 const REFRESH_TTL_MS = 90 * 86400e3;     // 90日
@@ -76,6 +77,10 @@ authRoutes.get('/auth/config', c => c.json({
   turnstileRequired: !!c.env.TURNSTILE_SECRET_KEY,
   ...(c.env.TURNSTILE_SECRET_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}),
   passkeyEnabled: true,
+  steamAuth: {
+    mockAllowed: steamMockAllowed(c.env),
+    configured: !!(c.env.STEAM_WEB_API_KEY && c.env.STEAM_APP_ID),
+  },
 }));
 
 /* ---------- ゲスト作成 ---------- */
@@ -150,6 +155,47 @@ authRoutes.post('/auth/link-code', authRequired, async c => {
     db.prepare('UPDATE users SET is_guest = 0 WHERE id = ?1').bind(userId),
   ]);
   return c.json({ code });
+});
+
+/* ---------- Steam Session Ticket ログイン(doc 23) ---------- */
+const steamLoginSchema = z.object({
+  ticket: z.string().min(6).max(8192),
+});
+
+authRoutes.post('/auth/steam', async c => {
+  const ip = c.req.header('CF-Connecting-IP') || 'local';
+  if (rateLimited(`steamlogin:${ip}`, 10)) return apiError(c, 'RATE_LIMITED', 'しばらく待ってからお試しください');
+
+  const body = steamLoginSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!body.success) return apiError(c, 'VALIDATION', 'リクエストが不正です');
+
+  const verified = await verifySteamSessionTicket(c.env, body.data.ticket);
+  if (!verified.ok) return apiError(c, 'UNAUTHORIZED', verified.reason);
+
+  const db = c.env.DB;
+  const steamId = verified.steamId;
+  const existing = await db
+    .prepare("SELECT a.user_id, u.is_guest, u.status FROM auth_identities a JOIN users u ON u.id = a.user_id WHERE a.provider = 'steam' AND a.subject = ?1")
+    .bind(steamId)
+    .first<{ user_id: string; is_guest: number; status: string }>();
+
+  if (existing) {
+    if (existing.status !== 'active') return apiError(c, 'BANNED', 'このアカウントは利用停止されています');
+    const tokens = await issueTokens(c.env, existing.user_id, false);
+    return c.json({ userId: existing.user_id, steamId, ...tokens, created: false });
+  }
+
+  const userId = crypto.randomUUID();
+  await db.batch([
+    db.prepare('INSERT INTO users (id, is_guest) VALUES (?1, 0)').bind(userId),
+    db.prepare('INSERT INTO user_profiles (user_id, tickets, formation, onboarding_done) VALUES (?1, ?2, ?3, 0)')
+      .bind(userId, FIRST_BONUS, JSON.stringify(DEFAULT_FORMATION)),
+    db.prepare("INSERT INTO auth_identities (user_id, provider, subject) VALUES (?1, 'steam', ?2)").bind(userId, steamId),
+    currencyLogStmt(db, userId, 'tickets', FIRST_BONUS, FIRST_BONUS, 'initial'),
+  ]);
+
+  const tokens = await issueTokens(c.env, userId, false);
+  return c.json({ userId, steamId, ...tokens, created: true }, 201);
 });
 
 /* ---------- 引き継ぎコードでログイン ---------- */

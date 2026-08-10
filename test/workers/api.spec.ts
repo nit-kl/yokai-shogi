@@ -35,7 +35,80 @@ describe('認証', () => {
   it('認証設定: Turnstile未設定時は不要と返す', async () => {
     const config = await api('/v1/auth/config');
     expect(config.status).toBe(200);
-    expect(config.body).toEqual({ turnstileRequired: false, passkeyEnabled: true });
+    expect(config.body).toEqual({
+      turnstileRequired: false,
+      passkeyEnabled: true,
+      steamAuth: { mockAllowed: true, configured: false },
+    });
+  });
+
+  it('Steam ログイン: mock チケットで作成・再ログイン', async () => {
+    const steamId = '76561198000001234';
+    const created = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: `mock:${steamId}` }),
+      ip: freshIp(),
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.userId).toBeTruthy();
+    expect(created.body.steamId).toBe(steamId);
+    expect(created.body.created).toBe(true);
+    expect(created.body.accessToken).toBeTruthy();
+
+    const me = await api('/v1/me', { token: created.body.accessToken });
+    expect(me.status).toBe(200);
+    expect(me.body.isGuest).toBe(false);
+    expect(me.body.tickets).toBe(10);
+
+    const again = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: `mock:${steamId}` }),
+      ip: freshIp(),
+    });
+    expect(again.status).toBe(200);
+    expect(again.body.userId).toBe(created.body.userId);
+    expect(again.body.created).toBe(false);
+
+    const bad = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: 'mock:not-a-number' }),
+      ip: freshIp(),
+    });
+    expect(bad.status).toBe(401);
+  });
+
+  it('Steam DLC: mock full_collection でガチャプールを冪等付与', async () => {
+    const steamId = '76561198000005678';
+    const login = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: `mock:${steamId}` }),
+      ip: freshIp(),
+    });
+    expect(login.status).toBe(201);
+    const token = login.body.accessToken as string;
+
+    const sync = await api('/v1/steam/dlc/sync', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ dlcIds: ['full_collection'] }),
+    });
+    expect(sync.status).toBe(200);
+    expect(sync.body.fullCollection).toBe(true);
+    expect(sync.body.newlyGrantedDlc).toEqual(['full_collection']);
+    expect(sync.body.collectionCount).toBeGreaterThan(10);
+
+    const again = await api('/v1/steam/dlc/sync', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ dlcIds: ['full_collection'] }),
+    });
+    expect(again.status).toBe(200);
+    expect(again.body.newlyGrantedDlc).toEqual([]);
+    expect(again.body.collectionCount).toBe(sync.body.collectionCount);
+
+    const status = await api('/v1/steam/dlc', { token });
+    expect(status.status).toBe(200);
+    expect(status.body.ownedDlc).toEqual(['full_collection']);
   });
 
   it('ゲスト作成: 初期チケット10・所持なし・オンボーディング未完了', async () => {

@@ -26,19 +26,26 @@
 | フレンドマッチ | なし | win-trading対策 |
 | 引き分け・切断勝ち | なし(参加報酬は対象) | 不正・事故の旨味を消す。参加報酬は勝敗不問のため win-trading 誘因にならない |
 | 運営配布(補償・記念) | 都度 | currency_logs reason='compensation' で記録 |
-| Steam 全駒解放DLC(計画) | 対象駒の一括所持 | チケット消費なし。entitlement 同期後に `user_yokai` へ付与。無料ルートは残す(doc 23) |
+| Steam 全駒解放DLC | 対象駒の一括所持 | チケット消費なし。`/v1/steam/dlc/sync` 後に `user_yokai` へ付与。無料ルートは残す(doc 23) |
 
 > 週あたり標準獲得量: ログボ9枚 + 勝利報酬・参加報酬。オンライン勝利上限まで遊ぶ熱心なプレイヤーは週に複数回10連できる設計。コレクション完走後の余剰は妖力の追加用途で受け止める。
 >
 > Steam では広告報酬がないため、ログボ・対戦報酬が Web と同等以上であることを維持し、「広告がない分だけ損」に見えないようにする。
 
-## Steam DLC と経済の境界(計画)
+## Steam DLC と経済の境界
 
 | 売ってよい | 売らない |
 |---|---|
 | 全駒解放パック(現行ガチャ排出駒の一括所持。価格目安 ¥800〜¥1,500) | 有償ガチャチケット |
 | 異装・テーマ・BGM 等の見た目 | 強駒のバラ売り |
 | (将来)拡張パック※新駒はプレイ入手経路も同時に用意 | Pay-to-Win の必須課金要素 |
+
+### 全駒解放の同期(実装骨格)
+
+- DLC ID: `full_collection`(`shared/steam-dlc.ts`)
+- `POST /v1/steam/dlc/sync` が `GACHA_POOL` を `user_yokai` へ冪等付与し、`steam_entitlement_grants` に記録
+- 開発: `STEAM_AUTH_MOCK=1` 時のみクライアント申告(`dlcIds`)を信頼。検証は `?steamDlc=full_collection`
+- 本番: Steam 所有確認に差し替え予定(未確認時は付与しない)
 
 ### 新駒追加時のルール(仮)
 
@@ -128,7 +135,7 @@ SSRを「数字が大きいだけの駒」から「使っていて楽しい駒�
 1. user_profiles.tickets == 初期値 + Σ currency_logs.delta (tickets)
 2. user_yokai の件数増加は gacha_logs の new_count 合計
    + 参加報酬の新規付与数 + 百鬼1位報酬の yokai_new 合計
-   + Steam entitlement 由来の付与数(導入後) と一致
+   + steam_entitlement_grants.yokai_new 合計 と一致
 3. 日次の勝利報酬付与 ≦ 上限 × アクティブユーザー数
 4. gacha_logs の レアリティ実測分布が理論値から大きく乖離していない(乱数バグ検知)
 ```

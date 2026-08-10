@@ -1,6 +1,6 @@
 # 23. Steam 配信方針
 
-> 方針確定: 2026-08。関連: doc 01 / 08 / 11 / 12。  
+> 方針確定: 2026-08。関連: doc 01 / 08 / 11 / 12 / 24。  
 > Tauri シェル（オフライン起動）まで実装済み。
 
 ## 製品パッケージ(確定)
@@ -54,9 +54,9 @@
 | 2 | アセット権利・商標クリア | 駒・BGM OK(条件付き)。J-PlatPat 主要検索0件でクリア。Steam AI 開示は提出時 |
 | 3 | `PLATFORM` ビルドフラグと広告経路の完全分離 | `__PLATFORM__` + `npm run build:steam`。広告 UI/GPT/AdSense を Steam で無効化 — **完了** |
 | 4 | Tauri シェル + オフライン起動 | `src-tauri/` + `npm run tauri:build`（steam-offline）— **完了** |
-| 5 | Steam Auth + アカウント連携/マージ | Steam → API → 既存メタ復元 |
-| 6 | オンライン接続(同一 Matchmaker) | Web プレイヤーとマッチ成立 |
-| 7 | 全駒解放 entitlement API | 購入反映が冪等に効く |
+| 5 | Steam Auth + アカウント連携/マージ | `POST /v1/auth/steam` + クライアント Steam セッション — **骨格完了**(実チケットは Steamworks 接続後) |
+| 6 | オンライン接続(同一 Matchmaker) | `tauri:dev:local` / staging で API 接続可能 — **開発経路完了**(クロスプレイ手動スモークは運営者確認) |
+| 7 | 全駒解放 entitlement API | `POST /v1/steam/dlc/sync` + mock 付与 — **骨格完了**(本番所有確認は Steamworks 後) |
 | 8 | Steamworks(実績・Cloud)とストア提出 | 審査提出可能 |
 | 9 | 公開後: 異装 DLC 第1弾 | 見た目装備が可能 |
 
@@ -76,18 +76,57 @@
 
 | コマンド | 内容 |
 |---|---|
-| `npm run tauri:dev` | Vite(`steam-offline`・port 1420) + Tauri ウィンドウ。通常の `npm run dev`(5173) と共存可 |
-| `npm run tauri:build` | オフライン Steam クライアントをビルドし NSIS インストーラを生成 |
-| `npm run build:steam` | Web 資産のみ（本番 API・広告なし）。将来のオンライン梱包用 |
+| `npm run tauri:dev` | オフライン(APIなし)。ソロ検証用 |
+| `npm run tauri:dev:local` | ローカル API(`8787`)へ接続。**別ターミナルで `npm run api:dev` 必須** |
+| `npm run tauri:dev:staging` | staging Workers へ接続 |
+| `npm run tauri:build` | オフライン NSIS |
+| `npm run tauri:build:staging` | staging API 梱包ビルド |
+| `npm run build:steam` | Web 資産のみ（本番 API・広告なし） |
+| `npm run dev:steam:local` | ブラウザだけで Steam+local API(Tauri なし) |
+| `npm run dev:steam:staging` | ブラウザだけで Steam+staging |
+
+### オンライン / クロスプレイ スモーク(開発)
+
+1. ターミナルA: `npm run api:dev`
+2. ターミナルB: `npm run tauri:dev:local`(または `npm run dev:steam:local`)
+3. ターミナルC(Web側): `$env:VITE_API_URL='http://127.0.0.1:8787'; npm run dev`
+4. 双方で大将選択・オンボ完了後、「オンライン対戦」→ランダムマッチ
+5. Steam 同士で試す場合は `?steamMockId=` を変えて別アカウントにする(同一 mock ID は自己マッチ不可)
+
+### DLC mock 検証
+
+- URL に `?steamDlc=full_collection` を付けて起動 → ガチャプールが一括所持される
+- 外す: `?steamDlc=none`(localStorage クリア)
+
+### Steam Auth の検証手順(開発)
+
+1. `npm run api:dev`(ローカルは `STEAM_AUTH_MOCK=1`)
+2. `npm run tauri:dev:local` または `dev:steam:local`
+3. 起動時に `POST /v1/auth/steam`（チケットは `mock:<steamId>`）でメタが載る
+4. 本番では Partner の Web API キーと App ID を Workers secrets に入れ、mock を無効化する
 
 `cargo: program not found` になるとき: Rust は `%USERPROFILE%\.cargo\bin` に入っている。**ターミナルを開き直す**か、PowerShell で次を実行してから再試行する。
 
 ```powershell
 $env:Path = "$env:USERPROFILE\.cargo\bin;" + $env:Path
-npm run tauri:dev
+npm run tauri:dev:local
 ```
 
-`src-tauri/tauri.conf.json` の `beforeBuildCommand` は当面 `build:steam:offline`。オンライン梱包に切り替えるときは `build:steam` に変更する。
+`src-tauri/tauri.conf.json` の `beforeBuildCommand` は当面 `build:steam:offline`。オンライン本番梱包は `build:steam` に切り替える。
+
+## 運営者側で必要な対応(コード外)
+
+**App ID と Publisher Web API キーの取得手順は [24-steam-partner-setup.md](24-steam-partner-setup.md) が正本。**
+
+| 優先 | 内容 | 備考 |
+|---|---|---|
+| 任意・今 | 上記スモークを1回試す | 詰まったらログを共有 |
+| 次 | Steam Partner 登録 → App ID + Publisher キー | [doc 24](24-steam-partner-setup.md)。Workers secrets へ投入後に連絡 |
+| 後 | 利用規約・プラポリに Steam ID / DLC 追記 | doc 11 |
+| 後 | 年齢レーティング・ストア文面 | 審査提出時（税・銀行は doc 24 のオンボで実施） |
+| 後 | 全駒解放の最終価格決定 | ¥980 前後を仮置き可 |
+
+コード側が次にやるのは **Steamworks 実チケット接続**と **本番 CORS / 所有確認 API**。doc 24 のチェックリスト完了後に着手するのが効率的。
 
 ## 未決定の細部
 

@@ -5,6 +5,7 @@ import { defineConfig, type Plugin } from 'vite';
    - `vite build --mode steam`    → Steam向け・本番API・広告なし
    - `vite build --mode steam-offline` → Steam向け・APIなし(オフライン検証)
    - `vite build --mode steam-staging` → Steam向け・staging API
+   - `vite --mode steam-local` → Steam向け・ローカル wrangler(8787)
    - `VITE_API_URL=... vite build` → 任意のAPI(staging検証など)
    - `vite build`(既定)            → 未設定=オフライン(ローカル版。e2eのオフライン経路はこれ) */
 const PROD_API = 'https://api.yokai-shogi.nit-games.com';
@@ -14,16 +15,21 @@ const STAGING_API = 'https://yokai-shogi-api-staging.kojileo0178.workers.dev';
 type AppPlatform = 'web' | 'steam';
 
 function resolvePlatform(mode: string): AppPlatform {
-  if (mode === 'steam' || mode === 'steam-offline' || mode === 'steam-staging') return 'steam';
+  if (mode.startsWith('steam')) return 'steam';
   if (process.env.VITE_PLATFORM === 'steam') return 'steam';
   return 'web';
 }
 
 function resolveApiUrl(mode: string): string {
+  /* 明示指定があれば常に優先(ローカルAPIや一時検証用) */
+  if (process.env.VITE_API_URL !== undefined && process.env.VITE_API_URL !== '') {
+    return process.env.VITE_API_URL;
+  }
   if (mode === 'online' || mode === 'steam') return PROD_API;
   if (mode === 'staging' || mode === 'steam-staging') return STAGING_API;
+  if (mode === 'steam-local') return 'http://127.0.0.1:8787';
   if (mode === 'steam-offline') return '';
-  return process.env.VITE_API_URL ?? '';
+  return '';
 }
 
 /** Steam ビルドから AdSense meta / スクリプトを除去する */

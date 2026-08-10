@@ -22,13 +22,14 @@ async function checkCurrencyInvariant(db: D1Database, currency: 'tickets' | 'yor
   return rs.results;
 }
 
-/* 不変条件2: 所持妖怪数 == ガチャ・オンボーディング大将の new_count + 対戦会限定 + 百鬼1位報酬 */
+/* 不変条件2: 所持妖怪数 == ガチャ new_count(+オンボ大将) + 対戦会限定 + 百鬼1位 + Steam DLC */
 async function checkYokaiInvariant(db: D1Database): Promise<{ actual: number; expected: number } | null> {
   const row = await db.prepare(`
     SELECT (SELECT COUNT(*) FROM user_yokai) AS actual,
            IFNULL((SELECT SUM(new_count) FROM gacha_logs), 0)
          + IFNULL((SELECT SUM(yokai_new) FROM participation_logs), 0)
-         + IFNULL((SELECT SUM(yokai_new) FROM hyakki_week_rewards), 0) AS expected`)
+         + IFNULL((SELECT SUM(yokai_new) FROM hyakki_week_rewards), 0)
+         + IFNULL((SELECT SUM(yokai_new) FROM steam_entitlement_grants), 0) AS expected`)
     .first<{ actual: number; expected: number }>();
   return row && row.actual !== row.expected ? row : null;
 }
@@ -101,6 +102,7 @@ async function cleanupDormantGuests(db: D1Database): Promise<number> {
       db.prepare('DELETE FROM campaign_grants WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM hyakki_week_rewards WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM hyakki_weekly WHERE user_id = ?1').bind(id),
+      db.prepare('DELETE FROM steam_entitlement_grants WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM currency_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM gacha_logs WHERE user_id = ?1').bind(id),
       db.prepare('DELETE FROM user_yokai WHERE user_id = ?1').bind(id),
