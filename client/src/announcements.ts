@@ -2,6 +2,7 @@ import { currentAnnouncements } from '../../shared/announcements';
 import type { Announcement } from '../../shared/announcements';
 import { $ } from './util';
 import { AudioSys } from './audio';
+import { getLocale } from './locale';
 
 declare const __API_URL__: string;
 
@@ -25,10 +26,15 @@ function writeSet(key: string, values: Set<string>): void {
 function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric' }).format(date);
+  return new Intl.DateTimeFormat(getLocale() === 'en' ? 'en-US' : 'ja-JP', { month: 'numeric', day: 'numeric' }).format(date);
 }
 
 function typeLabel(type: Announcement['type']): string {
+  if (getLocale() === 'en') {
+    if (type === 'maintenance') return 'Maintenance';
+    if (type === 'campaign') return 'Event';
+    return 'Update';
+  }
   if (type === 'maintenance') return 'メンテ';
   if (type === 'campaign') return 'イベント';
   return 'アップデート';
@@ -81,6 +87,9 @@ export const AnnouncementsUI = {
       AudioSys.play('click');
       $('modal-announcements').classList.add('hidden');
     };
+    window.addEventListener('yokai-locale-change', () => {
+      if (!$('modal-announcements').classList.contains('hidden')) this.renderList();
+    });
   },
 
   async refresh(opts: { popup?: boolean } = {}): Promise<void> {
@@ -150,9 +159,9 @@ export const AnnouncementsUI = {
       meta.append(type, date);
 
       const title = document.createElement('h3');
-      title.textContent = item.title;
+      title.textContent = getLocale() === 'en' ? item.titleEn ?? item.title : item.title;
       const body = document.createElement('p');
-      appendLinkedText(body, item.body);
+      appendLinkedText(body, getLocale() === 'en' ? item.bodyEn ?? item.body : item.body);
 
       card.append(meta, title, body);
       list.appendChild(card);

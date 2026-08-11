@@ -4,7 +4,7 @@
 
 import {
   COLS, ROWS, MAX_HP, ZONE_DEPTH, YOKAI, TYPE_INFO, RARITY_INFO,
-  ALL_IMAGES, BOSS_CHOICES, ENEMY_BOSS, GACHA_POOL, SETUP,
+  ALL_IMAGES, ENEMY_BOSS, GACHA_POOL, SETUP,
   RESONANCES, MOON_PHASES, baseIdOf,
 } from '../../shared/data';
 import type { Rarity, Side, YokaiType } from '../../shared/data';
@@ -33,6 +33,7 @@ import { AnnouncementsUI } from './announcements';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ClockPhase, ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
+import { initializeLocale } from './locale';
 
 let G: GameState | null = null; // ゲーム状態
 let busy = false;               // 演出中・AI思考中の入力ロック
@@ -137,6 +138,7 @@ const TIER_SCALE = [0.75, 1, 1.3, 1.6] as const;
 
 /* ============================== 起動 ============================== */
 window.addEventListener('DOMContentLoaded', () => {
+  initializeLocale();
   trackLandingEventOnce('app_loaded', 'app_loaded');
   void initSentry();
   FX.init();
@@ -2103,12 +2105,6 @@ const PIECE_TYPE_ORDER: YokaiType[] = ['boss', 'attack', 'defense', 'ambush', 'd
 const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
 const PIECE_RARITY_RANK: Record<Rarity, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
 
-function pieceSourceText(id: string): string {
-  if (id === HYAKKI_REWARD_YOKAI_ID) return '百鬼夜行ランキング1位限定';
-  if (YOKAI[id]?.limited) return '土曜対戦会限定';
-  return BOSS_CHOICES.includes(id as (typeof BOSS_CHOICES)[number]) ? '初期選択またはガチャ' : 'ガチャ';
-}
-
 function ssrIntroLines(id: string): string[] {
   const def = YOKAI[id];
   if (def.rarity !== 'SSR') return [];
@@ -2222,11 +2218,6 @@ function renderPieceCatalogCards() {
     name.className = 'rp-name';
     name.textContent = def.name;
 
-    const source = document.createElement('span');
-    source.textContent = pieceSourceText(def.id);
-    source.className = 'rp-source';
-    top.appendChild(source);
-
     body.append(top, name);
     card.append(art, body);
     wrap.appendChild(card);
@@ -2245,7 +2236,7 @@ function openPieceDetail(id: string) {
     `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span>` +
     `<span class="type-chip ${ti.cls}">${ti.label}</span>`;
   $('piece-detail-name').textContent = def.name;
-  $('piece-detail-atk').textContent = `ATK ${def.atk} / ${pieceSourceText(def.id)}で入手`;
+  $('piece-detail-atk').textContent = `ATK ${def.atk}`;
   $('piece-detail-move').textContent = def.moveText;
   $('piece-detail-skill-name').textContent = def.skill.name;
   const records = Records.get(def.skill.name);
