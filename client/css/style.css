@@ -1,6 +1,5 @@
 /* ============================================================
-   妖怪将棋 〜百鬼夜行の盤上決戦〜
-   ============================================================ */
+   妖怪封E��E〜百鬼夜行�E盤上決戦、E   ============================================================ */
 :root {
   --gold: #e8c46a;
   --gold-deep: #b8860b;
@@ -28,12 +27,43 @@ html, body {
   user-select: none;
 }
 
+/* English: Latin faces first so UI copy doesn't render in Japanese Mincho/Gothic metrics */
+html[data-script="latn"],
+html[data-script="latn"] body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  letter-spacing: 0;
+}
+html[data-script="latn"] .serif,
+html[data-script="latn"] .btn,
+html[data-script="latn"] .title-logo,
+html[data-script="latn"] .title-catch,
+html[data-script="latn"] .title-sub-top,
+html[data-script="latn"] .gc-name,
+html[data-script="latn"] .rp-name,
+html[data-script="latn"] .piece-card .rp-name,
+html[data-script="latn"] .rule-piece .rp-name,
+html[data-script="latn"] .info-line1,
+html[data-script="latn"] .form-info b,
+html[data-script="latn"] .battle-status-title,
+html[data-script="latn"] #btn-battle-status,
+html[data-script="latn"] .cutin-name,
+html[data-script="latn"] .vs-title,
+html[data-script="latn"] .result-title,
+html[data-script="latn"] .modal h2,
+html[data-script="latn"] .modal h3,
+html[data-script="latn"] .screen h2,
+html[data-script="latn"] .screen h3 {
+  font-family: Georgia, "Palatino Linotype", "Book Antiqua", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: 0.02em;
+  text-indent: 0;
+}
+
 #app { position: relative; width: 100%; height: 100%; overflow: hidden; }
 
 .serif { font-family: "Yu Mincho", "Hiragino Mincho ProN", "MS PMincho", serif; }
 .hidden { display: none !important; }
 
-/* ---------- 画面共通 ---------- */
+/* ---------- 画面共送E---------- */
 .screen {
   position: absolute; inset: 0;
   display: none;
@@ -70,7 +100,7 @@ html, body {
   box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 
-/* ---------- ローディング ---------- */
+/* ---------- ローチE��ング ---------- */
 .loading-inner { text-align: center; }
 .loading-mark {
   font-family: "Yu Mincho", serif;
@@ -246,6 +276,19 @@ html, body {
   animation: logoGlow 3s ease-in-out infinite;
 }
 .title-logo span:last-child { color: #fff6d8; }
+html[data-script="latn"] .title-logo {
+  gap: 0.18em;
+  font-size: clamp(3rem, 9vw, 5.5rem);
+  letter-spacing: 0.04em;
+  text-indent: 0;
+}
+html[data-script="latn"] .title-catch {
+  letter-spacing: 0.06em;
+}
+html[data-script="latn"] .title-sub-top {
+  letter-spacing: 0.08em;
+  text-indent: 0;
+}
 .title-catch {
   margin: 0.35em 0 0.55em;
   color: #8f83aa; font: clamp(0.68rem, 2vw, 0.82rem) "Yu Mincho", serif;
@@ -353,7 +396,7 @@ html, body {
   color: #6e6590; font-size: 0.78rem; letter-spacing: 0.15em; z-index: 2;
 }
 
-/* ---------- 百鬼夜行(ソロ連戦) ---------- */
+/* ---------- 百鬼夜衁Eソロ連戦) ---------- */
 #screen-solo { flex-direction: column; }
 .solo-col { width: min(98vw, 520px); }
 .solo-hyakki-lobby {
@@ -438,7 +481,7 @@ html, body {
 }
 .solo-lobby-links .btn { width: 100%; padding: 10px 8px; font-size: 0.78rem; }
 
-/* ---------- 百鬼夜行 次戦プレビュー ---------- */
+/* ---------- 百鬼夜衁E次戦プレビュー ---------- */
 #screen-hyakki-preview { flex-direction: column; }
 .hyakki-preview-col { width: min(98vw, 480px); }
 .hyakki-preview-card {
@@ -573,7 +616,7 @@ html, body {
   letter-spacing: 0.03em;
 }
 
-/* ---------- 百鬼夜行 週間連勝ランキング(doc 21) ---------- */
+/* ---------- 百鬼夜衁E週間連勝ランキング(doc 21) ---------- */
 #hyakki-ranking {
   flex: 1;
   min-height: 0;
@@ -692,7 +735,7 @@ html, body {
 .tag-player { background: rgba(88, 182, 255, 0.18); color: var(--p-blue); border: 1px solid rgba(88,182,255,0.5); }
 .tag-enemy { background: rgba(255, 93, 93, 0.16); color: var(--e-red); border: 1px solid rgba(255,93,93,0.5); }
 
-/* HP バー */
+/* HP バ�E */
 .hp-bar {
   position: relative;
   height: clamp(14px, 2.4vh, 20px);
@@ -753,7 +796,7 @@ html, body {
 }
 .hud-enemy .hand-chip { cursor: pointer; }
 
-/* コンボバッジ */
+/* コンボバチE�� */
 .combo-badge {
   position: absolute; right: 8px; top: -14px;
   font-family: "Yu Mincho", serif;
@@ -768,13 +811,13 @@ html, body {
 .combo-badge.show { opacity: 1; animation: comboPop 0.4s cubic-bezier(0.2, 1.8, 0.4, 1); }
 @keyframes comboPop { from { transform: scale(2.2) rotate(-6deg); } to { transform: scale(1) rotate(0); } }
 
-/* ---------- 盤 (妖界ステージ) ---------- */
+/* ---------- 盤 (妖界スチE�Eジ) ---------- */
 #board-wrap {
   position: relative;
   flex-shrink: 1;
   min-height: 0;
   max-width: 100%;
-  /* 召喚陣(132%)のはみ出しで横スクロール領域が広がらないようにする */
+  /* 召喚陣(132%)のはみ出しで横スクロール領域が庁E��らなぁE��ぁE��する */
   overflow: hidden;
 }
 /* 盤の背後で回転する召喚陣 */
@@ -811,7 +854,7 @@ html, body {
   animation: boardFloat 5.6s ease-in-out infinite;
 }
 @keyframes boardFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-/* 盤上を漂う霊気の霧 */
+/* 盤上を漂う霊気�E霧 */
 #board-frame::after {
   content: "";
   position: absolute; inset: -4%;
@@ -878,7 +921,7 @@ html, body {
   opacity: 1;
   box-shadow: inset 0 0 0 3px rgba(255, 226, 130, 0.95), inset 0 0 18px rgba(255, 210, 90, 0.5);
 }
-/* 敵駒の利きプレビュー（自駒の青系と区別しやすい暖色） */
+/* 敵駒�E利き�Eレビュー�E��E駒�E青系と区別しやすい暖色�E�E*/
 .cell.hl-enemy-selected .hl {
   opacity: 1;
   box-shadow: inset 0 0 0 3px rgba(255, 120, 140, 0.95), inset 0 0 18px rgba(255, 70, 90, 0.45);
@@ -897,7 +940,7 @@ html, body {
 .cell.hl-last .hl { opacity: 1; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.28); }
 @keyframes hlPulse { 0%, 100% { transform: scale(0.92); } 50% { transform: scale(1); } }
 
-/* 駒 */
+/* 駁E*/
 #board-pieces { position: absolute; inset: calc(var(--bw) * 0.018); pointer-events: none; }
 .piece {
   position: absolute;
@@ -931,7 +974,7 @@ html, body {
   filter: blur(1px) brightness(1.7);
 }
 @keyframes ghostFade { to { opacity: 0; transform: scale(0.92); } }
-/* SSR・異装の移動:溜め→疾走 */
+/* SSR・異裁E�E移勁E溜め→疾走 */
 .piece.charging { z-index: 5; }
 .piece.charging img { animation: pieceCharge 0.18s ease-in forwards; }
 @keyframes pieceCharge {
@@ -964,7 +1007,7 @@ html, body {
   filter: drop-shadow(0 0 10px var(--special-primary, #e32f3f)) drop-shadow(0 0 4px var(--special-light, #fff2cd));
 }
 @keyframes specialPieceAura { to { transform: scale(1.18); filter: brightness(1.6); } }
-/* 異装: 周回する光輪 */
+/* 異裁E 周回する�E輪 */
 .piece.special-piece::before {
   content: "";
   position: absolute; inset: -9%;
@@ -979,7 +1022,7 @@ html, body {
   animation: specialOrbit 3s linear infinite;
 }
 @keyframes specialOrbit { to { transform: rotate(360deg); } }
-/* 通常SSR: 金のオーラ(異装より控えめ、N/R/SRとの格差を作る) */
+/* 通常SSR: 金�Eオーラ(異裁E��り控えめ、N/R/SRとの格差を作る) */
 .piece.ssr-piece .piece-base {
   background: radial-gradient(ellipse, rgba(255, 246, 216, 0.85) 0%, rgba(255, 210, 74, 0.42) 48%, transparent 74%);
   animation: specialPieceAura 1.7s ease-in-out infinite alternate;
@@ -1076,9 +1119,8 @@ html, body {
 @keyframes thinkBlink { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 
 /*
-  駒情報ポップアップ:
-  - position:fixed でレイアウトを押さない（自軍HUDが見切れない）
-  - 画面上部（敵HUD帯）に重ね、盤と自軍HUDは触れるまま
+  駒情報ポップアチE�E:
+  - position:fixed でレイアウトを押さなぁE���E軍HUDが見�EれなぁE��E  - 画面上部�E�敵HUD帯�E�に重�E、盤と自軍HUDは触れるまま
 */
 #piece-info {
   position: fixed;
@@ -1149,7 +1191,7 @@ html, body {
 .t-trap { background: #ff9a3c; }
 .t-boss { background: var(--c-boss); }
 
-/* ツールボタン */
+/* チE�Eルボタン */
 .battle-tools {
   position: absolute; top: 8px; right: 8px;
   display: flex; flex-direction: column; gap: 8px;
@@ -1167,7 +1209,7 @@ html, body {
 }
 .tool-btn:hover { transform: scale(1.12); box-shadow: 0 0 12px rgba(232,196,106,0.5); }
 
-/* ---------- カットイン ---------- */
+/* ---------- カチE��イン ---------- */
 #cutin {
   position: fixed; inset: 0;
   z-index: 200;
@@ -1199,7 +1241,7 @@ html, body {
   border-bottom: 2px solid rgba(255, 215, 110, 0.95);
   box-shadow: 0 0 70px rgba(255, 200, 80, 0.5);
 }
-/* SSR・異装 見参カットイン(--cutin-* はJS側でsummonColorsから設定) */
+/* SSR・異裁E見参カチE��イン(--cutin-* はJS側でsummonColorsから設宁E */
 #cutin.style-summon .cutin-bg {
   background: linear-gradient(100deg, rgba(8, 4, 14, 0.97) 28%, color-mix(in srgb, var(--cutin-primary, #b8860b) 42%, rgba(24, 8, 6, 0.97)) 74%);
   border-top: 3px solid var(--cutin-light, #fff6d8);
@@ -1215,7 +1257,7 @@ html, body {
 }
 #cutin.style-summon .cutin-texts { left: 50%; max-width: 48vw; }
 #cutin.style-summon #cutin-name {
-  /* 異装名は長い(例:百鬼夜行・ぬらりひょん)ため縮小+折り返し許可 */
+  /* 異裁E��は長ぁE侁E百鬼夜行�EぬらりひめE��)ため縮封E折り返し許可 */
   font-size: clamp(1.3rem, 4.8vw, 2.6rem);
   letter-spacing: 0.08em;
   white-space: normal;
@@ -1228,7 +1270,7 @@ html, body {
   letter-spacing: 0.4em;
   text-shadow: 0 0 14px var(--cutin-primary, #ffaa28);
 }
-/* スキル系統色カットイン(--cutin-* はJS側でSKILL_KIND_FXから設定) */
+/* スキル系統色カチE��イン(--cutin-* はJS側でSKILL_KIND_FXから設宁E */
 #cutin.has-colors:not(.style-summon) .cutin-bg {
   background: linear-gradient(100deg, rgba(10, 6, 18, 0.96) 30%,
     color-mix(in srgb, var(--cutin-primary, #ff8a3c) 34%, rgba(16, 8, 10, 0.96)) 72%);
@@ -1249,7 +1291,7 @@ html, body {
   filter: drop-shadow(0 0 24px color-mix(in srgb, var(--cutin-primary, #ffaa28) 70%, transparent))
     drop-shadow(0 0 10px rgba(0, 0, 0, 0.9));
 }
-/* レアリティ格差: N/Rは帯が細く控えめ、SSR・異装は特大の帯+強い発光 */
+/* レアリチE��格差: N/Rは帯が細く控えめ、SSR・異裁E�E特大の帯+強ぁE��允E*/
 #cutin.tier-0 .cutin-bg, #cutin.tier-0 .cutin-lines,
 #cutin.tier-1 .cutin-bg, #cutin.tier-1 .cutin-lines { height: min(34vh, 250px); }
 #cutin.tier-0 #cutin-img, #cutin.tier-1 #cutin-img { height: min(48vh, 360px); }
@@ -1338,10 +1380,10 @@ html, body {
 }
 @keyframes cutinFlash { from { opacity: 0.75; } to { opacity: 0; } }
 
-/* ---------- ダメージ数字・フロートテキスト ---------- */
+/* ---------- ダメージ数字�EフロートテキスチE---------- */
 #fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 150; overflow: hidden; }
 
-/* 画面フラッシュ */
+/* 画面フラチE��ュ */
 .fx-flash {
   position: fixed; inset: 0;
   pointer-events: none;
@@ -1349,7 +1391,7 @@ html, body {
 }
 @keyframes fxFlash { from { opacity: 1; } to { opacity: 0; } }
 
-/* 暗転スポットライト(スキル発動のタメ) */
+/* 暗転スポットライチEスキル発動�Eタメ) */
 .fx-spotlight {
   position: fixed; inset: 0;
   pointer-events: none;
@@ -1377,7 +1419,7 @@ html, body {
   to { transform: translate(-50%, -50%) scale(var(--sw-scale, 10)); border-width: 1px; opacity: 0; }
 }
 
-/* 斬撃ライン */
+/* 斬撁E��イン */
 .fx-slash {
   position: fixed;
   height: 3px;
@@ -1394,7 +1436,7 @@ html, body {
   100% { transform: translate(-50%, -50%) rotate(var(--sl-ang, -30deg)) scaleX(1.35); opacity: 0; }
 }
 
-/* 画面ズームパンチ */
+/* 画面ズームパンチE*/
 #screen-battle.zoom-punch { animation: zoomPunch 0.24s ease-out; }
 @keyframes zoomPunch { 30% { transform: scale(1.018); } }
 #screen-battle.zoom-punch-big { animation: zoomPunchBig 0.34s cubic-bezier(0.2, 0.9, 0.3, 1); }
@@ -1411,7 +1453,7 @@ html, body {
 .dmg-num.dmg-big { font-size: clamp(2.4rem, 9vw, 4rem); color: #ff7a3c; text-shadow: 0 0 16px rgba(255, 80, 0, 1), 0 4px 3px rgba(0,0,0,0.9), -2px 0 2px rgba(0,0,0,0.8), 2px 0 2px rgba(0,0,0,0.8); }
 .dmg-num.dmg-counter { font-size: clamp(1.9rem, 7vw, 3rem); color: #c88aff; text-shadow: 0 0 14px rgba(160, 60, 255, 1), 0 3px 2px rgba(0,0,0,0.9); }
 .dmg-num.dmg-heal { font-size: clamp(1.6rem, 5.5vw, 2.4rem); color: #7cf2a4; text-shadow: 0 0 12px rgba(40, 220, 120, 0.9), 0 3px 2px rgba(0,0,0,0.9); }
-/* 会心(crit/rush発動): 最大サイズ+倍率の右肩表示 */
+/* 会忁Ecrit/rush発勁E: 最大サイズ+倍率の右肩表示 */
 .dmg-num.dmg-crit {
   font-size: clamp(2.9rem, 11vw, 4.8rem);
   color: #ffd24a;
@@ -1456,7 +1498,7 @@ html, body {
   100% { opacity: 0; transform: translate(-50%, -110%); }
 }
 
-/* ---------- リザルト ---------- */
+/* ---------- リザルチE---------- */
 #screen-result { flex-direction: column; z-index: 100; overflow-y: auto; }
 .result-inner {
   text-align: center; position: relative; z-index: 2;
@@ -1750,14 +1792,11 @@ html, body {
 .piece-card .rp-stats { display: flex; align-items: center; gap: 7px; color: #9f94ba; font-size: 0.7rem; }
 .piece-card .rp-stats b { color: #ffad79; font-size: 0.82rem; }
 .piece-card .rp-stats span { padding: 1px 6px; border-radius: 999px; background: rgba(255,255,255,0.07); }
-.rp-source {
-  width: fit-content;
-  padding: 1px 7px;
-  color: #9f94ba;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.07);
-  font-size: 0.7rem;
-  line-height: 1.45;
+html[data-script="latn"] .piece-card .rp-name {
+  white-space: normal;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
 }
 .rp-section {
   display: grid;
@@ -1890,10 +1929,10 @@ html, body {
 }
 
 /* ============================================================
-   ガチャ・編成・ログインボーナス
+   ガチャ・編成�Eログインボ�Eナス
    ============================================================ */
 
-/* ---------- レアリティ ---------- */
+/* ---------- レアリチE�� ---------- */
 .rarity-chip {
   font-size: 0.72em; font-weight: bold;
   padding: 2px 8px; border-radius: 3px;
@@ -1911,6 +1950,16 @@ html, body {
   font-size: 0.82rem; letter-spacing: 0.08em;
   color: #ffe9a0;
 }
+html[data-script="latn"] .title-currency {
+  letter-spacing: 0.02em;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+html[data-script="latn"] .title-currency span,
+html[data-script="latn"] .currency span,
+html[data-script="latn"] .cur-yoryoku {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.02em;
+}
 .title-audio-btn {
   width: 2.1rem;
   height: 2.1rem;
@@ -1926,6 +1975,53 @@ html, body {
 .title-audio-btn:hover {
   border-color: var(--gold);
   box-shadow: 0 0 14px rgba(232,196,106,0.25);
+}
+
+.title-language {
+  display: inline-flex;
+  align-items: center;
+}
+.title-language-select {
+  width: auto;
+  min-width: 4.6rem;
+  height: 2.1rem;
+  padding: 0 0.45rem;
+  border-radius: 14px;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ffe9a0;
+  cursor: pointer;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #ffe9a0 50%),
+    linear-gradient(135deg, #ffe9a0 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) calc(50% - 2px),
+    calc(100% - 7px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-inline: 0.55rem 1.35rem;
+}
+.title-language-select:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(232,196,106,0.25);
+}
+.title-language-select option {
+  color: #1a1428;
+  background: #f3e7c9;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .title-profile {
   position: absolute; top: 12px; left: 14px;
@@ -1954,7 +2050,7 @@ html, body {
 .btn:disabled { opacity: 0.4; pointer-events: none; }
 .btn small { display: block; font-size: 0.6em; letter-spacing: 0.15em; margin-top: 0.3em; opacity: 0.8; }
 
-/* ---------- メニュー画面共通 ---------- */
+/* ---------- メニュー画面共送E---------- */
 .menu-col {
   display: flex; flex-direction: column;
   align-items: center;
@@ -2020,7 +2116,7 @@ html, body {
 .gacha-ad-note { color: #7a7198; font-size: 0.72rem; letter-spacing: 0.08em; margin-top: -0.35em; }
 .gacha-rates { color: #6e6590; font-size: 0.72rem; letter-spacing: 0.08em; }
 
-/* 召喚儀式 */
+/* 召喚儀弁E*/
 #gacha-summon {
   position: fixed; inset: 0;
   z-index: 270;
@@ -2085,7 +2181,7 @@ html, body {
   100% { opacity: 0; filter: brightness(8); transform: scale(1.08); }
 }
 
-/* 召喚結果オーバーレイ */
+/* 召喚結果オーバ�Eレイ */
 #gacha-result {
   position: fixed; inset: 0;
   z-index: 250;
@@ -2194,7 +2290,7 @@ html, body {
 .gc-new { color: #ffd24a; text-shadow: 0 0 8px rgba(255,170,40,0.8); }
 .gc-dupe { color: #c88aff; }
 
-/* ---------- 編成 ---------- */
+/* ---------- 編戁E---------- */
 .form-zone-label { color: var(--e-red); font-size: 0.75rem; letter-spacing: 0.3em; opacity: 0.8; }
 #form-grid {
   display: grid;
@@ -2243,7 +2339,7 @@ html, body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* レア度バッジ(top:-6px)・選択時の浮き上がり・「配置中」ラベル分の余白 */
+  /* レア度バッジ(top:-6px)・選択時の浮き上がり�E「�E置中」ラベル刁E�E余白 */
   padding: 14px 8px 12px;
 }
 .bench-chip {
@@ -2281,7 +2377,7 @@ html, body {
 }
 #form-error { min-height: 1.4em; color: var(--e-red); font-size: 0.82rem; letter-spacing: 0.1em; }
 
-/* ---------- ログインボーナス ---------- */
+/* ---------- ログインボ�Eナス ---------- */
 .login-box { text-align: center; align-items: center; }
 .login-day { color: #9a8fc0; letter-spacing: 0.15em; }
 .login-day b { color: var(--gold); font-size: 1.5em; font-family: "Yu Mincho", serif; margin: 0 0.15em; }
@@ -2305,7 +2401,7 @@ html, body {
   letter-spacing: 0.15em;
 }
 
-/* ---------- データ引き継ぎ ---------- */
+/* ---------- チE�Eタ引き継ぎ ---------- */
 .title-foot {
   display: flex;
   flex-direction: column;
@@ -2623,6 +2719,14 @@ html, body {
   .title-currency { top: 8px; right: 8px; gap: 4px; font-size: 0.66rem; }
   .title-currency span { padding: 3px 7px; }
   .title-audio-btn { width: 1.75rem; height: 1.75rem; font-size: 0.85rem; border-radius: 10px; }
+  .title-language-select {
+    width: auto;
+    min-width: 4.2rem;
+    height: 1.75rem;
+    font-size: 0.6rem;
+    border-radius: 10px;
+    padding-inline: 0.4rem 1.15rem;
+  }
   .title-foot { bottom: 1%; }
   .title-foot-links { gap: 0.45rem; }
   .title-foot-links a, .title-link-btn, .title-foot-btn { font-size: 0.6rem; }
@@ -2636,7 +2740,7 @@ html, body {
 }
 
 /* ============================================================
-   開幕VS演出
+   開幕VS演�E
    ============================================================ */
 #vs-intro {
   position: fixed; inset: 0;
@@ -2645,7 +2749,7 @@ html, body {
   transition: opacity 0.4s ease;
 }
 #vs-intro.vs-out { opacity: 0; }
-/* 斜め二分割の背景(自軍=藍 / 敵軍=緋、境界に金の刃) */
+/* 斜め二�E割の背景(自軁E藁E/ 敵軁E緋、墁E��に金�E刁E */
 #vs-intro .vs-bg {
   position: absolute; inset: 0;
   background:
@@ -2680,7 +2784,7 @@ html, body {
   70% { transform: translateX(-1.6vw); opacity: 1; }
   100% { transform: none; opacity: 1; }
 }
-/* 見切れ防止: .vs-side は画面外へ3%はみ出すため、その分を足して内側へ寄せる */
+/* 見�Eれ防止: .vs-side は画面外へ3%はみ出すため、その刁E��足して冁E�Eへ寁E��めE*/
 #vs-intro .vs-texts { position: absolute; z-index: 2; max-width: 80vw; }
 #vs-intro .vs-p .vs-texts { left: 7vw; bottom: 6%; text-align: left; }
 #vs-intro .vs-e .vs-texts { right: 7vw; top: 6%; text-align: right; }
@@ -2707,7 +2811,7 @@ html, body {
   background-image: linear-gradient(175deg, #ffe8e0 20%, #ff8a7a 60%, #c22e3a 95%);
   filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(255, 90, 80, 0.6));
 }
-/* 中央VSエンブレム: 叩きつけ→衝撃リング */
+/* 中央VSエンブレム: 叩きつけ�E衝撃リング */
 #vs-intro .vs-emblem {
   position: absolute; left: 50%; top: 44%;
   transform: translate(-50%, -50%);
@@ -2741,7 +2845,7 @@ html, body {
 @keyframes vsRing {
   to { transform: translate(-50%, -50%) scale(24); border-width: 1px; opacity: 0; }
 }
-/* VS着地の白閃光 */
+/* VS着地の白閁E�E */
 #vs-intro .vs-flash {
   position: absolute; inset: 0;
   background: #fff;
@@ -2750,7 +2854,7 @@ html, body {
   pointer-events: none;
 }
 @keyframes vsFlash { 0% { opacity: 0; } 12% { opacity: 0.8; } 100% { opacity: 0; } }
-/* ステージ名(上部) */
+/* スチE�Eジ吁E上部) */
 #vs-intro .vs-stage {
   position: absolute; left: 50%; top: 7%;
   transform: translateX(-50%);
@@ -2766,7 +2870,7 @@ html, body {
   animation: vsStage 0.5s ease-out 0.8s both;
 }
 @keyframes vsStage { from { opacity: 0; letter-spacing: 0.9em; } to { opacity: 1; letter-spacing: 0.5em; } }
-/* 「開戦」の帯が横一閃 */
+/* 「開戦」�E帯が横一閁E*/
 #vs-intro .vs-kaisen {
   position: absolute; left: 0; right: 0; top: 72%;
   transform: translateY(-50%) scaleX(0);
@@ -2790,9 +2894,9 @@ html, body {
 }
 
 /* ============================================================
-   成り(覚醒)演出
+   成り(覚�E)演�E
    ============================================================ */
-/* 金屏風の帯が駒の高さを横一閃する */
+/* 金屏風の帯が駒�E高さを横一閁E��めE*/
 .fx-promote-band {
   position: absolute; left: 0; right: 0;
   height: clamp(64px, 12vh, 110px);
@@ -2812,7 +2916,7 @@ html, body {
   78% { transform: translateY(-50%) scaleX(1); opacity: 1; }
   100% { transform: translateY(-50%) scaleX(1); opacity: 0; }
 }
-/* 大書き漢字スタンプ(「成」) */
+/* 大書き漢字スタンチE「�E、E */
 .fx-kanji-stamp {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -2835,7 +2939,7 @@ html, body {
   78% { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, -66%) scale(0.95); }
 }
-/* 覚醒のタメ: 光を溜めて白熱していく */
+/* 覚�Eのタメ: 光を溜めて白熱してぁE�� */
 .piece.awakening { z-index: 5; }
 .piece.awakening img { animation: pieceAwaken 0.6s ease-in forwards; }
 @keyframes pieceAwaken {
@@ -2844,7 +2948,7 @@ html, body {
     filter: brightness(2.4) saturate(0.5) drop-shadow(0 0 18px rgba(255, 210, 74, 0.95));
   }
 }
-/* 覚醒の解放: 閃光から実体へ戻る */
+/* 覚�Eの解放: 閁E�Eから実体へ戻めE*/
 .piece.promoted-burst { z-index: 5; }
 .piece.promoted-burst img { animation: pieceAwakenBurst 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
 @keyframes pieceAwakenBurst {
@@ -2853,9 +2957,9 @@ html, body {
 }
 
 /* ============================================================
-   コンボ・エスカレーション
+   コンボ�Eエスカレーション
    ============================================================ */
-/* 画面縁の炎ビネット(3コンボ=lv1 / 4コンボ以上=lv2) */
+/* 画面縁�E炎ビネッチE3コンチElv1 / 4コンボ以丁Elv2) */
 #combo-vignette {
   position: fixed; inset: 0;
   pointer-events: none;
@@ -2910,7 +3014,7 @@ html, body {
 .fx-combo.tier-1 { font-size: clamp(1.15rem, 4vw, 1.7rem); }
 .fx-combo.tier-2 { font-size: clamp(1.5rem, 5.4vw, 2.3rem); }
 .fx-combo.tier-3 { font-size: clamp(1.9rem, 7vw, 3rem); }
-/* 高コンボは炎色の白熱ナンバー */
+/* 高コンボ�E炎色の白熱ナンバ�E */
 .fx-combo.tier-2 b, .fx-combo.tier-3 b {
   background: linear-gradient(175deg, #fff8e0 15%, #ffd24a 50%, #ff6b2e 90%);
   -webkit-background-clip: text; background-clip: text;
@@ -2934,10 +3038,10 @@ html, body {
 }
 
 /* ============================================================
-   SSR体験改修: 月齢HUD・覚醒ゲージ・因縁共鳴(doc 08)
+   SSR体験改修: 月齢HUD・覚�Eゲージ・因縁�E鳴(doc 08)
    ============================================================ */
 
-/* ---------- 対局ステータス(ボタンで開く) ---------- */
+/* ---------- 対局スチE�Eタス(ボタンで開く) ---------- */
 .battle-status-wrap {
   position: relative;
 }
@@ -2946,6 +3050,22 @@ html, body {
   font-family: "Yu Mincho", serif;
   font-size: 0.95rem;
   letter-spacing: 0.06em;
+}
+html[data-script="latn"] #btn-battle-status {
+  width: auto;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  letter-spacing: 0.03em;
+  font-family: Georgia, "Palatino Linotype", "Book Antiqua", serif;
+}
+html[data-script="latn"] .battle-tools #btn-battle-status {
+  width: auto;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 11px;
 }
 .battle-status-badge {
   position: absolute;
@@ -3038,7 +3158,7 @@ html, body {
   background: rgba(140, 170, 255, 0.22) !important;
 }
 
-/* ---------- 月齢(パネル内表示用) ---------- */
+/* ---------- 月齢(パネル冁E��示用) ---------- */
 #moon-icon { font-size: 1.05em; line-height: 1; filter: drop-shadow(0 0 4px rgba(185, 168, 255, 0.6)); }
 #hyakki-round-hud {
   position: absolute;
@@ -3061,7 +3181,7 @@ html, body {
   letter-spacing: 0.06em;
 }
 
-/* 満月の夜: 盤が月光に染まり、moon駒(九尾・玉藻前)が輝く */
+/* 満月�E夁E 盤が月光に染まり、moon駁E九尾・玉藻剁Eが輝く */
 #board-frame.moonlit {
   box-shadow: 0 0 34px rgba(154, 134, 255, 0.5), 0 0 90px rgba(120, 100, 230, 0.28);
   transition: box-shadow 0.6s;
@@ -3074,7 +3194,7 @@ html, body {
   filter: drop-shadow(0 0 12px rgba(185, 168, 255, 0.95)) drop-shadow(0 0 5px rgba(242, 236, 255, 0.9));
 }
 
-/* ---------- 覚醒ゲージ ---------- */
+/* ---------- 覚�Eゲージ ---------- */
 .awaken-row {
   display: flex; align-items: center; gap: 6px;
   min-height: 14px;
@@ -3123,7 +3243,7 @@ html, body {
   to   { box-shadow: 0 0 18px rgba(255, 210, 90, 0.95), 0 0 30px rgba(255, 170, 60, 0.4); }
 }
 
-/* 覚醒対象の選択ハイライト */
+/* 覚�E対象の選択ハイライチE*/
 .cell.hl-awaken .hl {
   opacity: 1;
   background: radial-gradient(circle, rgba(255, 226, 150, 0.5) 0%, rgba(232, 164, 60, 0.18) 60%, transparent 78%);
@@ -3131,8 +3251,8 @@ html, body {
   animation: hlPulse 0.8s ease-in-out infinite;
 }
 
-/* ---------- 覚醒中・激怒・共鳴中の駒 ---------- */
-/* 覚醒中: 黄金の魂焔が立ち昇る */
+/* ---------- 覚�E中・激怒�E共鳴中の駁E---------- */
+/* 覚�E中: 黁E��の魂�Eが立ち昁E�� */
 .piece.awakened::after {
   content: "";
   position: absolute; inset: -14% -8% -2% -8%;
@@ -3152,7 +3272,7 @@ html, body {
   to   { transform: scaleY(1.1) translateY(-3%); opacity: 1; }
 }
 
-/* 激怒(妖狐相伝): 緋色の怒気が脈打つ */
+/* 激态E妖狐相企E: 緋色の怒気が脈打つ */
 .piece.enraged .piece-base {
   background: radial-gradient(ellipse, rgba(255, 200, 170, 0.9) 0%, rgba(255, 70, 40, 0.55) 46%, transparent 76%);
   animation: enragedPulse 0.55s ease-in-out infinite alternate;
@@ -3162,7 +3282,7 @@ html, body {
 }
 @keyframes enragedPulse { to { transform: scale(1.22); filter: brightness(1.7); } }
 
-/* 因縁共鳴中: 対の証の淡い光輪 */
+/* 因縁�E鳴中: 対の証の淡ぁE�E輪 */
 .piece.resonating::after {
   content: "";
   position: absolute; inset: 4%;
@@ -3173,11 +3293,11 @@ html, body {
   animation: resonateRing 2.2s ease-in-out infinite alternate;
 }
 @keyframes resonateRing { from { opacity: 0.35; } to { opacity: 0.9; } }
-/* 覚醒中は覚醒の魂焔を優先(::afterが競合するため) */
+/* 覚�E中は覚�Eの魂�Eを優允E::afterが競合するためE */
 .piece.awakened.resonating::after {
   border: none;
   box-shadow: none;
 }
 
-/* 図鑑詳細: 覚醒技・因縁・通算発動の複数行表示 */
+/* 図鑑詳細: 覚�E技・因縁�E通算発動�E褁E��行表示 */
 #piece-detail-skill-desc { white-space: pre-line; }
