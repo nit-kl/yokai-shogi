@@ -5,14 +5,14 @@
 | テスト | 内容 |
 |---|---|
 | `test/engine.test.ts` | エンジンの合法手、終局、ランダム自己対局の整合性 |
-| `test/skills.test.ts` / `test/new-pieces.test.ts` | スキル、SSR体験、追加駒の回帰テスト |
-| `test/meta.test.ts` / `test/api-meta.test.ts` | ローカル/APIメタ進行、ガチャ、ログボ、編成 |
-| `test/workers/*.spec.ts` | Workersランタイム上のAPI・D1・DO統合テスト |
-| `test/e2e/*.mjs` | Playwright実ブラウザ検証 |
+| `test/skills.test.ts` / `test/ssr-skills.test.ts` / `test/new-pieces.test.ts` / `test/hunger-ember.test.ts` | スキル、SSR体験、追加駒、飢餓の夜・残火の回帰テスト |
+| `test/meta.test.ts` / `test/api-meta.test.ts` / `test/online.test.ts` / `test/match-hour.test.ts` | ローカル/APIメタ進行、オンライン報酬、逢魔が時 |
+| `test/workers/*.spec.ts` | Workersランタイム上のAPI・D1・DO・パスキー統合テスト |
+| `test/e2e/*.mjs` | Playwright実ブラウザ検証(オフライン・オンライン・日英) |
 
 > 設計上の利点: エンジン・抽選ロジックが純粋関数的でNode上で完結するため、**最重要ロジックのテストが既に高速・決定的**。この性質(Web標準APIのみ・Node API非依存)を壊さないことをレビュー基準にする(Workersで動く条件でもある)。
 
-## テスト基盤(TypeScript化後)
+## テスト基盤
 
 - ユニット/統合: **vitest**
 - Workersランタイム上のテスト: **@cloudflare/vitest-pool-workers**(API・DOをminiflare相当の実環境で実行。D1・DOストレージ・アラームも再現)
@@ -33,7 +33,7 @@
         ▼
 ```
 
-## 重点テスト領域(オンライン化で新たに必要)
+## 重点テスト領域
 
 ### 1. プロトコル統合テスト(最重要)
 nodeから素のWSクライアント2本を張り、シナリオを自動実行:

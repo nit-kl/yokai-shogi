@@ -2,7 +2,7 @@
 
 REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 — Durable Objects)の2系統。
 
-**型の正本は `shared/` のTypeScript定義**(`Action` / `GameEvent` / `GameState` および各メッセージ型)。本ドキュメントはその仕様書であり、実装時は型定義からのずれをコンパイルで検出する。
+**型の正本は `shared/` のTypeScript定義**(`Action` / `GameEvent` / `GameState` および各メッセージ型)。本ドキュメントはその仕様書であり、実装とのずれはコンパイルで検出する。
 
 ## 共通事項
 
@@ -23,11 +23,15 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 
 | メソッド | パス | 内容 |
 |---|---|---|
-| GET | /auth/config | Turnstile要否とサイトキー取得 |
+| GET | /auth/config | Turnstile要否とサイトキー、パスキー有効フラグ |
 | POST | /auth/guest | ゲストアカウント作成。`{ userId, accessToken, refreshToken, expiresIn }` |
 | POST | /auth/refresh | トークン更新 |
 | POST | /auth/link-code | 引き継ぎコード発行。発行時にゲスト扱いから外れる |
 | POST | /auth/login/link-code | 引き継ぎコードでログイン |
+| POST | /auth/passkey/register/options | パスキー登録オプション(要認証) |
+| POST | /auth/passkey/register | パスキー登録完了(要認証) |
+| POST | /auth/passkey/login/options | パスキー認証オプション |
+| POST | /auth/passkey/login | パスキーでログイン |
 
 ### プロフィール・進行
 
@@ -37,14 +41,16 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 ```json
 {
   "userId": "u_xxx", "name": "プレイヤー名",
+  "isGuest": true, "hasPasskey": false,
   "tickets": 12, "yoryoku": 350,
   "onboardingDone": true,
-  "loginBonus": { "day": 3, "tickets": 1 },   // 付与があった時のみ
-  "rating": 1500, "wins": 10, "losses": 4
+  "loginBonus": { "day": 3, "tickets": 1 },
+  "loginStreak": 3,
+  "rating": 1500, "wins": 10, "losses": 4,
+  "soloWinRewardToday": 0
 }
 ```
-
-ログインボーナスはオンボーディング完了後のみ付与する。
+`loginBonus` / `releaseGift` は付与があった時のみ含む。ログインボーナスはオンボーディング完了後のみ付与する。`rating` はプロフィールに保持するが、マッチングには未使用(doc 08)。
 
 #### GET /me/collection
 ```json
@@ -55,7 +61,7 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 ```json
 { "rows": [["raiju", null, "...", "ibaraki"], ["daitengu", "...", "hitouban"]] }
 ```
-PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジックを共有コードで実行): 2×5構造 / 全駒所持済み / 種別重複なし / 大将ちょうど1体。違反は `INVALID_FORMATION`。
+PUT時のサーバー検証(`shared/validate.ts` と同一ロジック): 2×5構造 / 全駒所持済み / 種別重複なし / 大将ちょうど1体。違反は `INVALID_FORMATION`。
 
 #### PUT /me/name
 表示名を更新する。検証は `shared/validate.ts` が正本。
@@ -81,7 +87,7 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 ```
 - `count` は 1 または 10 のみ
 - **idempotencyKey 必須**: 通信断での二重引きを防ぐ(同一キーは保存済み結果を再返却)
-- 抽選・確定枠(10連SR以上保証)・被り妖力変換のロジックは現 `Meta.pull` をサーバーへ移植(乱数はサーバー)
+- 抽選・確定枠(10連SR以上保証)・被り妖力変換のロジックは `shared/gacha.ts` をサーバーでも実行する(乱数はサーバー)
 - 排出率はレスポンスとは別に `GET /gacha/rates`(静的)で公開
 
 #### POST /exchange
@@ -114,7 +120,7 @@ PUT時のサーバー検証(現 `Meta.validateFormation` と同一ロジック�
 | GET | /ads/status | 必須 | 有効フラグ・provider・日次残回数・clientConfig |
 | POST | /ads/reward | 必須 | `{ "provider": "mock"|"gpt" }`。視聴完了後のチケット請求 |
 
-エラーコードに `FEATURE_DISABLED`(403) を追加(機能オフ時の POST)。
+機能オフ時の POST は `FEATURE_DISABLED`(403)。
 
 ## WebSocket プロトコル
 

@@ -34,7 +34,7 @@ export type Skill =
   | { kind: 'moon'; name: string; desc: string; mult: number }                // 満月の手番は会心確定(それ以外は不発)
   | { kind: 'heads'; name: string; desc: string; step: number; max: number }  // この駒の撃破数だけ与ダメ成長
   | { kind: 'legion'; name: string; desc: string; per: number; cap: number } // 盤上の味方数で与ダメ加算
-  /* 攻め改善: 食い逃げ・残火(phase2-v3) */
+  /* 食い逃げ・残火 */
   | { kind: 'retreat'; name: string; desc: string }                           // 取ったあと自動で元マスへ戻る
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
   | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap'; value: number; span: number }
