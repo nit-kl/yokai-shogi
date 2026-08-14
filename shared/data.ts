@@ -544,13 +544,13 @@ export const YOKAI: Record<string, YokaiDef> = {
   ingyo: {
     id: 'ingyo', name: '隱神刑部', type: 'transform', atk: 360, rarity: 'SSR', gachaOnly: true,
     img: img('ingyo'), imgSm: imgSm('ingyo'),
-    moveText: '金の動き(成:全方向1マス)',
+    moveText: '斜めに1マスと前へ変則跳び(成:全方向1マス+変則跳び)',
     skill: {
       kind: 'veil', name: '隱形の術',
       desc: 'この駒で取ったあと、(1)その場に残る (2)元いたマスへ戻る (3)隣の空きマスへ逃げる、のいずれかを選べる',
     },
-    moves: { steps: STEPS_GOLD },
-    promoted: { steps: STEPS_ALL8 },
+    moves: { steps: STEPS_DIAG4, jumps: [[1,-2],[-1,-2]] },
+    promoted: { steps: STEPS_ALL8, jumps: [[1,-2],[-1,-2]] },
     awakenName: '真・隱形',
   },
 };

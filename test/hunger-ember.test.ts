@@ -144,10 +144,16 @@ test('隱神刑部: veil で元マスへ帰影できる', () => {
   const s = blank();
   s.turn = 'p';
   put(s, 2, 3, 'ingyo', 'p');
-  put(s, 2, 2, 'kooni', 'e');
+  put(s, 3, 2, 'kooni', 'e');
   put(s, 0, 0, 'ittan', 'e');
-  move(s, 2, 3, 2, 2, { rng: false, phaseTo: { x: 2, y: 3 } });
-  expect(s.board[2][2]).toBeNull();
+  const dests = Game.getMoves(s, 2, 3).map(m => `${m.x},${m.y}`);
+  expect(dests).toContain('1,2');
+  expect(dests).toContain('3,2');
+  expect(dests).toContain('1,1');
+  expect(dests).toContain('3,1');
+  expect(dests).not.toContain('2,2');
+  move(s, 2, 3, 3, 2, { rng: false, phaseTo: { x: 2, y: 3 } });
+  expect(s.board[2][3]).toBeNull();
   expect(s.board[3][2]?.id).toBe('ingyo');
 });
 

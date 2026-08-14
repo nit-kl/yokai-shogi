@@ -216,7 +216,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   tsurube: ['Tsurube-otoshi', 'Any distance forward (promoted: +1 sideways/back)', 'Pit to Darkness', 'Leaves a pit for 4 moves. An enemy entering it takes 80 HP damage'],
   shiranui: ['Shiranui', '1 square diagonally (promoted: diagonal + forward/back)', 'Sending Fire', 'After a capture, place an allied Onibi on an adjacent empty square'],
   enenra: ['Enenra', '1 square diagonally (promoted: +1 forward/back)', 'Smoke Shadow-Step', 'After a capture, may escape to an adjacent empty square or stay put'],
-  ingyo: ['Inugami Gyobu', 'Gold General movement (promoted: 1 in any direction)', 'Art of Concealment', 'After a capture, choose to stay, return to the original square, or escape to an adjacent empty square', 'True Concealment'],
+  ingyo: ['Inugami Gyobu', '1 diagonally and a forward knight leap (promoted: 1 in any direction + knight leap)', 'Art of Concealment', 'After a capture, choose to stay, return to the original square, or escape to an adjacent empty square', 'True Concealment'],
 };
 
 for (const [id, values] of Object.entries(YOKAI_EN)) {
