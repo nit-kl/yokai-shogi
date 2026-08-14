@@ -1038,6 +1038,18 @@ html[data-script="latn"] .title-sub-top {
 }
 .piece.owner-e img { filter: drop-shadow(0 3px 3px rgba(20, 8, 0, 0.55)) drop-shadow(0 0 5px rgba(255, 60, 60, 0.35)); }
 .piece.promoted img { filter: drop-shadow(0 3px 3px rgba(20,8,0,0.55)) drop-shadow(0 0 7px rgba(255, 205, 80, 0.75)); }
+.piece .hydra-badge {
+  position: absolute; top: 0; left: 2%;
+  width: 28%; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Yu Mincho", serif; font-weight: bold;
+  font-size: calc(var(--bw) * 0.032);
+  color: #fff7e0;
+  background: radial-gradient(circle, #c45a28, #6a1810);
+  border: 1px solid #ffc090;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 90, 40, 0.85);
+}
 .piece .promo-badge {
   position: absolute; top: 0; right: 2%;
   width: 32%; aspect-ratio: 1;

@@ -16,6 +16,7 @@ export function actionToServer(action: Action, side: Side): Action {
         to: flipPos(action.to),
         ...(action.phaseTo ? { phaseTo: flipPos(action.phaseTo) } : {}),
         ...(action.spawnTo ? { spawnTo: flipPos(action.spawnTo) } : {}),
+        ...(action.dualTo ? { dualTo: flipPos(action.dualTo) } : {}),
       };
     case 'drop': return { kind: 'drop', id: action.id, to: flipPos(action.to) };
     case 'awaken': return { kind: 'awaken', to: flipPos(action.to) };

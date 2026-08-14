@@ -17,7 +17,8 @@ export interface Piece {
   id: string;
   owner: Side;
   promoted: boolean;
-  kills?: number;       // heads(八岐の首): この駒の撃破数。取られて打ち直されるとリセット
+  kills?: number;       // heads(撃破成長): この駒の撃破数。取られて打ち直されるとリセット
+  hydra?: number;       // hydra: 残りの逃げ回数。未設定ならスキルの extra として扱う
   awakenUntil?: number; // 覚醒の有効期限(この手数まで。plies基準)
   enraged?: boolean;    // foxBond(妖狐相伝): 次の攻撃が確定会心
 }
@@ -66,7 +67,7 @@ export const HUNGER_GRACE = 8;
 export const HUNGER_DRAIN = 50;
 
 export type Action =
-  | { kind: 'move'; from: Pos; to: Pos; phaseTo?: Pos; spawnTo?: Pos } // phaseTo: 影遁先 / spawnTo: 送り火の設置先
+  | { kind: 'move'; from: Pos; to: Pos; phaseTo?: Pos; spawnTo?: Pos; dualTo?: Pos }
   | { kind: 'drop'; id: string; to: Pos }
   | { kind: 'awaken'; to: Pos }; // 自軍SSR駒(to)を覚醒させる(手番を消費)
 
@@ -94,6 +95,9 @@ export interface CaptureEvent {
   counter: { dmg: number; name: string; img: string; owner: Side; hp: Record<Side, number> } | null;
   decoy: { name: string; img: string } | null;
   explode: { name: string; img: string; uid: number } | null;
+  charm?: { name: string; img: string } | null;
+  recall?: { name: string; img: string } | null;
+  hydra?: { lives: number } | null;
   heal: number;
   combo: number;
   comboMult: number;
@@ -120,6 +124,11 @@ export interface ApplyOptions {
   rand?: () => number;
 }
 
+interface CaptureOpts {
+  dmgMult?: number;
+  occupy?: boolean; // false: 双面の追撃(攻撃駒は to に居ない)
+}
+
 const posKey = (p: Pos) => `${p.x},${p.y}`;
 
 export const Game = {
@@ -136,7 +145,7 @@ export const Game = {
         let id = SETUP[y][x];
         if (enemyRows && y < 2) id = enemyRows[y][x];
         if (playerRows && y >= ROWS - 2) id = playerRows[y - (ROWS - 2)][x];
-        row.push(id ? { uid: ++uid, id, owner: y < ROWS / 2 ? 'e' : 'p', promoted: false } : null);
+        row.push(id ? this.preparePiece({ uid: ++uid, id, owner: y < ROWS / 2 ? 'e' : 'p', promoted: false }) : null);
       }
       board.push(row);
     }
@@ -304,6 +313,47 @@ export const Game = {
     return out;
   },
 
+  /* 打ち・初期配置で hydra 残機などを付ける */
+  preparePiece(pc: Piece): Piece {
+    const sk = YOKAI[pc.id]?.skill;
+    if (sk?.kind === 'hydra' && pc.hydra === undefined) pc.hydra = sk.extra;
+    return pc;
+  },
+
+  isAdjacent(a: Pos, b: Pos): boolean {
+    const dx = Math.abs(a.x - b.x), dy = Math.abs(a.y - b.y);
+    return dx <= 1 && dy <= 1 && (dx !== 0 || dy !== 0);
+  },
+
+  /* 八岐の逃げ先(at の周囲空き。盤座標で北から時計回り) */
+  hydraEscapeAt(s: GameState, at: Pos): Pos | null {
+    const dirs: readonly (readonly [number, number])[] = [
+      [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1],
+    ];
+    for (const [dx, dy] of dirs) {
+      const x = at.x + dx, y = at.y + dy;
+      if (!this.inBounds(x, y)) continue;
+      if (!s.board[y][x]) return { x, y };
+    }
+    return null;
+  },
+
+  /* 双面の追撃先(to に隣接する敵。victim 自身は含まない) */
+  dualDests(s: GameState, to: Pos, side: Side): Pos[] {
+    const foe: Side = side === 'p' ? 'e' : 'p';
+    const out: Pos[] = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = to.x + dx, y = to.y + dy;
+        if (!this.inBounds(x, y)) continue;
+        const occ = s.board[y][x];
+        if (occ && occ.owner === foe) out.push({ x, y });
+      }
+    }
+    return out;
+  },
+
   /* 捕獲後の送り火設置先(to の周囲空き。元マス from も含む) */
   spawnDests(s: GameState, from: Pos, to: Pos): Pos[] {
     return this.escapeDests(s, from, to, 'phase');
@@ -354,6 +404,11 @@ export const Game = {
               acts.push({ kind: 'move', from: { x, y }, to: { x: m.x, y: m.y }, spawnTo: st });
             }
           }
+          if (m.capture && sk === 'dual') {
+            for (const dt of this.dualDests(s, { x: m.x, y: m.y }, side)) {
+              acts.push({ kind: 'move', from: { x, y }, to: { x: m.x, y: m.y }, dualTo: dt });
+            }
+          }
         }
       }
     }
@@ -398,7 +453,7 @@ export const Game = {
         } else if (sk.kind === 'weaken') {
           effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: `敵の与ダメージ-${Math.round(sk.reduce * 100)}%` });
         } else if (sk.kind === 'jam') {
-          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: '会心・月齢・首成長を封じた' });
+          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: '会心・月齢を封じた' });
         } else if (sk.kind === 'chill') {
           effects.push({ kind: 'combo', name: sk.name, owner: side, img: def.img, text: '相手のコンボ倍率を無効化' });
         }
@@ -498,7 +553,7 @@ export const Game = {
         name: YOKAI[pc.id].awakenName || '覚醒', until: pc.awakenUntil,
       });
     } else if (action.kind === 'drop') {
-      const pc: Piece = { uid: ++s.nextUid, id: action.id, owner: side, promoted: false };
+      const pc: Piece = this.preparePiece({ uid: ++s.nextUid, id: action.id, owner: side, promoted: false });
       s.board[action.to.y][action.to.x] = pc;
       s.hands[side][action.id]--;
       if (s.hands[side][action.id] <= 0) delete s.hands[side][action.id];
@@ -526,6 +581,19 @@ export const Game = {
           s, pc, victim, from, to, side, foe, ply, rng, rand, events, action.phaseTo, action.spawnTo,
         );
         if (ended) return events;
+        const dualSk = YOKAI[pc.id].skill;
+        if (action.dualTo && dualSk.kind === 'dual' && s.board[to.y][to.x] === pc) {
+          const dt = action.dualTo;
+          const second = s.board[dt.y][dt.x];
+          if (second && second.owner === foe && this.isAdjacent(to, dt)) {
+            s.board[dt.y][dt.x] = null;
+            const ended2 = this._resolveCapture(
+              s, pc, second, to, dt, side, foe, ply, rng, rand, events,
+              undefined, undefined, { dmgMult: dualSk.mult, occupy: false },
+            );
+            if (ended2) return events;
+          }
+        }
       } else {
         s.combo[side] = 0;
         const enter = this.resolveEmberEnter(s, side, to, events);
@@ -588,8 +656,10 @@ export const Game = {
   _resolveCapture(
     s: GameState, attacker: Piece, victim: Piece, from: Pos, to: Pos,
     side: Side, foe: Side, ply: number, rng: boolean, rand: () => number, events: GameEvent[],
-    phaseTo?: Pos, spawnTo?: Pos,
+    phaseTo?: Pos, spawnTo?: Pos, capOpts?: CaptureOpts,
   ): boolean {
+    const occupy = capOpts?.occupy !== false;
+    const dmgMult = capOpts?.dmgMult ?? 1;
     const vDef = YOKAI[victim.id];
     const aDef = YOKAI[attacker.id];
     const procs: SkillProc[] = [];
@@ -671,6 +741,9 @@ export const Game = {
         mult *= sk.mult;
         if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `疾風一閃 ${sk.mult}倍!` });
       }
+    } else if (sk.kind === 'famine' && this.hungerActive(s)) {
+      mult *= sk.mult;
+      if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `飢餓の巨骨 ×${sk.mult}! 魂力${sk.heal}回復` });
     }
 
     s.combo[side]++;
@@ -682,10 +755,11 @@ export const Game = {
     const defMult = this.defenseMult(s, foe);
     if (defMult < 1) effects.push(...this.activeSkillEffects(s, foe, ['aura', 'weaken']));
     let damage = Math.max(1, Math.round((base * mult + bonus) * cMult * defMult));
+    if (dmgMult !== 1) damage = Math.max(1, Math.round(damage * dmgMult));
 
     /* 残火(atk): 最終ダメへ平坦加算 */
     let emberBonus = 0;
-    const atkEmber = this.findEmberAt(s, to.x, to.y, side);
+    const atkEmber = occupy ? this.findEmberAt(s, to.x, to.y, side) : undefined;
     if (atkEmber?.mode === 'atk') {
       emberBonus = atkEmber.value;
       damage += emberBonus;
@@ -710,10 +784,20 @@ export const Game = {
       s.hp[side] += heal;
       if (rng && heal > 0) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `魂力${heal}回復!` });
     }
+    if (sk.kind === 'famine' && this.hungerActive(s)) {
+      const extra = Math.min(MAX_HP - s.hp[side], sk.heal);
+      if (extra > 0) {
+        s.hp[side] += extra;
+        heal += extra;
+      }
+    }
     /* 残火(heal) on capture square */
-    const healEnter = this.resolveEmberEnter(s, side, to, events, procs);
-    heal += healEnter.heal;
-    const trapDmg = healEnter.trapDmg;
+    let trapDmg = 0;
+    if (occupy) {
+      const healEnter = this.resolveEmberEnter(s, side, to, events, procs);
+      heal += healEnter.heal;
+      trapDmg = healEnter.trapDmg;
+    }
     const hpAfterAttack = { ...s.hp };
 
     let counter: CaptureEvent['counter'] = null;
@@ -725,13 +809,49 @@ export const Game = {
 
     const bossCaptured = vDef.type === 'boss';
     const vanish = vDef.skill.kind === 'decoy' || vDef.skill.kind === 'explode';
-    if (!bossCaptured && !vanish) {
+    const recalled = !bossCaptured && vDef.skill.kind === 'recall';
+    let hydraTo: Pos | null = null;
+    if (!bossCaptured && vDef.skill.kind === 'hydra') {
+      const lives = victim.hydra ?? vDef.skill.extra;
+      if (lives > 0) {
+        const dest = this.hydraEscapeAt(s, to);
+        if (dest) {
+          victim.hydra = lives - 1;
+          hydraTo = dest;
+        }
+      }
+    }
+    const charmOk = occupy && sk.kind === 'charm' && !bossCaptured && !vanish && !recalled && !hydraTo;
+    if (!bossCaptured && !vanish && !recalled && !hydraTo && !charmOk) {
       s.hands[side][victim.id] = (s.hands[side][victim.id] || 0) + 1;
+    }
+    let recall: CaptureEvent['recall'] = null;
+    if (recalled) {
+      s.hands[foe][victim.id] = (s.hands[foe][victim.id] || 0) + 1;
+      recall = { name: vDef.skill.name, img: vDef.img };
+      if (rng) procs.push({ name: vDef.skill.name, owner: foe, img: vDef.img, text: '自軍の持ち駒に戻った!' });
+    }
+    let hydra: CaptureEvent['hydra'] = null;
+    if (hydraTo) {
+      s.board[hydraTo.y][hydraTo.x] = victim;
+      hydra = { lives: victim.hydra ?? 0 };
+      if (rng) {
+        procs.push({
+          name: vDef.skill.name, owner: foe, img: vDef.img,
+          text: `首が逃げた! 残り${(victim.hydra ?? 0) + 1}首`,
+        });
+      }
+    }
+    let charm: CaptureEvent['charm'] = null;
+    if (charmOk) {
+      charm = { name: sk.name, img: aDef.img };
+      if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `${vDef.name}を味方にした!` });
     }
 
     let explode: CaptureEvent['explode'] = null;
     if (vDef.skill.kind === 'explode') {
-      s.board[to.y][to.x] = null;
+      const ax = occupy ? to.x : from.x, ay = occupy ? to.y : from.y;
+      if (s.board[ay][ax] === attacker) s.board[ay][ax] = null;
       explode = { name: vDef.skill.name, img: vDef.img, uid: attacker.uid };
     }
 
@@ -754,7 +874,7 @@ export const Game = {
     s.lastCapturePly = s.plies;
 
     /* 残火設置(捕獲マス。帰影してもマスに残る) */
-    if (!explode && sk.kind === 'ember') {
+    if (occupy && !explode && sk.kind === 'ember') {
       this.placeEmber(s, side, to, sk.mode, sk.value, sk.span);
       if (rng) {
         const label = sk.mode === 'atk' ? '残火を灯した' : sk.mode === 'heal' ? '燐火を残した' : '落とし穴を開いた';
@@ -765,13 +885,13 @@ export const Game = {
     /* 送り火: 周囲の空きマスへ実駒を1体置く(省略時は元マス) */
     let spawned: Piece | null = null;
     let spawnAt: Pos | null = null;
-    if (!explode && sk.kind === 'spawn') {
+    if (occupy && !explode && sk.kind === 'spawn') {
       const dests = this.spawnDests(s, from, to);
       const wanted = spawnTo
         ? dests.find(p => p.x === spawnTo.x && p.y === spawnTo.y)
         : dests.find(p => p.x === from.x && p.y === from.y) ?? dests[0];
       if (wanted && !s.board[wanted.y][wanted.x] && YOKAI[sk.piece]) {
-        spawned = { uid: ++s.nextUid, id: sk.piece, owner: side, promoted: false };
+        spawned = this.preparePiece({ uid: ++s.nextUid, id: sk.piece, owner: side, promoted: false });
         s.board[wanted.y][wanted.x] = spawned;
         spawnAt = { ...wanted };
         if (rng) {
@@ -783,12 +903,16 @@ export const Game = {
       }
     }
 
-    /* 帰影 / 影遁 / 隱形の行き先を先に確定(演出テキストも capture に含める) */
+    if (dmgMult !== 1 && rng && sk.kind === 'dual') {
+      procs.push({ name: sk.name, owner: side, img: aDef.img, text: 'もう一つの顔が噛みついた!' });
+    }
+
+    /* 帰影 / 影遁 / 隱形 / 傾国の行き先を先に確定(演出テキストも capture に含める) */
     let escapeTo: Pos | null = null;
     if (!explode && s.board[to.y][to.x] === attacker) {
-      if (sk.kind === 'retreat') {
+      if (sk.kind === 'retreat' || charmOk) {
         escapeTo = { ...from };
-        if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: '元のマスへ戻った!' });
+        if (rng && sk.kind === 'retreat') procs.push({ name: sk.name, owner: side, img: aDef.img, text: '元のマスへ戻った!' });
       } else if ((sk.kind === 'phase' || sk.kind === 'veil') && phaseTo) {
         const legal = this.escapeDests(s, from, to, sk.kind).some(
           p => p.x === phaseTo.x && p.y === phaseTo.y,
@@ -812,6 +936,7 @@ export const Game = {
       victim: { uid: victim.uid, id: victim.id, owner: foe, promoted: victim.promoted },
       at: { ...to },
       damage, procs, effects, counter, decoy, explode, heal,
+      charm, recall, hydra,
       combo: s.combo[side], comboMult: cMult,
       hp: hpAfterAttack,
       enrage,
@@ -821,6 +946,20 @@ export const Game = {
 
     if (spawned && spawnAt) {
       events.push({ t: 'drop', uid: spawned.uid, id: spawned.id, owner: side, to: spawnAt });
+    }
+
+    if (escapeTo && (escapeTo.x !== to.x || escapeTo.y !== to.y) && s.board[to.y][to.x] === attacker) {
+      s.board[to.y][to.x] = null;
+      s.board[escapeTo.y][escapeTo.x] = attacker;
+      events.push({ t: 'move', uid: attacker.uid, from: { ...to }, to: { ...escapeTo } });
+    }
+    if (charmOk && !s.board[to.y][to.x]) {
+      const converted: Piece = { uid: victim.uid, id: victim.id, owner: side, promoted: victim.promoted };
+      if (victim.hydra !== undefined) converted.hydra = victim.hydra;
+      s.board[to.y][to.x] = converted;
+    }
+    if (hydraTo) {
+      events.push({ t: 'move', uid: victim.uid, from: { ...to }, to: { ...hydraTo } });
     }
 
     if (bossCaptured) {
@@ -842,12 +981,6 @@ export const Game = {
       s.winner = foe; s.reason = 'explode';
       events.push({ t: 'gameover', winner: foe, reason: 'explode' });
       return true;
-    }
-
-    if (escapeTo && (escapeTo.x !== to.x || escapeTo.y !== to.y) && s.board[to.y][to.x] === attacker) {
-      s.board[to.y][to.x] = null;
-      s.board[escapeTo.y][escapeTo.x] = attacker;
-      events.push({ t: 'move', uid: attacker.uid, from: { ...to }, to: { ...escapeTo } });
     }
 
     return false;

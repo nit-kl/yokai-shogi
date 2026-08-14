@@ -37,9 +37,13 @@ export const AI = {
     if (def.skill.kind === 'counter') v += 60;
     if (def.skill.kind === 'explode') v += 50;
     if (def.skill.kind === 'heads') v += (pc.kills ?? 0) * 80;
-    if (def.skill.kind === 'retreat' || def.skill.kind === 'phase' || def.skill.kind === 'veil') v += 70;
+    if (def.skill.kind === 'hydra') v += ((pc.hydra ?? def.skill.extra) + 1) * 70;
+    if (def.skill.kind === 'retreat' || def.skill.kind === 'phase' || def.skill.kind === 'veil' || def.skill.kind === 'charm') v += 70;
+    if (def.skill.kind === 'recall') v += 110;
     if (def.skill.kind === 'ember') v += 55;
     if (def.skill.kind === 'spawn') v += 90;
+    if (def.skill.kind === 'famine') v += 85;
+    if (def.skill.kind === 'dual') v += 95;
     if (def.skill.kind === 'legion') v += 70;
     if (def.skill.kind === 'moon') v += 80;
     if (def.rarity === 'SSR') v += 40;

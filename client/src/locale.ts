@@ -143,8 +143,11 @@ const STATIC: Record<string, string> = {
   '秒読み！': 'Final countdown!', '秒読み': 'Countdown', '相手の秒読み': "Opponent's countdown",
   'あなたの手番': 'Your turn', '相手の手番': "Opponent's turn", '敵の手番': 'Enemy turn', '対戦相手': 'Opponent',
   '満月 ― 会心確定!': 'Full Moon — Critical guaranteed!', 'SSR妖怪 見参': 'An SSR Yokai Appears',
-  '覚醒 ― 真の力、解放': 'Awakening — True Power Unleashed', 'ダメージ半減! 駒は葉っぱに化けていた': 'Damage halved! The yokai was only a leaf.',
+  '覚醒 ― 真の力、解放': 'Awakening — True Power Unleashed',   'ダメージ半減! 駒は葉っぱに化けていた': 'Damage halved! The yokai was only a leaf.',
   '取った駒を道連れに爆散!': 'It explodes and takes its captor with it!', '鬼火を灯した': 'Lit an Onibi', '連勝ならず': 'No win streak',
+  '自軍の持ち駒に戻った!': 'Returned to your hand!',
+  'もう一つの顔が噛みついた!': 'The other face bit down!',
+  '会心・月齢を封じた': 'Sealed criticals and moon skills',
   '勝利報酬を確認中…': 'Checking victory rewards…', '本日の勝利報酬は上限に達しました': "Today's victory reward limit has been reached.",
   '勝利報酬の付与に失敗しました(通信状態を確認)': 'Could not grant the victory reward. Check your connection.',
   '引き分け': 'Draw', '討伐成功': 'Victory', '敗北': 'Defeat', '我が大将が討ち取られた…': 'Your general was captured…',
@@ -181,8 +184,8 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   oonyudo: ['O-nyudo', '1 forward or sideways (promoted: orthogonal + forward diagonals)', 'Void Pressure', 'While on the board, your army takes 25% less damage'],
   daitengu: ['Great Tengu', 'Leaps 1–2 squares diagonally (promoted: +1 forward/back)', 'Tengu Gale', 'When captured, deals 400 counter damage to the captor'],
   raiju: ['Raiju', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Lightning Fang', '30% chance for a capture to deal 1.8× damage'],
-  ibaraki: ['Ibaraki-doji', 'Gold General movement (promoted: 1 in any direction)', "Yasha's Arm", '30% chance for a capture to deal 2× damage', 'Rashomon Severance'],
-  tamamo: ['Tamamo-no-Mae', '1 square in any direction', 'Calamitous Foxfire', 'Capturing under a full moon always deals 2.2× damage (check the battle status for the moon phase)', 'Ninefold Calamity'],
+  ibaraki: ['Ibaraki-doji', 'Gold General movement (promoted: 1 in any direction)', "Arm's Return", 'When captured, returns to your hand instead of the enemy hand', 'Rashomon Severance'],
+  tamamo: ['Tamamo-no-Mae', '1 square in any direction', 'Calamitous Invitation', 'After a capture, returns to its original square and the captured yokai joins you on that square', 'Ninefold Calamity'],
   sunakake: ['Sunakake-baba', '1 forward or forward-diagonal (promoted: Gold General movement)', 'Blinding Sand', 'While on the board, seals enemy critical skills'],
   tsuchigumo: ['Tsuchigumo', '1 diagonal + leap 2 forward (promoted: +1 orthogonally)', 'Corrosive Silk', 'While on the board, reduces enemy damage by 12%'],
   yukionna: ['Yuki-onna', '1 forward-diagonal or forward/back (promoted: 1 in any direction)', 'Freezing Breath', 'While on the board, disables the enemy combo multiplier'],
@@ -193,7 +196,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   karakasa: ['Karakasa-kozo', '1 forward or backward-diagonal (promoted: 1 in any direction)', 'Umbrella Guard', 'While on the board, your army takes 12% less damage'],
   chochin: ['Chochin-obake', '1 square orthogonally (promoted: 1 in any direction)', 'Lantern Light', 'Capturing restores 200 HP to your army'],
   baku: ['Baku', '1 forward/back, any distance sideways (promoted: orthogonal + forward diagonals)', 'Nightmare Eater', 'While on the board, reduces enemy damage by 15%'],
-  yamata: ['Yamata-no-Orochi', '1 in three forward, two sideways, and back', 'Eightfold Tyranny', 'Each capture awakens another head and adds 30% damage (up to +90%)', 'Eight-Headed Calamity'],
+  yamata: ['Yamata-no-Orochi', '1 in three forward, two sideways, and back', 'Eight Heads', 'When captured, slithers to an adjacent empty square and loses a head. Escapes twice; the third capture fells it', 'Eight-Headed Calamity'],
   bakezouri: ['Bake-zori', '1 forward or forward-diagonal (promoted: Gold General movement)', 'Sandal Decoy', 'When captured, halves damage and does not enter the enemy hand'],
   sunekosuri: ['Sunekosuri', '1 forward or sideways (promoted: orthogonal + forward diagonals)', "Shin-Rubber's Curse", 'While on the board, seals enemy critical skills'],
   kodama: ['Kodama', '1 square orthogonally (promoted: 1 in any direction)', "Forest's Breath", 'Capturing restores 150 HP to your army'],
@@ -205,8 +208,8 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   wanyudo: ['Wanyudo', 'Any distance forward (promoted: +1 sideways/back)', 'Karmic Fire Wheel', 'A capture after moving at least 2 squares deals 2× damage'],
   yatagarasu: ['Yatagarasu', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Three-Legged Guidance', '28% chance for a capture to deal 1.9× damage'],
   oomyukade: ['Giant Centipede', '1 diagonal + leap 2 forward (promoted: +1 orthogonally)', "Centipede's Venom", 'While on the board, reduces enemy damage by 14%'],
-  gashadokuro: ['Gashadokuro', '1 in three forward, two sideways, and back', 'Tower of Bones', 'Each capture adds 25% damage (up to +100%)', 'Starving Skeleton King'],
-  sukuna: ['Sukuna', 'Gold General movement (promoted: 1 in any direction)', 'Two-Faced Oni God', '35% chance for a capture to deal 2× damage', 'Two-Faced Sukuna'],
+  gashadokuro: ['Gashadokuro', '1 in three forward, two sideways, and back', "Starving Bones", 'During the Night of Hunger, captures deal 1.8× damage and restore 250 HP', 'Starving Skeleton King'],
+  sukuna: ['Sukuna', 'Gold General movement (promoted: 1 in any direction)', 'Two Faces', 'After a capture, may strike one more adjacent enemy (the second hit deals half damage)', 'Two-Faced Sukuna'],
   makuragaeshi: ['Makuragaeshi', '1 in the three forward directions and back (promoted: Gold General movement)', 'Pillow Shadow-Return', 'After a capture, automatically returns to its original square'],
   rinka: ['Rinka', '1 square orthogonally (promoted: 1 in any direction)', 'Lingering Phosphor', 'Leaves a flame for 4 moves. An ally entering, capturing, or dropping there restores 150 HP'],
   tsurube: ['Tsurube-otoshi', 'Any distance forward (promoted: +1 sideways/back)', 'Pit to Darkness', 'Leaves a pit for 4 moves. An enemy entering it takes 80 HP damage'],
@@ -244,7 +247,7 @@ for (const [id, values] of Object.entries(VARIANT_EN)) {
 [['新月', 'New Moon'], ['三日月', 'Crescent Moon'], ['半月', 'Half Moon'], ['満月', 'Full Moon']].forEach(([ja, en]) => add(ja, en));
 Object.values(TYPE_INFO).forEach(info => add(info.label, STATIC[info.label] ?? info.label));
 const resonanceEn = [
-  ['Oni Feast', 'While Shuten-doji and Ibaraki-doji are both on the board, each gains +15% critical chance'],
+  ['Oni Feast', 'While Shuten-doji and Ibaraki-doji are both on the board, Shuten-doji gains +15% critical chance'],
   ['Foxfire Bond', 'When Nine-Tailed Fox and Tamamo-no-Mae are together and one is captured, the other becomes enraged and its next attack is a guaranteed critical'],
 ] as const;
 RESONANCES.forEach((r, i) => { add(r.name, resonanceEn[i][0]); add(r.desc, resonanceEn[i][1]); });
@@ -260,13 +263,13 @@ const HTML_OVERRIDES: Record<string, string> = {
     <p><b>Promotion:</b> A non-General entering the last two enemy ranks promotes automatically, gaining 1.5× attack and stronger movement.</p>
     <p><b>SSR Awakening:</b> Captures fill the awakening gauge. Once full, use a turn to empower one friendly SSR on the board, once per battle. It gains 1.5× ATK for three of your turns.</p>
     <p><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP after every move. A capture resets the count. Open <b>Status</b> during battle to see the remaining moves.</p>
-    <p><b>Special captures:</b> Some yokai return to their previous square or escape to an adjacent square after capturing. Others leave flames or pits, or place a real yokai such as Onibi nearby. See each entry in the <b>Yokai Compendium</b> for exact effects.</p>
+    <p><b>Special captures:</b> Some yokai return, escape, convert a captured piece, or strike a second adjacent enemy. Others leave flames or pits, or place a real yokai such as Onibi nearby. See each entry in the <b>Yokai Compendium</b> for exact effects.</p>
     <h3>Modes and Rewards</h3>
     <p><b>Night Parade:</b> A solo win-streak challenge with a new enemy army each round. Your best streak enters the weekly rankings. Last week's #1 player receives the exclusive “Champion · Nine-Tails” alt (first time only).</p>
     <p><b>Online Battle:</b> Random matchmaking is always available; 20:00–22:00 JST is the busiest period. Friend rooms use a six-digit code. Each move has 60 seconds plus a 15-second countdown. Completing enough moves grants a daily ticket, with extra Saturday event rewards.</p>
     <p><b>Yokai Summon:</b> Spend tickets to summon yokai. A 10-pull guarantees at least one SR. Duplicates become Spirit Power; exchange 300 for one ticket.</p>
     <p><b>Formation:</b> Your army must have exactly one General. Place owned yokai in the two starting ranks. Selecting a reserve shows its movement and skill.</p>
-    <p><b>Unique abilities:</b> Moon phases, army bonuses, growth, resonances, retreats, lingering flames, and awakenings belong to specific yokai. Check their Compendium entries for details.</p>
+    <p><b>Unique abilities:</b> Moon phases, army bonuses, resonances, retreats, lingering flames, and awakenings belong to specific yokai. Check their Compendium entries for details.</p>
     <h3>Yokai Types</h3>
     <p><span class="type-chip t-attack">ATK</span> Combat skills that add damage or trigger critical hits on capture.</p>
     <p><span class="type-chip t-defense">DEF</span> Reduces damage to your army while on the board.</p>
@@ -313,6 +316,13 @@ function translatePatterns(value: string): string {
     [/成長:\s*駒を取るごとに与ダメ\+(\d+)%\(最大\+(\d+)%\)/g, 'Growth: Each capture adds $1% damage (up to +$2%)'],
     [/布陣:\s*盤上の味方1体ごとに与ダメ\+(\d+)%\(最大\+(\d+)%\)/g, 'Army: Each ally on board adds $1% damage (up to +$2%)'],
     [/会心:\s*駒を取った時(\d+)%でダメージ×([\d.]+)/g, 'Critical: $1% chance for ×$2 damage on capture'],
+    [/傾国:\s*取った駒をその場で味方にし、自身は元マスへ戻る/g, 'Calamity: After a capture, the yokai joins you and Tamamo returns'],
+    [/回帰:\s*取られても自分の持ち駒に戻る/g, 'Return: When captured, returns to your hand'],
+    [/八岐:\s*取られても隣接へ逃げる\((\d+)回まで\)/g, 'Hydra: When captured, escapes adjacent (up to $1 times)'],
+    [/飢餓:\s*飢餓の夜の取りが×([\d.]+)かつ魂力(\d+)回復/g, 'Famine: During Hunger, captures deal ×$1 and restore $2 HP'],
+    [/双面:\s*取ったあと隣接の別敵を追撃\(2体目はダメージ半分\)/g, 'Two Faces: After a capture, may strike one more adjacent enemy at half damage'],
+    [/(.+)を味方にした!/g, '$1 joined your army!'],
+    [/首が逃げた! 残り(\d+)首/g, 'A head slithered away! $1 heads left'],
     [/覚醒:\s*(.+) \/ 自分の手番3回のあいだATK×([\d.]+)/g, 'Awakening: $1 / ATK ×$2 for three of your turns'],
     [/因縁:\s*(.+)/g, 'Resonance: $1'], [/【SSR特性】/g, '[SSR Traits]'], [/【覚醒技】/g, '[Awakening]'],
     [/【因縁効果】/g, '[Resonance]'], [/【成】/g, ' [Promoted]'], [/反撃ダメージ\s*(\d+)!/g, 'Counter damage: $1!'],

@@ -43,6 +43,7 @@ type Sel =
   | { kind: 'awaken'; targets: Pos[] }
   | { kind: 'phase'; from: Pos; to: Pos; options: Pos[] } // 影遁/隱形の退避先選択(残留=to自身)
   | { kind: 'spawn'; from: Pos; to: Pos; options: Pos[] } // 送り火の設置先選択
+  | { kind: 'dual'; from: Pos; to: Pos; options: Pos[] } // 双面の追撃先選択
   | null;
 let sel: Sel = null;            // 選択中
 const pieceEls = new Map<number, HTMLElement>(); // uid -> DOM要素
@@ -124,9 +125,15 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
   phase: ['#dde8f0', '#9ab0c0', '#5a7080'],   // 影遁の煙
   ember: ['#ffe8c8', '#ff9a4a', '#e85a20'],   // 残火
   veil: ['#f0e8ff', '#c0a8e8', '#7a58c0'],    // 隱形
+  spawn: ['#ffe8c8', '#ff9a4a', '#e85a20'],
+  charm: ['#fff0d8', '#e8a050', '#b21f32'],   // 傾国
+  recall: ['#ffdbc2', '#ff4d4d', '#8d47d6'],  // 羅生門
+  hydra: ['#ffe2b8', '#ff8a3c', '#8d1f1f'],   // 八岐
+  famine: ['#e8d8c8', '#8a6a4a', '#3a2010'],  // 餓鬼
+  dual: ['#ffe0e8', '#e05070', '#8a1030'],    // 双面
 };
 /* 会心系(発動="当たり")として扱うスキル */
-const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads']);
+const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads', 'famine']);
 
 /* レアリティ段階(演出の格): N=0, R=1, SR=2, SSR・異装=3 */
 function rarityTier(id: string): 0 | 1 | 2 | 3 {
@@ -988,6 +995,18 @@ function setPromoted(el: HTMLElement) {
   el.appendChild(b);
 }
 
+function setHydraBadge(el: HTMLElement, pc: { id: string; hydra?: number }) {
+  const sk = YOKAI[pc.id].skill;
+  el.querySelector('.hydra-badge')?.remove();
+  if (sk.kind !== 'hydra') return;
+  const heads = (pc.hydra ?? sk.extra) + 1;
+  const b = document.createElement('div');
+  b.className = 'hydra-badge';
+  b.textContent = String(heads);
+  b.title = `残り${heads}首`;
+  el.appendChild(b);
+}
+
 /* 状態とDOMを同期 */
 function renderAll() {
   const seen = new Set<number>();
@@ -1013,6 +1032,9 @@ function renderAll() {
       el.classList.toggle('awakened', Game.isAwakened(pc, G!.plies ?? 0));
       el.classList.toggle('enraged', pc.enraged === true);
       el.classList.toggle('resonating', resonating.has(pc.uid));
+      el.classList.toggle('owner-p', pc.owner === 'p');
+      el.classList.toggle('owner-e', pc.owner === 'e');
+      setHydraBadge(el, pc);
     }
   }
   for (const [uid, el] of pieceEls) {
@@ -1298,6 +1320,20 @@ function beginSpawnSelect(from: Pos, to: Pos) {
   for (const p of options) cellEl(p.x, p.y).classList.add('hl-drop');
 }
 
+function beginDualSelect(from: Pos, to: Pos) {
+  if (!G) return;
+  const options = Game.dualDests(G, to, 'p');
+  if (options.length === 0) {
+    doAction({ kind: 'move', from, to });
+    return;
+  }
+  clearSel();
+  sel = { kind: 'dual', from, to, options };
+  AudioSys.play('select');
+  cellEl(to.x, to.y).classList.add('hl-selected', 'hl-phase');
+  for (const p of options) cellEl(p.x, p.y).classList.add('hl-capture');
+}
+
 function onCellClick(x: number, y: number) {
   if (!G) return;
 
@@ -1330,6 +1366,19 @@ function onCellClick(x: number, y: number) {
       clearBattleFocus();
       return;
     }
+    if (sel.kind === 'dual') {
+      if (x === sel.to.x && y === sel.to.y) {
+        doAction({ kind: 'move', from: sel.from, to: sel.to });
+        return;
+      }
+      const opt = sel.options.find(p => p.x === x && p.y === y);
+      if (opt) {
+        doAction({ kind: 'move', from: sel.from, to: sel.to, dualTo: opt });
+        return;
+      }
+      clearBattleFocus();
+      return;
+    }
     if (sel.kind === 'piece') {
       const { x: sx, y: sy } = sel;
       const m = sel.moves.find(m => m.x === x && m.y === y);
@@ -1342,6 +1391,10 @@ function onCellClick(x: number, y: number) {
         }
         if (m.capture && sk === 'spawn') {
           beginSpawnSelect({ x: sx, y: sy }, { x, y });
+          return;
+        }
+        if (m.capture && sk === 'dual') {
+          beginDualSelect({ x: sx, y: sy }, { x, y });
           return;
         }
         doAction({ kind: 'move', from: { x: sx, y: sy }, to: { x, y } });
@@ -1791,15 +1844,21 @@ async function animCapture(ev: CaptureEvent) {
   /* 撃破演出: 斬撃 → ヒットストップ(一瞬静止) → 爆発(高コンボ中は常に大) */
   const victimEl = pieceEls.get(ev.victim.uid);
   const big = ev.damage >= 450 || ev.procs.length > 0 || ev.combo >= 3;
+  const survivor = !!(ev.charm || ev.hydra);
 
   AudioSys.play(big ? 'bighit' : 'capture');
   FX.slash(c.x, c.y, big);
   if (victimEl) victimEl.classList.add('hitflash');
   await sleep(jackpot ? 260 : big ? 150 : 100); // ヒットストップ(当たりは長めに溜める)
 
-  if (victimEl) {
+  if (victimEl && !survivor) {
     victimEl.classList.add('dying');
     setTimeout(() => { victimEl.remove(); pieceEls.delete(ev.victim.uid); }, 420);
+  } else if (victimEl && ev.charm) {
+    victimEl.classList.remove('owner-p', 'owner-e', 'hitflash');
+    victimEl.classList.add(`owner-${ev.attacker.owner}`);
+  } else if (victimEl) {
+    victimEl.classList.remove('hitflash');
   }
 
   if (big) FX.flash('rgba(255,240,205,0.6)', 200);
@@ -2149,6 +2208,16 @@ function ssrIntroLines(id: string): string[] {
     lines.push(`布陣: 盤上の味方1体ごとに与ダメ+${Math.round(def.skill.per * 100)}%(最大+${Math.round(def.skill.cap * 100)}%)`);
   } else if (def.skill.kind === 'crit') {
     lines.push(`会心: 駒を取った時${Math.round(def.skill.chance * 100)}%でダメージ×${def.skill.mult}`);
+  } else if (def.skill.kind === 'charm') {
+    lines.push('傾国: 取った駒をその場で味方にし、自身は元マスへ戻る');
+  } else if (def.skill.kind === 'recall') {
+    lines.push('回帰: 取られても自分の持ち駒に戻る');
+  } else if (def.skill.kind === 'hydra') {
+    lines.push(`八岐: 取られても隣接へ逃げる(${def.skill.extra}回まで)`);
+  } else if (def.skill.kind === 'famine') {
+    lines.push(`飢餓: 飢餓の夜の取りが×${def.skill.mult}かつ魂力${def.skill.heal}回復`);
+  } else if (def.skill.kind === 'dual') {
+    lines.push('双面: 取ったあと隣接の別敵を追撃(2体目はダメージ半分)');
   }
   /* veil のスキル本文が十分なため、SSR特性での重複要約は出さない */
   if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 自分の手番3回のあいだATK×${AWAKEN_ATK}`);
