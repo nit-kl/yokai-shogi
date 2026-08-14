@@ -56,7 +56,7 @@ let onlineParticipation = 0;
 let onlineEventYokai: string | null = null;
 let onlineSeq = 0;
 const ONLINE_TURN_MS = 60_000;
-const ONLINE_BYOYOMI_MS = 15_000;
+const ONLINE_BYOYOMI_MS = 30_000;
 const ONLINE_DISCONNECT_MS = 60_000;
 const ONLINE_AI_OFFER_MS = 20_000;
 const ONLINE_TIMER_WARN_MS = 20_000;
@@ -734,9 +734,9 @@ async function onOnlineMessage(message: ServerBattleMessage) {
   } else if (message.t === 'clock') {
     const enteredByoyomi = onlineClockPhase !== 'byoyomi' && message.phase === 'byoyomi';
     setOnlineTurnTimer(message.remainMs, message.phase);
-    if (enteredByoyomi && G?.turn === 'p') {
+    if (enteredByoyomi) {
       showByoyomiBanner();
-      AudioSys.play('byoyomi');
+      if (G?.turn === 'p') AudioSys.play('byoyomi');
     }
   } else if (message.t === 'opponent_disconnected') {
     setOpponentDisconnectTimer(message.graceMs);
@@ -801,6 +801,8 @@ function stopOnlineTimer(): void {
   onlineTimerTickSec = -1;
   $('online-status').classList.remove('timer-warn', 'timer-low', 'timer-byoyomi', 'opponent-turn');
   $('screen-battle').classList.remove('timer-urgent');
+  $('online-turn-hint').classList.add('hidden');
+  $('online-turn-hint').textContent = '';
   clearOpponentDisconnectTimer();
 }
 
@@ -813,10 +815,18 @@ function setOnlineTurnTimer(remainMs: number, phase: ClockPhase = 'main'): void 
 
 function showByoyomiBanner(): void {
   const b = $('turn-banner');
-  b.textContent = '秒読み！';
+  const own = G?.turn === 'p';
   b.className = '';
+  b.replaceChildren();
+  const label = document.createElement('span');
+  label.className = 'byoyomi-banner-label';
+  label.textContent = own ? '秒読み！' : '相手の秒読み！';
+  const msg = document.createElement('span');
+  msg.className = 'byoyomi-banner-msg';
+  msg.textContent = own ? '切れたら負け' : '切れれば勝ち';
+  b.append(label, msg);
   void b.offsetWidth;
-  b.classList.add('show-p');
+  b.classList.add('show-byoyomi');
 }
 
 function setOpponentDisconnectTimer(graceMs: number): void {
@@ -850,6 +860,9 @@ function renderOnlineTimers(): void {
     : (ownTurn ? 'あなたの手番' : '相手の手番');
   $('online-turn-time').textContent = formatCountdown(turnRemain, compact);
   $('online-turn-fill').style.width = `${Math.min(100, (turnRemain / spanMs) * 100)}%`;
+  const hint = $('online-turn-hint');
+  hint.textContent = byoyomi ? (ownTurn ? '切れたら負け' : '切れれば勝ち') : '';
+  hint.classList.toggle('hidden', !byoyomi);
 
   const status = $('online-status');
   status.classList.toggle('opponent-turn', !ownTurn);

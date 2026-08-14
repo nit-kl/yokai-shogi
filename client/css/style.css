@@ -1109,6 +1109,39 @@ html[data-script="latn"] .title-sub-top {
   background: linear-gradient(90deg, transparent, rgba(150, 30, 40, 0.85) 18%, rgba(150, 30, 40, 0.85) 82%, transparent);
   text-shadow: 0 0 14px rgba(255, 93, 93, 0.9);
 }
+#turn-banner.show-byoyomi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.08em;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  letter-spacing: 0.12em;
+  text-indent: 0;
+  color: #ffe8e8;
+  background: linear-gradient(90deg, transparent, rgba(160, 18, 28, 0.92) 10%, rgba(160, 18, 28, 0.92) 90%, transparent);
+  text-shadow: 0 0 18px rgba(255, 70, 70, 0.95);
+  animation: bannerSweep 1.45s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+#turn-banner.show-byoyomi .byoyomi-banner-label {
+  font-size: 0.38em;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  opacity: 0.9;
+}
+#turn-banner.show-byoyomi .byoyomi-banner-msg {
+  font-size: 1em;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+}
+html[data-script="latn"] #turn-banner.show-byoyomi {
+  letter-spacing: 0.04em;
+  font-size: clamp(1.4rem, 5.6vw, 2.3rem);
+}
+html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-label,
+html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
+  letter-spacing: 0.04em;
+  text-indent: 0;
+}
 @keyframes bannerSweep {
   0% { opacity: 0; transform: translate(-90%, -50%) skewX(-12deg); }
   18% { opacity: 1; transform: translate(-50%, -50%) skewX(0); }
@@ -2499,6 +2532,19 @@ html[data-script="latn"] .cur-yoryoku {
 }
 .online-status.timer-byoyomi #online-turn-time {
   color: #ffe0e0;
+  text-shadow: 0 0 10px rgba(255, 80, 80, 0.55);
+}
+.online-turn-hint {
+  margin-top: 4px;
+  color: #ff9a9a;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  line-height: 1.2;
+}
+.online-status.timer-byoyomi .online-turn-hint {
+  color: #ffe8e8;
+  font-size: 0.92rem;
   text-shadow: 0 0 10px rgba(255, 80, 80, 0.55);
 }
 .online-disconnect-block { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,0.1); }

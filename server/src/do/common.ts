@@ -6,7 +6,7 @@ import type { BattlePlayer, ServerBattleMessage } from '../../../shared/battle';
 
 export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
-export const BYOYOMI_MS = 15_000;
+export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
 export const RULE_VERSION = 'phase2-v5'; // v5: SSR特性(傾国/回帰/八岐/飢餓/双面)
 

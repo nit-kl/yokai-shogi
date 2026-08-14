@@ -141,6 +141,7 @@ const STATIC: Record<string, string> = {
   'このコードを相手に伝えてください': 'Share this code with your opponent.',
   'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。': 'No opponent yet. Keep waiting or battle the AI now.',
   '秒読み！': 'Final countdown!', '秒読み': 'Countdown', '相手の秒読み': "Opponent's countdown",
+  '相手の秒読み！': "Opponent's countdown!", '切れたら負け': 'Timeout is a loss', '切れれば勝ち': 'Timeout is a win',
   'あなたの手番': 'Your turn', '相手の手番': "Opponent's turn", '敵の手番': 'Enemy turn', '対戦相手': 'Opponent',
   '満月 ― 会心確定!': 'Full Moon — Critical guaranteed!', 'SSR妖怪 見参': 'An SSR Yokai Appears',
   '覚醒 ― 真の力、解放': 'Awakening — True Power Unleashed',   'ダメージ半減! 駒は葉っぱに化けていた': 'Damage halved! The yokai was only a leaf.',
@@ -266,7 +267,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <p><b>Special captures:</b> Some yokai return, escape, convert a captured piece, or strike a second adjacent enemy. Others leave flames or pits, or place a real yokai such as Onibi nearby. See each entry in the <b>Yokai Compendium</b> for exact effects.</p>
     <h3>Modes and Rewards</h3>
     <p><b>Night Parade:</b> A solo win-streak challenge with a new enemy army each round. Your best streak enters the weekly rankings. Last week's #1 player receives the exclusive “Champion · Nine-Tails” alt (first time only).</p>
-    <p><b>Online Battle:</b> Random matchmaking is always available; 20:00–22:00 JST is the busiest period. Friend rooms use a six-digit code. Each move has 60 seconds plus a 15-second countdown. Completing enough moves grants a daily ticket, with extra Saturday event rewards.</p>
+    <p><b>Online Battle:</b> Random matchmaking is always available; 20:00–22:00 JST is the busiest period. Friend rooms use a six-digit code. Each move has 60 seconds plus a 30-second countdown. Completing enough moves grants a daily ticket, with extra Saturday event rewards.</p>
     <p><b>Yokai Summon:</b> Spend tickets to summon yokai. A 10-pull guarantees at least one SR. Duplicates become Spirit Power; exchange 300 for one ticket.</p>
     <p><b>Formation:</b> Your army must have exactly one General. Place owned yokai in the two starting ranks. Selecting a reserve shows its movement and skill.</p>
     <p><b>Unique abilities:</b> Moon phases, army bonuses, resonances, retreats, lingering flames, and awakenings belong to specific yokai. Check their Compendium entries for details.</p>
