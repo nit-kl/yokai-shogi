@@ -102,7 +102,7 @@ const STATIC: Record<string, string> = {
   '接続済み': 'Connected', '持ち時間': 'Time', '相手の再接続待ち': 'Waiting for opponent to reconnect',
   '対局ステータス': 'Battle Status', '月齢': 'Moon Phase', '新月': 'New Moon', '飢餓': 'Hunger',
   '飢餓まであと8': '8 moves until Hunger', '8手取りなしで飢餓の夜。以後毎手双方-50。駒を取るとリセット。': 'After 8 moves without a capture, the Night of Hunger begins. Both sides lose 50 HP each move; a capture resets it.',
-  '投了': 'Resign', '駒の説明': 'Yokai details', 'この局の戦績': 'Battle Stats', '再 戦': 'Rematch',
+  '投了': 'Resign', '駒の説明': 'Yokai details', '再 戦': 'Rematch',
   'タイトルへ': 'Title Screen', '次の軍勢へ': 'Face the Next Army', 'もう一度挑む': 'Try Again',
   'ロビーへ戻る': 'Return to Lobby', 'プロフィール': 'Profile', 'プレイヤーネーム': 'Player Name',
   '1〜10文字': '1–10 characters', 'オンライン対戦で相手に表示されます。名前は重複できます。': 'Shown to opponents in online battles. Names do not need to be unique.',

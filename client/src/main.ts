@@ -76,13 +76,6 @@ let soloWinCounted = false;
 let hyakkiRanking: HyakkiRanking | null = null;
 let hyakkiRankingAt = 0; // 最終取得時刻(60秒キャッシュ)
 let rankingReturn: 'title' | 'solo' = 'title';
-type BattleStats = {
-  turns: number;
-  captures: Record<Side, number>;
-  damage: Record<Side, number>;
-  maxCombo: Record<Side, number>;
-};
-let battleStats: BattleStats = newBattleStats();
 const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
 const CONSENT_KEY = 'yokaiShogi.consent.2026-06-13';
 type StoredOnlineMatch = {
@@ -1513,11 +1506,11 @@ async function playVsIntro(enemy: { bossId: string; label: string }, stageLabel:
   const root = $('vs-intro');
   const boss = YOKAI[Meta.bossId()];
   $<HTMLImageElement>('vs-img-p').src = boss.img;
+  $<HTMLImageElement>('vs-img-p').alt = boss.name;
   $('vs-label-p').textContent = Meta.data.name;
-  $('vs-name-p').textContent = boss.name;
   $<HTMLImageElement>('vs-img-e').src = YOKAI[enemy.bossId].img;
+  $<HTMLImageElement>('vs-img-e').alt = YOKAI[enemy.bossId].name;
   $('vs-label-e').textContent = enemy.label;
-  $('vs-name-e').textContent = YOKAI[enemy.bossId].name;
   $('vs-stage').textContent = stageLabel;
   root.classList.remove('hidden', 'vs-out');
   // 再戦時にアニメを再始動
@@ -1546,7 +1539,6 @@ async function startBattle() {
   pendingSoloStage = null;
   activeSoloStage = stage;
   soloWinCounted = false;
-  battleStats = newBattleStats();
   if (hyakkiRankEligible()) {
     /* 開始申告(doc 21)。サーバーが正本の連勝数を返す(リロード後の継続もここで復元)。
        失敗してもローカル表示で対局は続行 */
@@ -1608,7 +1600,6 @@ async function doAction(action: Action) {
   }
 
   const events = Game.applyAction(G!, action);
-  recordBattleStats(events);
   for (const ev of events) await animEvent(ev);
 
   renderAll();
@@ -2002,28 +1993,6 @@ async function animCapture(ev: CaptureEvent) {
   }
 }
 
-function newBattleStats(): BattleStats {
-  return {
-    turns: 0,
-    captures: { p: 0, e: 0 },
-    damage: { p: 0, e: 0 },
-    maxCombo: { p: 0, e: 0 },
-  };
-}
-
-function recordBattleStats(events: GameEvent[]) {
-  battleStats.turns++;
-  for (const event of events) {
-    if (event.t !== 'capture') continue;
-    const side = event.attacker.owner;
-    const foe: Side = side === 'p' ? 'e' : 'p';
-    battleStats.captures[side]++;
-    battleStats.damage[side] += event.damage;
-    battleStats.maxCombo[side] = Math.max(battleStats.maxCombo[side], event.combo);
-    if (event.counter) battleStats.damage[foe] += event.counter.dmg;
-  }
-}
-
 function updateHP(hp: Record<Side, number>) {
   for (const side of ['p', 'e'] as const) {
     const pct = Math.max(0, hp[side] / MAX_HP * 100) + '%';
@@ -2065,7 +2034,6 @@ function showResult() {
   $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : enemyBoss].img;
 
   const streakEl = $('result-hyakki-streak');
-  const details = $<HTMLDetailsElement>('result-hyakki-details');
   const onlineActions = $('result-actions-online');
   const hyakkiActions = $('result-actions-hyakki');
 
@@ -2087,10 +2055,6 @@ function showResult() {
         + (soloBestStreak > 0 ? `　今週ベスト ${soloBestStreak}` : '');
     }
     streakEl.classList.remove('hidden');
-    details.classList.remove('hidden');
-    details.open = false;
-    renderHyakkiResultStats();
-    $('result-stats').classList.add('hidden');
     onlineActions.classList.add('hidden');
     hyakkiActions.classList.remove('hidden');
     $('btn-hyakki-continue').classList.toggle('hidden', !win);
@@ -2131,7 +2095,6 @@ function showResult() {
     if (!win) soloStreak = 0;
   } else {
     streakEl.classList.add('hidden');
-    details.classList.add('hidden');
     onlineActions.classList.remove('hidden');
     hyakkiActions.classList.add('hidden');
     $('result-sub').textContent = reasonsFor(win, enemyBossName);
@@ -2145,7 +2108,6 @@ function showResult() {
     } else {
       $('result-reward').classList.add('hidden');
     }
-    $('result-stats').classList.add('hidden');
   }
 
   const title = $('result-title');
@@ -2180,18 +2142,6 @@ function reasonsFor(win: boolean, enemyBossName: string): string {
     return G!.reason === 'draw' ? '飢餓の夜で双方の魂力が尽きた' : '300手に達したため引き分け';
   }
   return reasons[reasonKey] || '';
-}
-
-function renderHyakkiResultStats() {
-  const hp = G?.hp.p || 0;
-  const hpPct = Math.round(hp / MAX_HP * 100);
-  $('result-hyakki-stats').innerHTML =
-    `<div class="result-stat">手数<b>${battleStats.turns}</b></div>` +
-    `<div class="result-stat">撃破数<b>${battleStats.captures.p}</b></div>` +
-    `<div class="result-stat">与ダメージ<b>${battleStats.damage.p}</b></div>` +
-    `<div class="result-stat">被ダメージ<b>${battleStats.damage.e}</b></div>` +
-    `<div class="result-stat">最大コンボ<b>${battleStats.maxCombo.p}</b></div>` +
-    `<div class="result-stat">残り魂力<b>${hpPct}%</b></div>`;
 }
 
 /* ============================== 駒一覧 ============================== */

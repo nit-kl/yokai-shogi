@@ -1576,19 +1576,6 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
   filter: drop-shadow(0 4px 4px rgba(0,0,0,0.9));
 }
 #result-sub { color: #9a8fc0; letter-spacing: 0.3em; margin: 0.6em 0 1.6em; font-size: clamp(0.8rem, 2.6vw, 1.05rem); }
-#result-stats {
-  display: grid; grid-template-columns: repeat(3, minmax(90px, 1fr)); gap: 6px;
-  width: min(92vw, 460px); margin: -0.7em auto 1.2em;
-}
-.result-stat {
-  padding: 7px 5px; border: 1px solid rgba(232,196,106,0.2); border-radius: 8px;
-  background: rgba(20,16,31,0.75); color: #8f84a8; font-size: 0.62rem;
-}
-.result-stat b { display: block; margin-top: 2px; color: #fff0ad; font-size: 0.88rem; }
-.result-streak {
-  grid-column: 1 / -1; color: #ffd76a; border-color: rgba(232,196,106,0.45);
-  font: 0.9rem "Yu Mincho", serif; letter-spacing: 0.14em;
-}
 .result-hyakki-streak {
   margin: 0.15em 0 0.35em;
   color: var(--gold);
@@ -1599,24 +1586,6 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
 .result-hyakki-streak.is-broken {
   color: #c9bfd8;
   text-shadow: none;
-}
-.result-hyakki-details {
-  width: min(92vw, 420px);
-  margin: 0 auto 1em;
-  color: #9a8fc0;
-  font-size: 0.72rem;
-  text-align: left;
-}
-.result-hyakki-details summary {
-  cursor: pointer;
-  letter-spacing: 0.12em;
-  text-align: center;
-  list-style: none;
-}
-.result-hyakki-details summary::-webkit-details-marker { display: none; }
-.result-hyakki-details[open] summary { margin-bottom: 8px; color: #ffe9a0; }
-#result-hyakki-stats {
-  display: grid; grid-template-columns: repeat(3, minmax(80px, 1fr)); gap: 6px;
 }
 .hyakki-result-actions {
   flex-direction: column;
@@ -2714,7 +2683,6 @@ html[data-script="latn"] .cur-yoryoku {
 }
 @media (max-width: 680px) {
   .solo-mode-select { width: 100%; }
-  #result-stats { grid-template-columns: repeat(2, minmax(90px, 1fr)); }
   #result-boss { height: min(29vh, 240px); }
   #result-title { font-size: clamp(2.8rem, 15vw, 4.3rem); }
   #result-sub { margin-bottom: 1.35em; font-size: 0.72rem; }
@@ -2851,23 +2819,6 @@ html[data-script="latn"] .cur-yoryoku {
   font-size: clamp(0.72rem, 2.4vw, 1rem);
   letter-spacing: 0.3em;
   text-shadow: 0 0 10px rgba(232, 196, 106, 0.7), 0 2px 2px rgba(0, 0, 0, 0.9);
-  margin-bottom: 0.25em;
-}
-#vs-intro .vs-name {
-  font-family: "Yu Mincho", serif;
-  font-weight: bold;
-  font-size: clamp(1.4rem, 5.6vw, 2.8rem);
-  letter-spacing: 0.12em;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-#vs-intro .vs-p .vs-name {
-  background-image: linear-gradient(175deg, #eaf4ff 20%, #8cbeff 60%, #3a6ecc 95%);
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(90, 160, 255, 0.6));
-}
-#vs-intro .vs-e .vs-name {
-  background-image: linear-gradient(175deg, #ffe8e0 20%, #ff8a7a 60%, #c22e3a 95%);
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(255, 90, 80, 0.6));
 }
 /* 中央VSエンブレム: 叩きつけ�E衝撃リング */
 #vs-intro .vs-emblem {
