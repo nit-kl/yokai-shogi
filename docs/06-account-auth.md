@@ -4,7 +4,7 @@
 
 1. **登録なしで遊べる**(ゲスト即時発行)。カジュアルゲームで登録フォームは最大の離脱要因
 2. ゲストは**引き継ぎコード**を発行すると別端末で復元できる
-3. パスワードは持たない(漏洩リスクと運用コストを避ける)。パスキー(WebAuthn)やOAuthは将来候補
+3. パスワードは持たない(漏洩リスクと運用コストを避ける)。パスキー(WebAuthn)で端末間復元できる。OAuthは将来候補
 
 ## アカウント状態遷移
 
@@ -14,9 +14,9 @@
    ▼
 [ゲスト] ── デバイスのlocalStorageにrefreshトークン保持
    │  ※端末・ブラウザデータ消去でロスト(画面上で明示警告)
-   │ POST /auth/link-code(引き継ぎコード発行)
+   │ POST /auth/link-code または パスキー登録
    ▼
-[復元可能] ── 任意の端末から POST /auth/login/link-code で復元可能
+[復元可能] ── 引き継ぎコードまたはパスキーで任意の端末から復元可能
 ```
 
 ## トークン設計
@@ -46,11 +46,20 @@ POST /auth/guest
 POST /auth/link-code        → ランダムなコードを発行し、SHA-256を auth_identities(provider='link_code') に保存
 POST /auth/login/link-code  → コードを検証して新しいトークンを発行
 ```
-コード発行済みユーザーは休眠ゲスト削除の対象外にする。
+コード発行済み、またはパスキー登録済みのユーザーは休眠ゲスト削除の対象外にする。
 
-### パスキー/OAuth(将来候補)
+### パスキー(実装済み)
 
-現時点では未実装。実装する場合は `auth_identities` に `provider='passkey'` または `provider='google'` を追加し、既存のゲスト/引き継ぎコードと併存させる。
+WebAuthn(discoverable credential)。`auth_identities.provider='passkey'` に credential ID・公開鍵・counter・transports を保存する。チャレンジは `webauthn_challenges` に短命保存し、Cronで期限切れを削除する。
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| POST | /auth/passkey/register/options | 登録オプション。要ログイン |
+| POST | /auth/passkey/register | 登録完了 |
+| POST | /auth/passkey/login/options | 認証オプション。未ログイン可 |
+| POST | /auth/passkey/login | 認証完了 → トークン発行 |
+
+OAuth(Google等)は未実装。追加する場合は同じ `auth_identities` に `provider='google'` を足し、既存のゲスト/パスキー/引き継ぎコードと併存させる。
 
 ### Steam(doc 23)
 
@@ -71,6 +80,7 @@ CREATE TABLE auth_identities (
   subject    TEXT NOT NULL,           -- 引き継ぎコードSHA-256 / credential ID / OAuth sub / SteamID64
   public_key BLOB,
   counter    INTEGER,
+  transports TEXT,                    -- パスキー: JSON配列
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (provider, subject)
 );
@@ -96,8 +106,8 @@ CREATE TABLE refresh_tokens (
 
 ## アカウント削除・引き継ぎ
 
-- 退会: アプリ内から申請 → 即時ログイン不可 → 90日後に物理削除(誤操作の復元猶予)
-- 機種変更: 引き継ぎコードを発行し、新端末で入力する。ゲストのまま消えるリスクはデータ引き継ぎ導線で案内する
+- 退会: アプリ内の専用導線は未実装。削除請求は問い合わせ窓口で受け、停止後90日で物理削除する(doc 11)
+- 機種変更: パスキーまたは引き継ぎコードで新端末へ復元する。ゲストのまま消えるリスクはデータ引き継ぎ導線で案内する
 
 ## 想定脅威と対策(認証まわり)
 

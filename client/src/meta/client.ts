@@ -145,7 +145,7 @@ export class ApiClient {
     try {
       config = await this.getPublic<AuthConfig>('/v1/auth/config');
     } catch (e) {
-      /* 旧API互換: /auth/config 未実装の Phase 1 デプロイ */
+      /* 旧デプロイ互換: /auth/config が VALIDATION を返す場合は Turnstile なしで続行 */
       if (!(e instanceof ApiError && e.code === 'VALIDATION')) throw e;
     }
     let turnstileToken: string | undefined;

@@ -34,11 +34,17 @@ export type Skill =
   | { kind: 'moon'; name: string; desc: string; mult: number }                // 満月の手番は会心確定(それ以外は不発)
   | { kind: 'heads'; name: string; desc: string; step: number; max: number }  // この駒の撃破数だけ与ダメ成長
   | { kind: 'legion'; name: string; desc: string; per: number; cap: number } // 盤上の味方数で与ダメ加算
-  /* 攻め改善: 食い逃げ・残火(phase2-v3) */
+  /* 食い逃げ・残火 */
   | { kind: 'retreat'; name: string; desc: string }                           // 取ったあと自動で元マスへ戻る
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
   | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap'; value: number; span: number }
-  | { kind: 'veil'; name: string; desc: string };                             // SSR: 残留/帰影/影遁を選択
+  | { kind: 'spawn'; name: string; desc: string; piece: string }              // 取ったあと周囲の空きへ駒を1体置く
+  | { kind: 'veil'; name: string; desc: string }                              // SSR: 残留/帰影/影遁を選択
+  | { kind: 'charm'; name: string; desc: string }                             // 取った駒を味方にして元マスへ戻る
+  | { kind: 'recall'; name: string; desc: string }                            // 取られても自軍の持ち駒に戻る
+  | { kind: 'hydra'; name: string; desc: string; extra: number }              // 取られても隣接へ逃げる(extra回)
+  | { kind: 'famine'; name: string; desc: string; mult: number; heal: number } // 飢餓の夜に与ダメ倍率+回復
+  | { kind: 'dual'; name: string; desc: string; mult: number };               // 取ったあと隣接の別敵を追撃
 
 export interface YokaiDef {
   id: string;
@@ -257,7 +263,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'ibaraki', name: '茨木童子', type: 'attack', atk: 320, rarity: 'SSR', gachaOnly: true,
     img: img('ibaraki'), imgSm: imgSm('ibaraki'),
     moveText: '金の動き(成:全方向1マス)',
-    skill: { kind: 'crit', name: '夜叉の腕', desc: '駒を取った時、30%で熔岩の鬼腕が唸りダメージ2倍', chance: 0.3, mult: 2 },
+    skill: { kind: 'recall', name: '腕の回帰', desc: '取られても相手の持ち駒にならず、自分の持ち駒に戻る。何度斬られても羅生門へ帰り来る' },
     moves: { steps: STEPS_GOLD },
     promoted: { steps: STEPS_ALL8 },
     awakenName: '羅生門の腕',
@@ -266,7 +272,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'tamamo', name: '玉藻前', type: 'attack', atk: 450, rarity: 'SSR', gachaOnly: true,
     img: img('tamamo'), imgSm: imgSm('tamamo'),
     moveText: '全方向に1マス',
-    skill: { kind: 'moon', name: '傾国の妖炎', desc: '満月の夜に駒を取ると、九尾の狐火が舞い、必ずダメージ2.2倍(月齢は対局ステータスで確認)', mult: 2.2 },
+    skill: { kind: 'charm', name: '傾国の誘い', desc: 'この駒で取ったあと元のマスへ戻り、取った駒はその場で味方になる(持ち駒を経由しない)' },
     moves: { steps: STEPS_ALL8 },
     awakenName: '傾国乱世',
   },
@@ -276,7 +282,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'sunakake', name: '砂かけ婆', type: 'debuff', atk: 120, rarity: 'N', gachaOnly: true,
     img: img('sunakake'), imgSm: imgSm('sunakake'),
     moveText: '前と斜め前に1マス(成:金の動き)',
-    skill: { kind: 'jam', name: '目つぶしの砂', desc: '盤上にいる間、敵の会心系スキル(確率会心・満月会心・首成長)を封じる' },
+    skill: { kind: 'jam', name: '目つぶしの砂', desc: '盤上にいる間、敵の会心系スキル(確率会心・満月会心)を封じる' },
     moves: { steps: [[0,-1],[1,-1],[-1,-1]] },
     promoted: { steps: STEPS_GOLD },
   },
@@ -366,7 +372,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'yamata', name: '八岐大蛇', type: 'attack', atk: 420, rarity: 'SSR', gachaOnly: true,
     img: img('yamata'), imgSm: imgSm('yamata'),
     moveText: '前3方向と横2方向、後ろに1マス',
-    skill: { kind: 'heads', name: '八岐の暴虐', desc: 'この駒で駒を取るたび次の首が目覚め、与えるダメージ+30%ずつ増える(最大+90%)', step: 0.3, max: 3 },
+    skill: { kind: 'hydra', name: '八岐の首', desc: '取られても隣接の空きマスへ逃げ、首が1つ減る。2回まで逃げ、3度目で討ち取られる', extra: 2 },
     moves: { steps: [[0,-1], [1,-1], [-1,-1], [1,0], [-1,0], [0,1]] },
     awakenName: '八岐咆哮',
   },
@@ -385,7 +391,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'sunekosuri', name: 'すねこすり', type: 'debuff', atk: 115, rarity: 'N', gachaOnly: true,
     img: img('sunekosuri'), imgSm: imgSm('sunekosuri'),
     moveText: '前と横に1マス(成:縦横+斜め前)',
-    skill: { kind: 'jam', name: '脛擦りの呪い', desc: '盤上にいる間、敵の会心系スキル(確率会心・満月会心・首成長)を封じる' },
+    skill: { kind: 'jam', name: '脛擦りの呪い', desc: '盤上にいる間、敵の会心系スキル(確率会心・満月会心)を封じる' },
     moves: { steps: [[0,-1],[1,0],[-1,0]] },
     promoted: { steps: [[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1]] },
   },
@@ -467,7 +473,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'gashadokuro', name: 'がしゃどくろ', type: 'attack', atk: 410, rarity: 'SSR', gachaOnly: true,
     img: img('gashadokuro'), imgSm: imgSm('gashadokuro'),
     moveText: '前3方向と横2方向、後ろに1マス',
-    skill: { kind: 'heads', name: '餓鬼の骨積み', desc: 'この駒で駒を取るたび骨が積み上がり、与えるダメージ+25%ずつ増える(最大+100%)', step: 0.25, max: 4 },
+    skill: { kind: 'famine', name: '餓鬼の骨', desc: '飢餓の夜のあいだ、駒を取るとダメージ1.8倍かつ自軍の魂力を250回復する', mult: 1.8, heal: 250 },
     moves: { steps: [[0,-1], [1,-1], [-1,-1], [1,0], [-1,0], [0,1]] },
     awakenName: '餓鬼髑髏',
   },
@@ -475,7 +481,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'sukuna', name: '宿儺', type: 'attack', atk: 380, rarity: 'SSR', gachaOnly: true,
     img: img('sukuna'), imgSm: imgSm('sukuna'),
     moveText: '金の動き(成:全方向1マス)',
-    skill: { kind: 'crit', name: '両面の鬼神', desc: '駒を取った時、35%で両面の鬼神が唸りダメージ2倍', chance: 0.35, mult: 2 },
+    skill: { kind: 'dual', name: '双面', desc: 'この駒で取ったあと、着地マスに隣接する別の敵を1体追撃できる(2体目のダメージは半分)', mult: 0.5 },
     moves: { steps: STEPS_GOLD },
     promoted: { steps: STEPS_ALL8 },
     awakenName: '両面宿儺',
@@ -520,9 +526,9 @@ export const YOKAI: Record<string, YokaiDef> = {
     img: img('shiranui'), imgSm: imgSm('shiranui'),
     moveText: '斜めに1マス(成:斜め+前後)',
     skill: {
-      kind: 'ember', name: '不知火の残火',
-      desc: '取ったマスに4手残る鬼火を置く。味方がそのマスで取るとダメージ+120',
-      mode: 'atk', value: 120, span: 4,
+      kind: 'spawn', name: '送り火',
+      desc: 'この駒で取ったあと、周囲の空きマス1つに味方の鬼火を置く',
+      piece: 'onibi',
     },
     moves: { steps: STEPS_DIAG4 },
     promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
@@ -538,13 +544,13 @@ export const YOKAI: Record<string, YokaiDef> = {
   ingyo: {
     id: 'ingyo', name: '隱神刑部', type: 'transform', atk: 360, rarity: 'SSR', gachaOnly: true,
     img: img('ingyo'), imgSm: imgSm('ingyo'),
-    moveText: '金の動き(成:全方向1マス)',
+    moveText: '斜めに1マスと前へ変則跳び(成:全方向1マス+変則跳び)',
     skill: {
       kind: 'veil', name: '隱形の術',
       desc: 'この駒で取ったあと、(1)その場に残る (2)元いたマスへ戻る (3)隣の空きマスへ逃げる、のいずれかを選べる',
     },
-    moves: { steps: STEPS_GOLD },
-    promoted: { steps: STEPS_ALL8 },
+    moves: { steps: STEPS_DIAG4, jumps: [[1,-2],[-1,-2]] },
+    promoted: { steps: STEPS_ALL8, jumps: [[1,-2],[-1,-2]] },
     awakenName: '真・隱形',
   },
 };
@@ -632,7 +638,7 @@ export interface Resonance {
 export const RESONANCES: readonly Resonance[] = [
   {
     pair: ['shuten', 'ibaraki'], name: '鬼の宴', effect: 'oniFeast',
-    desc: '酒呑童子と茨木童子が共に盤上にいる間、互いの会心率+15%',
+    desc: '酒呑童子と茨木童子が共に盤上にいる間、酒呑童子の会心率+15%',
     colors: ['#ffdbc2', '#ff4d4d', '#8d47d6'],
   },
   {

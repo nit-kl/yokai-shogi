@@ -6,9 +6,9 @@ import type { BattlePlayer, ServerBattleMessage } from '../../../shared/battle';
 
 export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
-export const BYOYOMI_MS = 15_000;
+export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v3'; // v3: 飢餓の夜・帰影/影遁/殘火・新駒6体
+export const RULE_VERSION = 'phase2-v6'; // v6: 隱神刑部の動き(斜め+桂馬)
 
 export function send(ws: WebSocket, message: ServerBattleMessage): void {
   try { ws.send(JSON.stringify(message)); } catch { /* closed socket */ }

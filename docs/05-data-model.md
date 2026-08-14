@@ -21,10 +21,10 @@ D1には**インタラクティブトランザクションがない**(`BEGIN`し
 
 ```
 users 1─1 user_profiles(通貨・編成・レート・オンボーディング・百鬼夜行進行)
-users 1─n user_yokai(所持) / auth_identities(doc 06) / refresh_tokens
-users 1─n gacha_logs / currency_logs / login_bonus_logs
+users 1─n user_yokai(所持) / auth_identities(doc 06) / refresh_tokens / webauthn_challenges
+users 1─n gacha_logs / currency_logs / login_bonus_logs / campaign_grants
 matches n─2 users、matches 1─n match_actions(リプレイ)
-users 1─n participation_logs / ad_reward_logs / hyakki_weekly
+users 1─n participation_logs / ad_reward_logs / hyakki_weekly / hyakki_week_rewards
 ```
 
 ## テーブル定義(D1マイグレーション形式)
@@ -63,7 +63,7 @@ CREATE TABLE user_profiles (
   hyakki_pending_at TEXT
 );
 ```
-初回10枚は `POST /auth/guest` の作成処理で `FIRST_BONUS` として付与し、`currency_logs(reason='initial')` に記録する。大将と編成はオンボーディングで確定する。
+初回10枚は `POST /auth/guest` の作成処理で `FIRST_BONUS` として付与し、`currency_logs(reason='initial')` に記録する。大将と編成はオンボーディングで確定する。キャンペーン配布は `campaign_grants(user_id, campaign_id)` で1回限りを担保する。パスキー登録中のチャレンジは `webauthn_challenges` に短命保存する(doc 06)。
 
 ### user_yokai(所持コレクション)
 ```sql
@@ -232,6 +232,6 @@ flushed     : D1反映済みフラグ(立つまでDO側を保持・再試行)
 | データ | バックアップ | 保持 |
 |---|---|---|
 | D1全体 | **Time Travel(Freeは7日 / Paidは30日の任意時点復元)** が標準で効く + 必要に応じて `wrangler d1 export` を退避 | - |
-| users/profiles/yokai/currency | 同上 | 退会後90日で物理削除(doc 11) |
+| users/profiles/yokai/currency | 同上 | 削除請求後90日で物理削除(doc 11) |
 | match_actions | 同上 | 90日(以降は matches の集計結果のみ)。容量と相談 |
 | アプリログ | -(Workers Logs) | 30日 |

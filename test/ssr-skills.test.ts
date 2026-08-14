@@ -59,12 +59,12 @@ test('moon: 期待値計算(AI読み)でも満月は決定的に評価される'
     const s = blank();
     s.turn = 'p';
     setMoon(s, fullMoon);
-    put(s, 2, 3, 'tamamo', 'p'); // ATK450 ×2.2
+    put(s, 2, 3, 'kyubi', 'p');
     put(s, 2, 2, 'ittan', 'e');
     put(s, 0, 0, 'shuten', 'e');
     put(s, 0, 5, 'ittan', 'p');
     const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-    expect(ev.damage).toBe(fullMoon ? Math.round(450 * 2.2) : 450);
+    expect(ev.damage).toBe(fullMoon ? 800 : 400);
   }
 });
 
@@ -93,32 +93,49 @@ test('moon: 月齢は両者共通で1夜=2手で進む', () => {
   expect(Game.moonPhase(s), '満月の翌夜は新月に戻る').toBe(0);
 });
 
-/* ---------- 八岐の首(heads) ---------- */
+/* ---------- 八岐の首(hydra) ---------- */
 
-test('heads: 首は最大+90%で頭打ち', () => {
+test('hydra: 取られても隣接へ逃げ、2回まで生き残る', () => {
   const s = blank();
-  s.turn = 'p';
-  put(s, 2, 3, 'yamata', 'p');
-  s.board[3][2]!.kills = 10; // 育ちきった状態
-  put(s, 2, 2, 'ittan', 'e');
+  s.turn = 'e';
+  put(s, 2, 2, 'yamata', 'p');
+  put(s, 2, 1, 'kappa', 'e');
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
-  const ev = capEv(cap(s, 2, 3, 2, 2));
-  expect(ev.damage).toBe(Math.round(420 * 1.9)); // 798
-});
+  cap(s, 2, 1, 2, 2, { rng: false });
+  expect(s.hands.e.yamata, 'まだ持ち駒にならない').toBeUndefined();
+  const escaped = s.board.flat().find(pc => pc?.id === 'yamata');
+  expect(escaped, '盤上に残る').toBeTruthy();
+  expect(escaped?.owner).toBe('p');
+  expect(escaped?.hydra).toBe(1);
 
-test('heads: jamで倍率は封じられるが撃破数は貯まる', () => {
-  const s = blank();
-  s.turn = 'p';
-  put(s, 2, 3, 'yamata', 'p');
-  s.board[3][2]!.kills = 2;
-  put(s, 2, 2, 'ittan', 'e');
-  put(s, 4, 0, 'sunakake', 'e');
-  put(s, 0, 0, 'shuten', 'e');
-  put(s, 0, 5, 'ittan', 'p');
-  const ev = capEv(cap(s, 2, 3, 2, 2));
-  expect(ev.damage).toBe(420);
-  expect(s.board[2][2]?.kills).toBe(3);
+  const pos = (() => {
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (s.board[y][x]?.id === 'yamata') return { x, y };
+    }
+    throw new Error('yamata missing');
+  })();
+  s.turn = 'e';
+  /* 2回目: 隣接する河童で取る */
+  const kx = pos.x === 2 ? 1 : 2;
+  const ky = pos.y;
+  put(s, kx, ky, 'kappa', 'e');
+  cap(s, kx, ky, pos.x, pos.y, { rng: false });
+  const escaped2 = s.board.flat().find(pc => pc?.id === 'yamata');
+  expect(escaped2?.hydra).toBe(0);
+
+  const pos2 = (() => {
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (s.board[y][x]?.id === 'yamata') return { x, y };
+    }
+    throw new Error('yamata missing');
+  })();
+  s.turn = 'e';
+  const kx2 = pos2.x === 2 ? 1 : 2;
+  put(s, kx2, pos2.y, 'kappa', 'e');
+  cap(s, kx2, pos2.y, pos2.x, pos2.y, { rng: false });
+  expect(s.board.flat().some(pc => pc?.id === 'yamata'), '3度目で討ち取られる').toBe(false);
+  expect(s.hands.e.yamata).toBe(1);
 });
 
 /* ---------- 百鬼の陣(legion) ---------- */
@@ -202,32 +219,32 @@ test('awaken: 発動でATK1.5倍が自分の3手番続き、その後切れる�
 
 /* ---------- 因縁共鳴 ---------- */
 
-test('oniFeast(鬼の宴): 酒呑と茨木が並ぶと互いの会心率+15%(期待値で検証)', () => {
+test('oniFeast(鬼の宴): 茨木が盤上にいると酒呑の会心率+15%(期待値で検証)', () => {
   const mk = (withPartner: boolean) => {
     const s = blank();
     s.turn = 'p';
-    put(s, 2, 3, 'ibaraki', 'p'); // ATK320 30%×2
-    if (withPartner) put(s, 4, 5, 'shuten', 'p');
+    put(s, 2, 3, 'shuten', 'p'); // ATK400 20%×2
+    if (withPartner) put(s, 4, 5, 'ibaraki', 'p');
     else put(s, 4, 5, 'kyubi', 'p');
     put(s, 2, 2, 'ittan', 'e');
     put(s, 0, 0, 'nurarihyon', 'e');
     put(s, 0, 5, 'ittan', 'p');
     return capEv(cap(s, 2, 3, 2, 2, { rng: false })).damage;
   };
-  expect(mk(false)).toBe(Math.round(320 * (1 + 0.3 * 1)));   // 期待倍率1.30
-  expect(mk(true)).toBe(Math.round(320 * (1 + 0.45 * 1)));   // 会心率45% → 期待倍率1.45
+  expect(mk(false)).toBe(Math.round(400 * (1 + 0.2 * 1)));   // 期待倍率1.20
+  expect(mk(true)).toBe(Math.round(400 * (1 + 0.35 * 1)));   // 会心率35% → 期待倍率1.35
 });
 
 test('oniFeast: 異装(鬼神・酒呑童子)でも共鳴する', () => {
   const s = blank();
   s.turn = 'p';
-  put(s, 2, 3, 'ibaraki_rashomon', 'p');
-  put(s, 4, 5, 'shuten_kishin', 'p');
+  put(s, 2, 3, 'shuten_kishin', 'p');
+  put(s, 4, 5, 'ibaraki_rashomon', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'nurarihyon', 'e');
   put(s, 0, 5, 'ittan', 'p');
   const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-  expect(ev.damage).toBe(Math.round(320 * 1.45));
+  expect(ev.damage).toBe(Math.round(400 * 1.35));
 });
 
 test('foxBond(妖狐相伝): 玉藻前を取られると九尾が激怒し、次の攻撃が確定会心', () => {
@@ -252,6 +269,94 @@ test('foxBond(妖狐相伝): 玉藻前を取られると九尾が激怒し、次
   const ev2 = capEv(cap(s, 2, 5, 2, 4, { rand: () => 0.99 }));
   expect(ev2.damage).toBe(800); // 400×2 確定
   expect(s.board[4][2]?.enraged, '激怒は消費される').toBeUndefined();
+});
+
+test('charm: 玉藻前は取った駒を味方にし、自身は元マスへ戻る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'tamamo', 'p');
+  put(s, 2, 2, 'kooni', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
+  expect(ev.charm).toBeTruthy();
+  expect(s.board[3][2]?.id, '玉藻は元マスへ').toBe('tamamo');
+  expect(s.board[2][2]?.id).toBe('kooni');
+  expect(s.board[2][2]?.owner).toBe('p');
+  expect(s.hands.p.kooni, '持ち駒を経由しない').toBeUndefined();
+});
+
+test('recall: 茨木は取られても自軍の持ち駒に戻る', () => {
+  const s = blank();
+  s.turn = 'e';
+  put(s, 2, 3, 'ibaraki', 'p');
+  put(s, 1, 2, 'nekomata', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  const ev = capEv(cap(s, 1, 2, 2, 3, { rng: false }));
+  expect(ev.recall).toBeTruthy();
+  expect(s.hands.e.ibaraki, '相手の持ち駒にならない').toBeUndefined();
+  expect(s.hands.p.ibaraki).toBe(1);
+  expect(s.board[3][2]?.id).toBe('nekomata');
+});
+
+test('charm より recall が優先され、茨木は寝返りしない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'tamamo', 'p');
+  put(s, 2, 2, 'ibaraki', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  cap(s, 2, 3, 2, 2, { rng: false });
+  expect(s.board[2][2]?.id, '玉藻はその場に残る').toBe('tamamo');
+  expect(s.hands.e.ibaraki).toBe(1);
+  expect(s.board.flat().some(pc => pc?.id === 'ibaraki')).toBe(false);
+});
+
+test('famine: 飢餓の夜のみ与ダメ1.8倍かつ250回復', () => {
+  const atk = () => {
+    const s = blank();
+    s.turn = 'p';
+    s.hp.p = 2000;
+    put(s, 2, 3, 'gashadokuro', 'p');
+    put(s, 2, 2, 'ittan', 'e');
+    put(s, 0, 0, 'shuten', 'e');
+    put(s, 0, 5, 'ittan', 'p');
+    return s;
+  };
+  const normal = atk();
+  const ev0 = capEv(cap(normal, 2, 3, 2, 2, { rng: false }));
+  expect(ev0.damage).toBe(410);
+  expect(normal.hp.p).toBe(2000);
+
+  const hungry = atk();
+  hungry.plies = 10;
+  hungry.lastCapturePly = 0;
+  const ev1 = capEv(cap(hungry, 2, 3, 2, 2, { rng: false }));
+  expect(ev1.damage).toBe(Math.round(410 * 1.8));
+  expect(hungry.hp.p).toBe(2250);
+  expect(ev1.heal).toBe(250);
+});
+
+test('dual: 隣接の別敵を追撃でき、2体目はダメージ半分', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'sukuna', 'p');
+  put(s, 2, 2, 'kooni', 'e');
+  put(s, 1, 2, 'ittan', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  put(s, 0, 5, 'kappa', 'p');
+  const events = Game.applyAction(s, {
+    kind: 'move', from: { x: 2, y: 3 }, to: { x: 2, y: 2 }, dualTo: { x: 1, y: 2 },
+  }, { rng: false });
+  const caps = events.filter(e => e.t === 'capture');
+  expect(caps).toHaveLength(2);
+  expect(caps[0].t === 'capture' && caps[0].damage).toBe(380);
+  expect(caps[1].t === 'capture' && caps[1].damage).toBe(Math.round(380 * 1.25 * 0.5));
+  expect(s.board[2][2]?.id).toBe('sukuna');
+  expect(s.board[2][1]).toBeNull();
+  expect(s.hands.p.kooni).toBe(1);
+  expect(s.hands.p.ittan).toBe(1);
 });
 
 /* ---------- 互換性 ---------- */

@@ -9,6 +9,8 @@
 - **Web**: 無料配信。運営収入として**任意のリワード広告**を許可する(チケットはログインボーナス、勝利報酬、参加報酬、広告視聴、運営配布)。doc 22
 - **Steam**(計画): 本体無料・**広告なし**。収益は **全駒解放DLC**(収集時短)と **異装等の見た目DLC**。オンラインは Web と同一マッチプールでクロスプレイ。doc 23
 - 現行の主配信は Web。Steam は Web と並行運用する追加チャネル(実装は Phase Steam)
+- **ユーザー課金(IAP・有償チケット)は実装しない**方針を継続する。運営収入として**任意のリワード広告**は許可する(チケットはログインボーナス、勝利報酬、参加報酬、広告視聴、運営配布)
+- Webブラウザ向けで運用する。ネイティブアプリ(ストア配信)とPWAは当面スコープ外
 - **インフラはCloudflareに統一**: Pages(配信)/ Workers(API)/ Durable Objects(対戦)/ D1(DB)/ Cron・Turnstile・Analytics Engine(補助)
 - **言語はTypeScriptに統一**(client / server / shared)
 - ルールエンジンは `shared/game.ts`、駒マスタは `shared/data.ts` を正本とし、クライアントとサーバーで同一コードを共有する
@@ -22,7 +24,7 @@
 | 03 | [オンライン対戦設計](03-online-battle.md) | 対戦フロー・状態同期・マッチメイキング・切断/再接続 |
 | 04 | [API・プロトコル仕様](04-api-spec.md) | REST API と WebSocket メッセージの定義 |
 | 05 | [データモデル設計](05-data-model.md) | DBスキーマ・既存localStorageデータの扱い |
-| 06 | [アカウント・認証設計](06-account-auth.md) | ゲスト認証・アカウント連携・セッション管理 |
+| 06 | [アカウント・認証設計](06-account-auth.md) | ゲスト認証・パスキー・引き継ぎコード・セッション管理 |
 | 07 | [セキュリティ・チート対策](07-security.md) | サーバー権威化・不正対策・脆弱性対策 |
 | 08 | [ゲーム内経済・ガチャ設計](08-game-economy.md) | 通貨設計・排出率・不正獲得対策・シーズン運用 |
 | 09 | [運用・インフラ設計](09-operations.md) | 環境構成・CI/CD・監視・バックアップ・コスト試算 |
@@ -49,20 +51,23 @@
 - API/DB/対戦仕様を確認する: 03 → 04 → 05 → 07
 - 運用・リリース手順を確認する: 09 → 10 → 11 → 13
 
-## 現状コードベースの概要(2026-07時点)
+## 現状コードベースの概要(2026-08時点)
 
 ```
-shared/data.ts          妖怪36種(8タイプ・4レアリティ)・初期配置・ガチャプール・型定義
-shared/game.ts          ルールエンジン(合法手・ダメージ・スキル8種・成り・持ち駒)
+shared/data.ts          妖怪56種(8タイプ・4レアリティ、うちガチャ54種)・初期配置・ガチャプール・型定義
+shared/game.ts          ルールエンジン(合法手・ダメージ・スキル・成り・持ち駒・覚醒・飢餓の夜)
                         ※依存ゼロ・乱数注入対応(opts.rand)・uid採番は GameState.nextUid
 shared/gacha.ts         ガチャ抽選・10連確定枠・被り変換・排出率 ※クライアント/サーバー共用
 shared/validate.ts      編成・表示名の検証 ※クライアント/サーバー共用(権威検証もこれを使う)
+shared/battle.ts        オンライン対戦の共有メッセージ型
+shared/hyakki.ts        百鬼夜行ランキングの定数・週次計算
 client/src/ai.ts        ソロ用AI(期待値評価+脅威差し引き)
-client/src/meta/        メタ進行: MetaProvider 抽象 + ローカル版/API版2実装 + ファサード
+client/src/meta/        メタ進行: MetaProvider 抽象 + ローカル版/API版2実装 + パスキー
+client/src/locale.ts    日英UI(日本語DOMが正本、英語はオーバーレイ)
 client/src/menu.ts      ガチャ・編成・ログボ・データ引き継ぎUI
 client/src/main.ts      対戦UIコントローラ(e2e用フック: window.yk)
 client/public/assets/   WebP最適化済み駒画像(512px + 小160px)。pieces/stock は今後のラインナップ候補置き場
-server/src/             Workers API(Hono): routes(auth/me/gacha/solo)・cron・lib(jwt/crypto/time)
+server/src/             Workers API(Hono): routes(auth/me/gacha/solo/matches/rankings/ads 等)・cron・DO
 server/migrations/      D1スキーマ / server/wrangler.jsonc  staging・production 環境定義
 test/*.test.ts          vitest(エンジン・スキル・メタ・APIクライアント配線)
 test/workers/*.spec.ts  vitest-pool-workers(実Workersランタイム+ローカルD1のAPI統合テスト)

@@ -19,6 +19,16 @@ describe('オンライン対戦の後手視点変換', () => {
     expect(actionToServer(action, 'e')).toEqual({
       kind: 'move', from: { x: 3, y: 1 }, to: { x: 3, y: 2 },
     });
+    expect(actionToServer({
+      kind: 'move', from: { x: 1, y: 4 }, to: { x: 1, y: 3 }, spawnTo: { x: 2, y: 4 },
+    }, 'e')).toEqual({
+      kind: 'move', from: { x: 3, y: 1 }, to: { x: 3, y: 2 }, spawnTo: { x: 2, y: 1 },
+    });
+    expect(actionToServer({
+      kind: 'move', from: { x: 1, y: 4 }, to: { x: 1, y: 3 }, dualTo: { x: 2, y: 3 },
+    }, 'e')).toEqual({
+      kind: 'move', from: { x: 3, y: 1 }, to: { x: 3, y: 2 }, dualTo: { x: 2, y: 2 },
+    });
     expect(eventsForView([{ t: 'move', uid: 1, from: { x: 3, y: 1 }, to: { x: 3, y: 2 } }], 'e'))
       .toEqual([{ t: 'move', uid: 1, from: { x: 1, y: 4 }, to: { x: 1, y: 3 } }]);
   });
