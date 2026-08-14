@@ -18,7 +18,7 @@ HTTPS│     HTTPS│                 WSS│
 ┌─────────┐ ┌─────────────┐ ┌──────────────────────┐
 │ CF Pages │ │ CF Workers   │ │ Durable Objects        │
 │ 静的配信  │ │ REST API     │ │  BattleRoom(1対局=1DO) │
-│ (client) │ │ (Hono)       │ │   ├ WebSocket×2(+観戦) │
+│ (client) │ │ (Hono)       │ │   ├ WebSocket×2        │
 └─────────┘ │ 認証/ガチャ/編成│ │   ├ 共有エンジンで着手検証 │
             └──────┬───────┘ │   └ DOストレージ(局面永続化)│
                    │          │  Matchmaker(キュー管理DO) │
@@ -59,12 +59,15 @@ HTTPS│     HTTPS│                 WSS│
 
 ```
 shared/             ← クライアント・Workers・DOの全てから import
-  data.ts           (妖怪マスタ・型定義: YokaiDef, Skill, Rarity ...)
-  game.ts           (エンジン: GameState, Action, GameEvent の型と純粋ロジック)
-  validate.ts       (編成検証などクライアント/サーバー共用の検証)
-client/             ← UI・ソロAI・演出・メタ進行
+  data.ts           (妖怪マスタ・型定義)
+  game.ts           (エンジン: GameState, Action, GameEvent)
+  gacha.ts          (抽選・排出率)
+  validate.ts       (編成・表示名の検証)
+  battle.ts         (オンライン対戦の共有メッセージ型)
+  hyakki.ts         (百鬼夜行ランキング)
+client/             ← UI・ソロAI・演出・メタ進行・日英UI
 server/
-  src/routes/       (Hono: 認証・ガチャ・編成・戦績)
+  src/routes/       (Hono: 認証・ガチャ・編成・戦績・ランキング・広告)
   src/do/           (BattleRoom / Matchmaker Durable Objects)
   migrations/       (D1マイグレーション)
 test/
@@ -81,7 +84,7 @@ test/
 教科書通りのクリーンアーキテクチャ(4層+全面的な抽象化)は採らない。ただし、その核心である**依存の向きの原則**は本設計の柱として採用する。
 
 ```
-[ドメイン]      shared/ … game.ts(ルール)・data.ts(マスタ)・validate.ts(検証)・抽選ロジック
+[ドメイン]      shared/ … game.ts(ルール)・data.ts(マスタ)・gacha.ts(抽選)・validate.ts(検証)
     ▲  依存はここへ一方向のみ。shared/ は何にも依存しない(Web標準APIのみ・I/Oなし・純粋関数的)
     │
 [ユースケース]   server/api のハンドラ(ガチャ・ログボ等のフロー)、BattleRoom DO の対局進行
@@ -130,6 +133,7 @@ test/
 
 ## クライアントの変更方針
 
-- 画面遷移にはソロ、オンライン対戦、ガチャ、編成、ランキング、駒一覧、サポート、初回オンボーディングを持つ。
+- 画面遷移にはソロ(百鬼夜行)、オンライン対戦、ガチャ、編成、ランキング、駒一覧、サポート、初回オンボーディングを持つ。
 - `main.ts` の対局進行は「ローカルエンジン直叩き(ソロ)」と「サーバーイベント受信(オンライン)」の2モード。
 - `client/src/meta/` はローカル版とAPI版の同一インターフェース2実装。API未設定または不達時はローカル版へフォールバックする。
+- UI文言の正本は日本語DOM。英語は `client/src/locale.ts` のオーバーレイ。

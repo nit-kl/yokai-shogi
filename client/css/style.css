@@ -1038,6 +1038,18 @@ html[data-script="latn"] .title-sub-top {
 }
 .piece.owner-e img { filter: drop-shadow(0 3px 3px rgba(20, 8, 0, 0.55)) drop-shadow(0 0 5px rgba(255, 60, 60, 0.35)); }
 .piece.promoted img { filter: drop-shadow(0 3px 3px rgba(20,8,0,0.55)) drop-shadow(0 0 7px rgba(255, 205, 80, 0.75)); }
+.piece .hydra-badge {
+  position: absolute; top: 0; left: 2%;
+  width: 28%; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Yu Mincho", serif; font-weight: bold;
+  font-size: calc(var(--bw) * 0.032);
+  color: #fff7e0;
+  background: radial-gradient(circle, #c45a28, #6a1810);
+  border: 1px solid #ffc090;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 90, 40, 0.85);
+}
 .piece .promo-badge {
   position: absolute; top: 0; right: 2%;
   width: 32%; aspect-ratio: 1;
@@ -1096,6 +1108,39 @@ html[data-script="latn"] .title-sub-top {
   color: #ffe2e2;
   background: linear-gradient(90deg, transparent, rgba(150, 30, 40, 0.85) 18%, rgba(150, 30, 40, 0.85) 82%, transparent);
   text-shadow: 0 0 14px rgba(255, 93, 93, 0.9);
+}
+#turn-banner.show-byoyomi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.08em;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  letter-spacing: 0.12em;
+  text-indent: 0;
+  color: #ffe8e8;
+  background: linear-gradient(90deg, transparent, rgba(160, 18, 28, 0.92) 10%, rgba(160, 18, 28, 0.92) 90%, transparent);
+  text-shadow: 0 0 18px rgba(255, 70, 70, 0.95);
+  animation: bannerSweep 1.45s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+#turn-banner.show-byoyomi .byoyomi-banner-label {
+  font-size: 0.38em;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  opacity: 0.9;
+}
+#turn-banner.show-byoyomi .byoyomi-banner-msg {
+  font-size: 1em;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+}
+html[data-script="latn"] #turn-banner.show-byoyomi {
+  letter-spacing: 0.04em;
+  font-size: clamp(1.4rem, 5.6vw, 2.3rem);
+}
+html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-label,
+html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
+  letter-spacing: 0.04em;
+  text-indent: 0;
 }
 @keyframes bannerSweep {
   0% { opacity: 0; transform: translate(-90%, -50%) skewX(-12deg); }
@@ -1531,19 +1576,6 @@ html[data-script="latn"] .title-sub-top {
   filter: drop-shadow(0 4px 4px rgba(0,0,0,0.9));
 }
 #result-sub { color: #9a8fc0; letter-spacing: 0.3em; margin: 0.6em 0 1.6em; font-size: clamp(0.8rem, 2.6vw, 1.05rem); }
-#result-stats {
-  display: grid; grid-template-columns: repeat(3, minmax(90px, 1fr)); gap: 6px;
-  width: min(92vw, 460px); margin: -0.7em auto 1.2em;
-}
-.result-stat {
-  padding: 7px 5px; border: 1px solid rgba(232,196,106,0.2); border-radius: 8px;
-  background: rgba(20,16,31,0.75); color: #8f84a8; font-size: 0.62rem;
-}
-.result-stat b { display: block; margin-top: 2px; color: #fff0ad; font-size: 0.88rem; }
-.result-streak {
-  grid-column: 1 / -1; color: #ffd76a; border-color: rgba(232,196,106,0.45);
-  font: 0.9rem "Yu Mincho", serif; letter-spacing: 0.14em;
-}
 .result-hyakki-streak {
   margin: 0.15em 0 0.35em;
   color: var(--gold);
@@ -1554,24 +1586,6 @@ html[data-script="latn"] .title-sub-top {
 .result-hyakki-streak.is-broken {
   color: #c9bfd8;
   text-shadow: none;
-}
-.result-hyakki-details {
-  width: min(92vw, 420px);
-  margin: 0 auto 1em;
-  color: #9a8fc0;
-  font-size: 0.72rem;
-  text-align: left;
-}
-.result-hyakki-details summary {
-  cursor: pointer;
-  letter-spacing: 0.12em;
-  text-align: center;
-  list-style: none;
-}
-.result-hyakki-details summary::-webkit-details-marker { display: none; }
-.result-hyakki-details[open] summary { margin-bottom: 8px; color: #ffe9a0; }
-#result-hyakki-stats {
-  display: grid; grid-template-columns: repeat(3, minmax(80px, 1fr)); gap: 6px;
 }
 .hyakki-result-actions {
   flex-direction: column;
@@ -2489,6 +2503,19 @@ html[data-script="latn"] .cur-yoryoku {
   color: #ffe0e0;
   text-shadow: 0 0 10px rgba(255, 80, 80, 0.55);
 }
+.online-turn-hint {
+  margin-top: 4px;
+  color: #ff9a9a;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  line-height: 1.2;
+}
+.online-status.timer-byoyomi .online-turn-hint {
+  color: #ffe8e8;
+  font-size: 0.92rem;
+  text-shadow: 0 0 10px rgba(255, 80, 80, 0.55);
+}
 .online-disconnect-block { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,0.1); }
 #online-disconnect-fill { background: linear-gradient(90deg, #ff5d5d, #ffb35d); }
 #screen-battle.timer-urgent::after {
@@ -2656,7 +2683,6 @@ html[data-script="latn"] .cur-yoryoku {
 }
 @media (max-width: 680px) {
   .solo-mode-select { width: 100%; }
-  #result-stats { grid-template-columns: repeat(2, minmax(90px, 1fr)); }
   #result-boss { height: min(29vh, 240px); }
   #result-title { font-size: clamp(2.8rem, 15vw, 4.3rem); }
   #result-sub { margin-bottom: 1.35em; font-size: 0.72rem; }
@@ -2793,23 +2819,6 @@ html[data-script="latn"] .cur-yoryoku {
   font-size: clamp(0.72rem, 2.4vw, 1rem);
   letter-spacing: 0.3em;
   text-shadow: 0 0 10px rgba(232, 196, 106, 0.7), 0 2px 2px rgba(0, 0, 0, 0.9);
-  margin-bottom: 0.25em;
-}
-#vs-intro .vs-name {
-  font-family: "Yu Mincho", serif;
-  font-weight: bold;
-  font-size: clamp(1.4rem, 5.6vw, 2.8rem);
-  letter-spacing: 0.12em;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-#vs-intro .vs-p .vs-name {
-  background-image: linear-gradient(175deg, #eaf4ff 20%, #8cbeff 60%, #3a6ecc 95%);
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(90, 160, 255, 0.6));
-}
-#vs-intro .vs-e .vs-name {
-  background-image: linear-gradient(175deg, #ffe8e0 20%, #ff8a7a 60%, #c22e3a 95%);
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(255, 90, 80, 0.6));
 }
 /* 中央VSエンブレム: 叩きつけ�E衝撃リング */
 #vs-intro .vs-emblem {

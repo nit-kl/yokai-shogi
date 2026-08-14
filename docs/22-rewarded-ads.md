@@ -62,8 +62,8 @@ AdSense は「中身のある公開サイト」を見る。申し込み前に揃
   - https://nit-games.com/ および /guide.html /about.html /contact.html /legal/*
   - https://yokai-shogi.nit-games.com/legal/terms.html
   - https://yokai-shogi.nit-games.com/legal/privacy.html
-- [x] ゲーム内お知らせでリワード広告を告知する(`shared/announcements.ts` の `2026-07-10-rewarded-ads`)
-  - 現状は **準備中** 文言。本番フラグオン時に「開始しました」へ差し替える
+- [x] ゲーム内お知らせでリワード広告の準備を告知済み(告知期間は終了)
+  - 本番フラグオン時に「開始しました」のお知らせを新たに出す
 - [x] フッター等から規約・プライバシー・ガイド・問い合わせへ常時リンクできること
 - [ ] サイトが `https://yokai-shogi.nit-games.com` で安定して開けること
 - [x] 問い合わせ手段が明示されていること(X: `@nit_zunda_dev` / apex `/contact.html`)

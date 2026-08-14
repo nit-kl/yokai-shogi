@@ -78,26 +78,16 @@ test('新規駒(baku): 獏が盤上にいるとき、敵軍の与ダメージが
   expect(ev.damage).toBe(Math.round(200 * 0.85)); // 200 * 0.85 = 170
 });
 
-test('新規駒(yamata): 八岐の首は駒を取るたび成長する(1体目は素、2体目+30%)', () => {
+test('新規駒(yamata): 取られても隣接へ逃げ、持ち駒にならない', () => {
   const s = blank();
-  s.turn = 'p';
-  put(s, 2, 3, 'yamata', 'p'); // プレイヤーの八岐大蛇 (ATK 420, 撃破ごとに+30%)
-  put(s, 2, 2, 'ittan', 'e');
+  s.turn = 'e';
+  put(s, 2, 2, 'yamata', 'p');
+  put(s, 2, 1, 'kappa', 'e');
   put(s, 0, 0, 'ittan', 'e');
-
-  // 1体目: 首はまだ目覚めていない → 素のATK
-  const ev1 = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-  expect(ev1.damage).toBe(420);
-  expect(s.board[2][2]?.kills).toBe(1);
-
-  // 2体目: 二の首覚醒 ×1.3(コンボの影響を除外して首の成長だけを見る)
-  s.turn = 'p';
-  s.combo.p = 0;
-  put(s, 2, 1, 'ittan', 'e');
-  put(s, 4, 0, 'ittan', 'e'); // 敵の手を残すダミー
-  const ev2 = capEv(cap(s, 2, 2, 2, 1, { rng: false }));
-  expect(ev2.damage).toBe(Math.round(420 * 1.3)); // 546
-  expect(s.board[1][2]?.kills).toBe(2);
+  put(s, 0, 5, 'ittan', 'p');
+  cap(s, 2, 1, 2, 2, { rng: false });
+  expect(s.hands.e.yamata).toBeUndefined();
+  expect(s.board.flat().some(pc => pc?.id === 'yamata' && pc.owner === 'p')).toBe(true);
 });
 
 test('ストック駒(kodama): 木霊が駒を取ったとき魂力が150回復すること', () => {
@@ -172,24 +162,18 @@ test('ストック駒(tenome): 手の目は取られたとき280の反撃ダメ�
   expect(s.hp.e).toBe(3000 - 280);
 });
 
-test('ストック駒(gashadokuro): 餓鬼の骨積みは駒を取るたび成長する(1体目は素、2体目+25%)', () => {
+test('ストック駒(gashadokuro): 飢餓の夜の取りが1.8倍かつ250回復', () => {
   const s = blank();
   s.turn = 'p';
+  s.hp.p = 2000;
+  s.plies = 10;
+  s.lastCapturePly = 0;
   put(s, 2, 3, 'gashadokuro', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'ittan', 'e');
-
-  const ev1 = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-  expect(ev1.damage).toBe(410);
-  expect(s.board[2][2]?.kills).toBe(1);
-
-  s.turn = 'p';
-  s.combo.p = 0;
-  put(s, 2, 1, 'ittan', 'e');
-  put(s, 4, 0, 'ittan', 'e');
-  const ev2 = capEv(cap(s, 2, 2, 2, 1, { rng: false }));
-  expect(ev2.damage).toBe(Math.round(410 * 1.25));
-  expect(s.board[1][2]?.kills).toBe(2);
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
+  expect(ev.damage).toBe(Math.round(410 * 1.8));
+  expect(s.hp.p).toBe(2250);
 });
 
 test('ストック駒(sunekosuri): すねこすりは敵の会心スキルを封じること', () => {
