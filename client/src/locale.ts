@@ -144,7 +144,7 @@ const STATIC: Record<string, string> = {
   'あなたの手番': 'Your turn', '相手の手番': "Opponent's turn", '敵の手番': 'Enemy turn', '対戦相手': 'Opponent',
   '満月 ― 会心確定!': 'Full Moon — Critical guaranteed!', 'SSR妖怪 見参': 'An SSR Yokai Appears',
   '覚醒 ― 真の力、解放': 'Awakening — True Power Unleashed', 'ダメージ半減! 駒は葉っぱに化けていた': 'Damage halved! The yokai was only a leaf.',
-  '取った駒を道連れに爆散!': 'It explodes and takes its captor with it!', '連勝ならず': 'No win streak',
+  '取った駒を道連れに爆散!': 'It explodes and takes its captor with it!', '鬼火を灯した': 'Lit an Onibi', '連勝ならず': 'No win streak',
   '勝利報酬を確認中…': 'Checking victory rewards…', '本日の勝利報酬は上限に達しました': "Today's victory reward limit has been reached.",
   '勝利報酬の付与に失敗しました(通信状態を確認)': 'Could not grant the victory reward. Check your connection.',
   '引き分け': 'Draw', '討伐成功': 'Victory', '敗北': 'Defeat', '我が大将が討ち取られた…': 'Your general was captured…',
@@ -210,7 +210,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   makuragaeshi: ['Makuragaeshi', '1 in the three forward directions and back (promoted: Gold General movement)', 'Pillow Shadow-Return', 'After a capture, automatically returns to its original square'],
   rinka: ['Rinka', '1 square orthogonally (promoted: 1 in any direction)', 'Lingering Phosphor', 'Leaves a flame for 4 moves. An ally entering, capturing, or dropping there restores 150 HP'],
   tsurube: ['Tsurube-otoshi', 'Any distance forward (promoted: +1 sideways/back)', 'Pit to Darkness', 'Leaves a pit for 4 moves. An enemy entering it takes 80 HP damage'],
-  shiranui: ['Shiranui', '1 square diagonally (promoted: diagonal + forward/back)', 'Lingering Shiranui', 'Leaves a flame for 4 moves. An ally capturing there deals +120 damage'],
+  shiranui: ['Shiranui', '1 square diagonally (promoted: diagonal + forward/back)', 'Sending Fire', 'After a capture, place an allied Onibi on an adjacent empty square'],
   enenra: ['Enenra', '1 square diagonally (promoted: +1 forward/back)', 'Smoke Shadow-Step', 'After a capture, may escape to an adjacent empty square or stay put'],
   ingyo: ['Inugami Gyobu', 'Gold General movement (promoted: 1 in any direction)', 'Art of Concealment', 'After a capture, choose to stay, return to the original square, or escape to an adjacent empty square', 'True Concealment'],
 };
@@ -260,7 +260,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <p><b>Promotion:</b> A non-General entering the last two enemy ranks promotes automatically, gaining 1.5× attack and stronger movement.</p>
     <p><b>SSR Awakening:</b> Captures fill the awakening gauge. Once full, use a turn to empower one friendly SSR on the board, once per battle. It gains 1.5× ATK for three of your turns.</p>
     <p><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP after every move. A capture resets the count. Open <b>Status</b> during battle to see the remaining moves.</p>
-    <p><b>Special captures:</b> Some yokai return to their previous square or escape to an adjacent square after capturing. Others leave flames or pits that trigger later. See each entry in the <b>Yokai Compendium</b> for exact effects.</p>
+    <p><b>Special captures:</b> Some yokai return to their previous square or escape to an adjacent square after capturing. Others leave flames or pits, or place a real yokai such as Onibi nearby. See each entry in the <b>Yokai Compendium</b> for exact effects.</p>
     <h3>Modes and Rewards</h3>
     <p><b>Night Parade:</b> A solo win-streak challenge with a new enemy army each round. Your best streak enters the weekly rankings. Last week's #1 player receives the exclusive “Champion · Nine-Tails” alt (first time only).</p>
     <p><b>Online Battle:</b> Random matchmaking is always available; 20:00–22:00 JST is the busiest period. Friend rooms use a six-digit code. Each move has 60 seconds plus a 15-second countdown. Completing enough moves grants a daily ticket, with extra Saturday event rewards.</p>

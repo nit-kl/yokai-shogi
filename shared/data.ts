@@ -38,6 +38,7 @@ export type Skill =
   | { kind: 'retreat'; name: string; desc: string }                           // 取ったあと自動で元マスへ戻る
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
   | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap'; value: number; span: number }
+  | { kind: 'spawn'; name: string; desc: string; piece: string }              // 取ったあと周囲の空きへ駒を1体置く
   | { kind: 'veil'; name: string; desc: string };                             // SSR: 残留/帰影/影遁を選択
 
 export interface YokaiDef {
@@ -520,9 +521,9 @@ export const YOKAI: Record<string, YokaiDef> = {
     img: img('shiranui'), imgSm: imgSm('shiranui'),
     moveText: '斜めに1マス(成:斜め+前後)',
     skill: {
-      kind: 'ember', name: '不知火の残火',
-      desc: '取ったマスに4手残る鬼火を置く。味方がそのマスで取るとダメージ+120',
-      mode: 'atk', value: 120, span: 4,
+      kind: 'spawn', name: '送り火',
+      desc: 'この駒で取ったあと、周囲の空きマス1つに味方の鬼火を置く',
+      piece: 'onibi',
     },
     moves: { steps: STEPS_DIAG4 },
     promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },

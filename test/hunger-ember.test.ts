@@ -15,10 +15,11 @@ const put = (s: GameState, x: number, y: number, id: string, owner: Side) => {
   s.board[y][x] = { uid: ++uid, id, owner, promoted: false };
 };
 
-const move = (s: GameState, fx: number, fy: number, tx: number, ty: number, opts?: ApplyOptions & { phaseTo?: { x: number; y: number } }) =>
+const move = (s: GameState, fx: number, fy: number, tx: number, ty: number, opts?: ApplyOptions & { phaseTo?: { x: number; y: number }; spawnTo?: { x: number; y: number } }) =>
   Game.applyAction(s, {
     kind: 'move', from: { x: fx, y: fy }, to: { x: tx, y: ty },
     ...(opts?.phaseTo ? { phaseTo: opts.phaseTo } : {}),
+    ...(opts?.spawnTo ? { spawnTo: opts.spawnTo } : {}),
   }, opts || { rng: true });
 
 test('新駒6体がYOKAIに定義されていること', () => {
@@ -59,22 +60,73 @@ test('枕返し: 取ったあと元マスへ帰影する', () => {
   expect(s.hands.p.kooni).toBe(1);
 });
 
-test('不知火: 残火マスで取るとダメージ+120', () => {
+test('不知火: 取ると元マスに鬼火を置く', () => {
   const s = blank();
   s.turn = 'p';
   put(s, 2, 3, 'shiranui', 'p');
   put(s, 1, 2, 'kooni', 'e');
   put(s, 0, 0, 'ittan', 'e');
-  move(s, 2, 3, 1, 2, { rng: false }); // 斜め取り → 残火設置
-  expect(s.embers.some(e => e.mode === 'atk' && e.x === 1 && e.y === 2)).toBe(true);
+  const events = move(s, 2, 3, 1, 2, { rng: false });
+  expect(s.board[2][1]?.id).toBe('shiranui');
+  expect(s.board[3][2]?.id, '省略時は元マスへ鬼火').toBe('onibi');
+  expect(s.board[3][2]?.owner).toBe('p');
+  expect(s.board[3][2]?.promoted).toBe(false);
+  expect(events.some(e => e.t === 'drop' && e.id === 'onibi' && e.to.x === 2 && e.to.y === 3)).toBe(true);
+});
 
+test('不知火: spawnTo で周囲の空きマスへ鬼火を置ける', () => {
+  const s = blank();
   s.turn = 'p';
-  s.combo.p = 0;
-  put(s, 0, 3, 'nekomata', 'p'); // ATK 200・斜め
+  put(s, 2, 3, 'shiranui', 'p');
   put(s, 1, 2, 'kooni', 'e');
-  put(s, 4, 0, 'ittan', 'e');
-  const ev = move(s, 0, 3, 1, 2, { rng: false }).find(e => e.t === 'capture');
-  expect(ev && ev.t === 'capture' && ev.damage).toBe(200 + 120);
+  put(s, 0, 0, 'ittan', 'e');
+  move(s, 2, 3, 1, 2, { rng: false, spawnTo: { x: 2, y: 2 } });
+  expect(s.board[2][1]?.id).toBe('shiranui');
+  expect(s.board[2][2]?.id).toBe('onibi');
+  expect(s.board[2][2]?.owner).toBe('p');
+  expect(s.board[3][2], '元マスは空のまま').toBeNull();
+});
+
+test('不知火: 置いた鬼火は道連れの爆炎を持つ', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'shiranui', 'p');
+  put(s, 1, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 3, 1, 2, { rng: false }); // 元マス(2,3)に鬼火
+  expect(s.board[3][2]?.id).toBe('onibi');
+
+  s.turn = 'e';
+  put(s, 2, 4, 'nekomata', 'e');
+  move(s, 2, 4, 2, 3, { rng: false });
+  expect(s.board[3][2], '猫又が鬼火に道連れ').toBeNull();
+  expect(s.hands.e.onibi, '鬼火は持ち駒にならない').toBeUndefined();
+});
+
+test('不知火: 自分が道連れになると鬼火は出ない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'shiranui', 'p');
+  put(s, 1, 2, 'onibi', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 3, 1, 2, { rng: false });
+  expect(s.board[2][1], '不知火も消滅').toBeNull();
+  expect(s.board[3][2], '送り火は不発').toBeNull();
+});
+
+test('不知火: 合法手に周囲への spawnTo が含まれる', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'shiranui', 'p');
+  put(s, 1, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  const acts = Game.getAllActions(s, 'p');
+  const caps = acts.filter(a => a.kind === 'move' && a.from.x === 2 && a.from.y === 3 && a.to.x === 1 && a.to.y === 2);
+  expect(caps.some(a => a.kind === 'move' && !a.spawnTo), '元マス設置は省略').toBe(true);
+  expect(caps.some(a => a.kind === 'move' && a.spawnTo?.x === 2 && a.spawnTo?.y === 2)).toBe(true);
 });
 
 test('煙々羅: phaseTo で隣接へ影遁できる', () => {

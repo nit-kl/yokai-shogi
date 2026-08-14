@@ -39,6 +39,7 @@ export const AI = {
     if (def.skill.kind === 'heads') v += (pc.kills ?? 0) * 80;
     if (def.skill.kind === 'retreat' || def.skill.kind === 'phase' || def.skill.kind === 'veil') v += 70;
     if (def.skill.kind === 'ember') v += 55;
+    if (def.skill.kind === 'spawn') v += 90;
     if (def.skill.kind === 'legion') v += 70;
     if (def.skill.kind === 'moon') v += 80;
     if (def.rarity === 'SSR') v += 40;

@@ -66,7 +66,7 @@ export const HUNGER_GRACE = 8;
 export const HUNGER_DRAIN = 50;
 
 export type Action =
-  | { kind: 'move'; from: Pos; to: Pos; phaseTo?: Pos } // phaseTo: 影遁/隱形の退避先
+  | { kind: 'move'; from: Pos; to: Pos; phaseTo?: Pos; spawnTo?: Pos } // phaseTo: 影遁先 / spawnTo: 送り火の設置先
   | { kind: 'drop'; id: string; to: Pos }
   | { kind: 'awaken'; to: Pos }; // 自軍SSR駒(to)を覚醒させる(手番を消費)
 
@@ -304,6 +304,11 @@ export const Game = {
     return out;
   },
 
+  /* 捕獲後の送り火設置先(to の周囲空き。元マス from も含む) */
+  spawnDests(s: GameState, from: Pos, to: Pos): Pos[] {
+    return this.escapeDests(s, from, to, 'phase');
+  },
+
   /* 捕獲後の影遁/隱形先(残留は含めない。残留は phaseTo 省略) */
   escapeDests(s: GameState, from: Pos, to: Pos, kind: 'phase' | 'veil'): Pos[] {
     const out: Pos[] = [];
@@ -341,6 +346,12 @@ export const Game = {
           if (m.capture && (sk === 'phase' || sk === 'veil')) {
             for (const pt of this.escapeDests(s, { x, y }, { x: m.x, y: m.y }, sk)) {
               acts.push({ kind: 'move', from: { x, y }, to: { x: m.x, y: m.y }, phaseTo: pt });
+            }
+          }
+          if (m.capture && sk === 'spawn') {
+            for (const st of this.spawnDests(s, { x, y }, { x: m.x, y: m.y })) {
+              if (st.x === x && st.y === y) continue; // 元マスへの設置は spawnTo 省略
+              acts.push({ kind: 'move', from: { x, y }, to: { x: m.x, y: m.y }, spawnTo: st });
             }
           }
         }
@@ -512,7 +523,7 @@ export const Game = {
 
       if (victim) {
         const ended = this._resolveCapture(
-          s, pc, victim, from, to, side, foe, ply, rng, rand, events, action.phaseTo,
+          s, pc, victim, from, to, side, foe, ply, rng, rand, events, action.phaseTo, action.spawnTo,
         );
         if (ended) return events;
       } else {
@@ -577,7 +588,7 @@ export const Game = {
   _resolveCapture(
     s: GameState, attacker: Piece, victim: Piece, from: Pos, to: Pos,
     side: Side, foe: Side, ply: number, rng: boolean, rand: () => number, events: GameEvent[],
-    phaseTo?: Pos,
+    phaseTo?: Pos, spawnTo?: Pos,
   ): boolean {
     const vDef = YOKAI[victim.id];
     const aDef = YOKAI[attacker.id];
@@ -751,6 +762,27 @@ export const Game = {
       }
     }
 
+    /* 送り火: 周囲の空きマスへ実駒を1体置く(省略時は元マス) */
+    let spawned: Piece | null = null;
+    let spawnAt: Pos | null = null;
+    if (!explode && sk.kind === 'spawn') {
+      const dests = this.spawnDests(s, from, to);
+      const wanted = spawnTo
+        ? dests.find(p => p.x === spawnTo.x && p.y === spawnTo.y)
+        : dests.find(p => p.x === from.x && p.y === from.y) ?? dests[0];
+      if (wanted && !s.board[wanted.y][wanted.x] && YOKAI[sk.piece]) {
+        spawned = { uid: ++s.nextUid, id: sk.piece, owner: side, promoted: false };
+        s.board[wanted.y][wanted.x] = spawned;
+        spawnAt = { ...wanted };
+        if (rng) {
+          procs.push({
+            name: sk.name, owner: side, img: aDef.img,
+            text: `${YOKAI[sk.piece].name}を灯した`,
+          });
+        }
+      }
+    }
+
     /* 帰影 / 影遁 / 隱形の行き先を先に確定(演出テキストも capture に含める) */
     let escapeTo: Pos | null = null;
     if (!explode && s.board[to.y][to.x] === attacker) {
@@ -786,6 +818,10 @@ export const Game = {
       emberBonus: emberBonus || undefined,
       trapDmg: trapDmg || undefined,
     });
+
+    if (spawned && spawnAt) {
+      events.push({ t: 'drop', uid: spawned.uid, id: spawned.id, owner: side, to: spawnAt });
+    }
 
     if (bossCaptured) {
       s.winner = side; s.reason = 'boss';

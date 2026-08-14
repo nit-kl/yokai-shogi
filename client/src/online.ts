@@ -10,9 +10,13 @@ export function actionToServer(action: Action, side: Side): Action {
   if (side === 'p') return action;
   switch (action.kind) {
     case 'move':
-      return action.phaseTo
-        ? { kind: 'move', from: flipPos(action.from), to: flipPos(action.to), phaseTo: flipPos(action.phaseTo) }
-        : { kind: 'move', from: flipPos(action.from), to: flipPos(action.to) };
+      return {
+        kind: 'move',
+        from: flipPos(action.from),
+        to: flipPos(action.to),
+        ...(action.phaseTo ? { phaseTo: flipPos(action.phaseTo) } : {}),
+        ...(action.spawnTo ? { spawnTo: flipPos(action.spawnTo) } : {}),
+      };
     case 'drop': return { kind: 'drop', id: action.id, to: flipPos(action.to) };
     case 'awaken': return { kind: 'awaken', to: flipPos(action.to) };
   }

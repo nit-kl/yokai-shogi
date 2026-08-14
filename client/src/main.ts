@@ -42,6 +42,7 @@ type Sel =
   | { kind: 'hand'; id: string; drops: Pos[] }
   | { kind: 'awaken'; targets: Pos[] }
   | { kind: 'phase'; from: Pos; to: Pos; options: Pos[] } // 影遁/隱形の退避先選択(残留=to自身)
+  | { kind: 'spawn'; from: Pos; to: Pos; options: Pos[] } // 送り火の設置先選択
   | null;
 let sel: Sel = null;            // 選択中
 const pieceEls = new Map<number, HTMLElement>(); // uid -> DOM要素
@@ -1283,6 +1284,20 @@ function beginPhaseSelect(from: Pos, to: Pos) {
   for (const p of all) cellEl(p.x, p.y).classList.add('hl-phase');
 }
 
+function beginSpawnSelect(from: Pos, to: Pos) {
+  if (!G) return;
+  const options = Game.spawnDests(G, from, to);
+  if (options.length === 0) {
+    doAction({ kind: 'move', from, to });
+    return;
+  }
+  clearSel();
+  sel = { kind: 'spawn', from, to, options };
+  AudioSys.play('select');
+  cellEl(to.x, to.y).classList.add('hl-selected');
+  for (const p of options) cellEl(p.x, p.y).classList.add('hl-drop');
+}
+
 function onCellClick(x: number, y: number) {
   if (!G) return;
 
@@ -1303,6 +1318,18 @@ function onCellClick(x: number, y: number) {
       clearBattleFocus();
       return;
     }
+    if (sel.kind === 'spawn') {
+      const opt = sel.options.find(p => p.x === x && p.y === y);
+      if (opt) {
+        const behind = opt.x === sel.from.x && opt.y === sel.from.y;
+        doAction(behind
+          ? { kind: 'move', from: sel.from, to: sel.to }
+          : { kind: 'move', from: sel.from, to: sel.to, spawnTo: opt });
+        return;
+      }
+      clearBattleFocus();
+      return;
+    }
     if (sel.kind === 'piece') {
       const { x: sx, y: sy } = sel;
       const m = sel.moves.find(m => m.x === x && m.y === y);
@@ -1311,6 +1338,10 @@ function onCellClick(x: number, y: number) {
         const sk = attacker ? YOKAI[attacker.id].skill.kind : '';
         if (m.capture && (sk === 'phase' || sk === 'veil')) {
           beginPhaseSelect({ x: sx, y: sy }, { x, y });
+          return;
+        }
+        if (m.capture && sk === 'spawn') {
+          beginSpawnSelect({ x: sx, y: sy }, { x, y });
           return;
         }
         doAction({ kind: 'move', from: { x: sx, y: sy }, to: { x, y } });
