@@ -338,7 +338,7 @@ export const Game = {
     return null;
   },
 
-  /* 双面の追撃先(to に隣接する敵。victim 自身は含まない) */
+  /* 双面の追撃先(to に隣接する敵。victim 自身と大将は含まない) */
   dualDests(s: GameState, to: Pos, side: Side): Pos[] {
     const foe: Side = side === 'p' ? 'e' : 'p';
     const out: Pos[] = [];
@@ -348,7 +348,7 @@ export const Game = {
         const x = to.x + dx, y = to.y + dy;
         if (!this.inBounds(x, y)) continue;
         const occ = s.board[y][x];
-        if (occ && occ.owner === foe) out.push({ x, y });
+        if (occ && occ.owner === foe && !YOKAI[occ.id].boss) out.push({ x, y });
       }
     }
     return out;
@@ -584,8 +584,9 @@ export const Game = {
         const dualSk = YOKAI[pc.id].skill;
         if (action.dualTo && dualSk.kind === 'dual' && s.board[to.y][to.x] === pc) {
           const dt = action.dualTo;
+          const legal = this.dualDests(s, to, side).some(p => p.x === dt.x && p.y === dt.y);
           const second = s.board[dt.y][dt.x];
-          if (second && second.owner === foe && this.isAdjacent(to, dt)) {
+          if (legal && second && second.owner === foe) {
             s.board[dt.y][dt.x] = null;
             const ended2 = this._resolveCapture(
               s, pc, second, to, dt, side, foe, ply, rng, rand, events,
@@ -613,7 +614,7 @@ export const Game = {
           if (s.board[y][x] === pc) { cur = { x, y }; break; }
         }
       }
-      if (cur && !pc.promoted && def.promoted && def.type !== 'boss' && this.inZone(side, to.y) && !s.winner) {
+      if (cur && !pc.promoted && def.promoted && !def.boss && this.inZone(side, to.y) && !s.winner) {
         pc.promoted = true;
         events.push({ t: 'promote', uid: pc.uid, to: { ...cur }, id: pc.id, owner: side });
       }
@@ -807,7 +808,7 @@ export const Game = {
       counter = { dmg: cDmg, name: vDef.skill.name, img: vDef.img, owner: foe, hp: { ...s.hp } };
     }
 
-    const bossCaptured = vDef.type === 'boss';
+    const bossCaptured = !!vDef.boss;
     const vanish = vDef.skill.kind === 'decoy' || vDef.skill.kind === 'explode';
     const recalled = !bossCaptured && vDef.skill.kind === 'recall';
     let hydraTo: Pos | null = null;
@@ -977,7 +978,7 @@ export const Game = {
       events.push({ t: 'gameover', winner: foe, reason: 'hp' });
       return true;
     }
-    if (explode && aDef.type === 'boss') {
+    if (explode && aDef.boss) {
       s.winner = foe; s.reason = 'explode';
       events.push({ t: 'gameover', winner: foe, reason: 'explode' });
       return true;

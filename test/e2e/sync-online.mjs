@@ -39,7 +39,7 @@ async function setupAccount(page) {
       const { Meta, YOKAI } = window.yk;
       await Meta.pickBoss('kyubi');
       await Meta.pull(10);
-      const ids = Object.keys(Meta.data.owned).filter(id => YOKAI[id].type !== 'boss');
+      const ids = Object.keys(Meta.data.owned).filter(id => !YOKAI[id].boss);
       const rows = [
         [ids[0] || null, ids[1] || null, ids[2] || null, ids[3] || null, ids[4] || null],
         [ids[5] || null, ids[6] || null, 'kyubi', ids[7] || null, ids[8] || null],

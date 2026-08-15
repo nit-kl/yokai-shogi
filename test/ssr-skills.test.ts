@@ -95,7 +95,7 @@ test('moon: 月齢は両者共通で1夜=2手で進む', () => {
 
 /* ---------- 八岐の首(hydra) ---------- */
 
-test('hydra: 取られても隣接へ逃げ、2回まで生き残る', () => {
+test('hydra: 取られても隣接へ逃げ、2度目で討ち取られる', () => {
   const s = blank();
   s.turn = 'e';
   put(s, 2, 2, 'yamata', 'p');
@@ -107,7 +107,7 @@ test('hydra: 取られても隣接へ逃げ、2回まで生き残る', () => {
   const escaped = s.board.flat().find(pc => pc?.id === 'yamata');
   expect(escaped, '盤上に残る').toBeTruthy();
   expect(escaped?.owner).toBe('p');
-  expect(escaped?.hydra).toBe(1);
+  expect(escaped?.hydra).toBe(0);
 
   const pos = (() => {
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
@@ -116,25 +116,10 @@ test('hydra: 取られても隣接へ逃げ、2回まで生き残る', () => {
     throw new Error('yamata missing');
   })();
   s.turn = 'e';
-  /* 2回目: 隣接する河童で取る */
   const kx = pos.x === 2 ? 1 : 2;
-  const ky = pos.y;
-  put(s, kx, ky, 'kappa', 'e');
-  cap(s, kx, ky, pos.x, pos.y, { rng: false });
-  const escaped2 = s.board.flat().find(pc => pc?.id === 'yamata');
-  expect(escaped2?.hydra).toBe(0);
-
-  const pos2 = (() => {
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-      if (s.board[y][x]?.id === 'yamata') return { x, y };
-    }
-    throw new Error('yamata missing');
-  })();
-  s.turn = 'e';
-  const kx2 = pos2.x === 2 ? 1 : 2;
-  put(s, kx2, pos2.y, 'kappa', 'e');
-  cap(s, kx2, pos2.y, pos2.x, pos2.y, { rng: false });
-  expect(s.board.flat().some(pc => pc?.id === 'yamata'), '3度目で討ち取られる').toBe(false);
+  put(s, kx, pos.y, 'kappa', 'e');
+  cap(s, kx, pos.y, pos.x, pos.y, { rng: false });
+  expect(s.board.flat().some(pc => pc?.id === 'yamata'), '2度目で討ち取られる').toBe(false);
   expect(s.hands.e.yamata).toBe(1);
 });
 
@@ -357,6 +342,23 @@ test('dual: 隣接の別敵を追撃でき、2体目はダメージ半分', () =
   expect(s.board[2][1]).toBeNull();
   expect(s.hands.p.kooni).toBe(1);
   expect(s.hands.p.ittan).toBe(1);
+});
+
+test('dual: 大将は追撃できない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'sukuna', 'p');
+  put(s, 2, 2, 'kooni', 'e');
+  put(s, 1, 2, 'shuten', 'e');
+  put(s, 0, 5, 'kappa', 'p');
+  expect(Game.dualDests(s, { x: 2, y: 2 }, 'p')).toEqual([]);
+  const events = Game.applyAction(s, {
+    kind: 'move', from: { x: 2, y: 3 }, to: { x: 2, y: 2 }, dualTo: { x: 1, y: 2 },
+  }, { rng: false });
+  const caps = events.filter(e => e.t === 'capture');
+  expect(caps).toHaveLength(1);
+  expect(s.board[2][1]?.id).toBe('shuten');
+  expect(s.winner).toBeNull();
 });
 
 /* ---------- 互換性 ---------- */

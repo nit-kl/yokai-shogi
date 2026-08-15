@@ -8,7 +8,7 @@ export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
 export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v6'; // v6: 隱神刑部の動き(斜め+桂馬)
+export const RULE_VERSION = 'phase2-v7'; // v7: 八岐大蛇の逃げ1回、宿儺は大将を追撃不可
 
 export function send(ws: WebSocket, message: ServerBattleMessage): void {
   try { ws.send(JSON.stringify(message)); } catch { /* closed socket */ }
@@ -21,7 +21,7 @@ export function randomCode(): string {
 }
 
 export function bossId(formation: (string | null)[][]): string {
-  return formation.flat().find(id => id && YOKAI[id].type === 'boss') || 'kyubi';
+  return formation.flat().find(id => id && YOKAI[id].boss) || 'kyubi';
 }
 
 export function newOnlineState(pFormation: (string | null)[][], eFormation: (string | null)[][]): GameState {
