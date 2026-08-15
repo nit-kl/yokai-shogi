@@ -10,9 +10,6 @@
   --e-red: #ff5d5d;
   --board-wood: #d9b36c;
   --board-wood2: #c69d52;
-  --c-attack: #ff6b4a;
-  --c-defense: #4aa8ff;
-  --c-ambush: #b06bff;
   --c-boss: #ffc83d;
 }
 
@@ -1227,13 +1224,6 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
   padding: 2px 8px; border-radius: 3px;
   color: #14101f; font-family: sans-serif;
 }
-.t-attack { background: var(--c-attack); }
-.t-defense { background: var(--c-defense); }
-.t-ambush { background: var(--c-ambush); }
-.t-debuff { background: #6bd6e8; }
-.t-support { background: #7cf2a4; }
-.t-transform { background: #d8a05a; }
-.t-trap { background: #ff9a3c; }
 .t-boss { background: var(--c-boss); }
 
 /* チE�Eルボタン */
@@ -1632,8 +1622,12 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
   border-bottom: 1px solid rgba(232,196,106,0.3);
   padding-bottom: 0.3em;
 }
-.rules-scroll { overflow-y: auto; line-height: 1.9; font-size: 0.88rem; padding-right: 6px; }
+.rules-scroll { overflow-y: auto; line-height: 1.7; font-size: 0.88rem; padding-right: 6px; }
+.rules-scroll h3:first-of-type { margin-top: 0.35em; }
+.rules-scroll .rules-lead { margin: 0 0 0.7em; opacity: 0.88; }
 .rules-scroll p { margin: 0.35em 0; }
+.rules-scroll ul { margin: 0.15em 0 0.85em; padding-left: 1.15em; }
+.rules-scroll li { margin: 0.28em 0; }
 .rules-scroll b { color: #ffd76a; }
 .rules-scroll::-webkit-scrollbar { width: 6px; }
 .rules-scroll::-webkit-scrollbar-thumb { background: rgba(232,196,106,0.35); border-radius: 3px; }
@@ -1697,7 +1691,7 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
 }
 .pieces-toolbar {
   display: grid;
-  grid-template-columns: minmax(210px, 1fr) minmax(120px, 150px) minmax(120px, 150px);
+  grid-template-columns: minmax(210px, 1fr) minmax(120px, 160px);
   gap: 8px;
   width: 100%;
 }

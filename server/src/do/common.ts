@@ -21,7 +21,7 @@ export function randomCode(): string {
 }
 
 export function bossId(formation: (string | null)[][]): string {
-  return formation.flat().find(id => id && YOKAI[id].type === 'boss') || 'kyubi';
+  return formation.flat().find(id => id && YOKAI[id].boss) || 'kyubi';
 }
 
 export function newOnlineState(pFormation: (string | null)[][], eFormation: (string | null)[][]): GameState {

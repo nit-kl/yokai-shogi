@@ -46,7 +46,7 @@ await page.screenshot({ path: path.join(dir, 'shot-g4-formation.png') });
 
 await page.evaluate(() => {
   const { yk } = window;
-  const owned = Object.keys(yk.Meta.data.owned).filter(id => yk.YOKAI[id].type !== 'boss');
+  const owned = Object.keys(yk.Meta.data.owned).filter(id => !yk.YOKAI[id].boss);
   yk.MenuUI.rows = [
     [owned[0] || null, owned[1] || null, owned[2] || null, owned[3] || null, owned[4] || null],
     [owned[5] || null, owned[6] || null, 'nurarihyon', owned[7] || null, owned[8] || null],

@@ -24,12 +24,14 @@ const PROFILE: Record<AIDifficulty, SearchProfile> = {
 
 const WIN = 1_000_000;
 const APPLY = { rng: false as const };
+const REAR_SKILLS = new Set(['aura', 'weaken', 'jam', 'chill', 'heal']);
+const isRearSkill = (kind: string) => REAR_SKILLS.has(kind);
 
 export const AI = {
   /* 駒の素材価値 */
   pieceValue(pc: Piece): number {
     const def = YOKAI[pc.id];
-    if (def.type === 'boss') return 100000;
+    if (def.boss) return 100000;
     let v = def.atk * (pc.promoted ? 1.5 : 1);
     if (def.skill.kind === 'aura' || def.skill.kind === 'weaken') v += 160;
     if (def.skill.kind === 'chill' || def.skill.kind === 'jam') v += 130;
@@ -202,7 +204,7 @@ export const AI = {
       const n = s.hands[side][id];
       if (n <= 0) continue;
       const def = YOKAI[id];
-      if (def.type === 'boss') continue;
+      if (def.boss) continue;
       const base = def.atk + (def.rarity === 'SSR' ? 40 : def.rarity === 'SR' ? 20 : 0);
       v += base * 0.85 * n;
     }
@@ -214,7 +216,7 @@ export const AI = {
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
         const pc = s.board[y][x];
-        if (pc && pc.owner === side && YOKAI[pc.id].type === 'boss') {
+        if (pc && pc.owner === side && YOKAI[pc.id].boss) {
           boss = { x, y };
           break;
         }
@@ -254,10 +256,9 @@ export const AI = {
         if (!pc || pc.owner !== side) continue;
         const def = YOKAI[pc.id];
         const forward = side === 'e' ? y : (ROWS - 1 - y);
-        if (def.type === 'attack') score += forward * 5;
-        else if (def.type === 'defense' || def.type === 'support') score += (forward <= 2 ? 10 : 2);
-        else if (def.type === 'boss') score += (forward <= 1 ? 16 : -forward * 8);
-        else score += forward * 2;
+        if (def.boss) score += (forward <= 1 ? 16 : -forward * 8);
+        else if (isRearSkill(def.skill.kind)) score += (forward <= 2 ? 10 : 2);
+        else score += forward * 5;
 
         score += (2 - Math.abs(x - 2)) * 2;
         if (pc.promoted) score += 35;
@@ -308,7 +309,7 @@ export const AI = {
           if (!m.capture) continue;
           const victim = s.board[m.y][m.x]!;
           const vDef = YOKAI[victim.id];
-          if (vDef.type === 'boss') return 800;
+          if (vDef.boss) return 800;
           let val = Game.atkOf(pc) * 0.5 + this.pieceValue(victim) * 0.45;
           if (vDef.skill.kind === 'counter') val -= vDef.skill.dmg * 0.7;
           if (vDef.skill.kind === 'explode') val -= this.pieceValue(pc) * 0.5;
@@ -337,7 +338,7 @@ export const AI = {
     }
     const victim = s.board[act.to.y][act.to.x];
     if (victim) {
-      if (YOKAI[victim.id].type === 'boss') return 10000;
+      if (YOKAI[victim.id].boss) return 10000;
       let k = 800 + this.pieceValue(victim);
       const atk = s.board[act.from.y][act.from.x];
       if (atk) k += Game.atkOf(atk) * 0.3;
@@ -347,7 +348,8 @@ export const AI = {
     if (!pc) return 0;
     const def = YOKAI[pc.id];
     let k = 10;
-    if (def.type === 'attack') k += act.to.y * 4;
+    if (def.boss) k += (ROWS - 1 - act.to.y) * 4;
+    else k += act.to.y * 4;
     k += (2 - Math.abs(act.to.x - 2)) * 2;
     return k;
   },
@@ -362,12 +364,14 @@ export const AI = {
     let b = 0;
     const def = YOKAI[act.kind === 'drop' ? act.id : before.board[act.from.y][act.from.x]!.id];
     if (act.kind === 'move') {
-      if (def.type === 'attack') b += act.to.y * 6;
-      if (def.type === 'boss') {
+      if (def.boss) {
         b -= act.to.y * 10;
         b += (act.to.y === 0) ? 12 : 0;
+      } else if (isRearSkill(def.skill.kind)) {
+        b -= Math.abs(act.to.y - 1) * 4;
+      } else {
+        b += act.to.y * 6;
       }
-      if (def.type === 'defense') b -= Math.abs(act.to.y - 1) * 4;
     } else {
       b += act.to.y * 4;
       if (def.skill.kind === 'counter') b += act.to.y * 4;

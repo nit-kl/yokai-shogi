@@ -6,8 +6,17 @@ import { AI } from '../client/src/ai';
 import { HYAKKI_STAGE, soloBattleStage } from '../client/src/solo';
 
 test('百鬼夜行のテンプレは大将を含む', () => {
-  expect(YOKAI[HYAKKI_STAGE.bossId].type).toBe('boss');
+  expect(YOKAI[HYAKKI_STAGE.bossId].boss).toBe(true);
   expect(HYAKKI_STAGE.enemyRows[0].some(id => id === HYAKKI_STAGE.bossId)).toBe(true);
+});
+
+test('大将フラグ: 本体系3体とその異装だけが大将', () => {
+  const bosses = Object.values(YOKAI).filter(d => d.boss).map(d => d.id).sort();
+  expect(bosses).toEqual([
+    'kyubi', 'kyubi_eclipse', 'kyubi_hasha',
+    'nurarihyon', 'nurarihyon_hyakki',
+    'shuten', 'shuten_kishin',
+  ].sort());
 });
 
 test('百鬼夜行は有効なランダム敵編成を生成する', () => {
@@ -16,8 +25,8 @@ test('百鬼夜行は有効なランダム敵編成を生成する', () => {
   expect(ids).toHaveLength(10);
   expect(new Set(ids).size).toBe(10);
   expect(stage.enemyRows[0][2]).toBe(stage.bossId);
-  expect(YOKAI[stage.bossId].type).toBe('boss');
-  expect(ids.filter(id => YOKAI[id].type === 'boss')).toEqual([stage.bossId]);
+  expect(YOKAI[stage.bossId].boss).toBe(true);
+  expect(ids.filter(id => YOKAI[id].boss)).toEqual([stage.bossId]);
   expect(() => Game.newState(null, stage.enemyRows)).not.toThrow();
 });
 
