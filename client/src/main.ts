@@ -2180,7 +2180,7 @@ function ssrIntroLines(id: string): string[] {
   } else if (def.skill.kind === 'famine') {
     lines.push(`飢餓: 飢餓の夜の取りが×${def.skill.mult}かつ魂力${def.skill.heal}回復`);
   } else if (def.skill.kind === 'dual') {
-    lines.push('双面: 取ったあと隣接の別敵を追撃(2体目はダメージ半分)');
+    lines.push('双面: 取ったあと隣接の別敵(大将以外)を追撃(2体目はダメージ半分)');
   }
   /* veil のスキル本文が十分なため、SSR特性での重複要約は出さない */
   if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 自分の手番3回のあいだATK×${AWAKEN_ATK}`);
