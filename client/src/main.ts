@@ -2189,7 +2189,7 @@ function ssrIntroLines(id: string): string[] {
   } else if (def.skill.kind === 'recall') {
     lines.push('回帰: 取られても自分の持ち駒に戻る');
   } else if (def.skill.kind === 'hydra') {
-    lines.push(`八岐: 取られても隣接へ逃げる(${def.skill.extra}回まで)`);
+    lines.push(`八岐: 取られても隣接へ逃げる(${def.skill.extra}回まで)。大将は取れない`);
   } else if (def.skill.kind === 'famine') {
     lines.push(`飢餓: 飢餓の夜の取りが×${def.skill.mult}かつ魂力${def.skill.heal}回復`);
   } else if (def.skill.kind === 'dual') {
