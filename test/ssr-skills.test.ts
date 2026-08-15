@@ -95,7 +95,14 @@ test('moon: 月齢は両者共通で1夜=2手で進む', () => {
 
 /* ---------- 八岐の首(hydra) ---------- */
 
-test('hydra: 取られても隣接へ逃げ、2度目で討ち取られる', () => {
+const findYamata = (s: GameState) => {
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    if (s.board[y][x]?.id === 'yamata') return { x, y };
+  }
+  throw new Error('yamata missing');
+};
+
+test('hydra: 取られても隣接へ2回逃げ、3度目で討ち取られる', () => {
   const s = blank();
   s.turn = 'e';
   put(s, 2, 2, 'yamata', 'p');
@@ -103,24 +110,42 @@ test('hydra: 取られても隣接へ逃げ、2度目で討ち取られる', () 
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
   cap(s, 2, 1, 2, 2, { rng: false });
-  expect(s.hands.e.yamata, 'まだ持ち駒にならない').toBeUndefined();
-  const escaped = s.board.flat().find(pc => pc?.id === 'yamata');
-  expect(escaped, '盤上に残る').toBeTruthy();
-  expect(escaped?.owner).toBe('p');
-  expect(escaped?.hydra).toBe(0);
+  expect(s.hands.e.yamata, '1度目は持ち駒にならない').toBeUndefined();
+  const first = s.board.flat().find(pc => pc?.id === 'yamata');
+  expect(first, '盤上に残る').toBeTruthy();
+  expect(first?.owner).toBe('p');
+  expect(first?.hydra).toBe(1);
 
-  const pos = (() => {
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-      if (s.board[y][x]?.id === 'yamata') return { x, y };
-    }
-    throw new Error('yamata missing');
-  })();
-  s.turn = 'e';
-  const kx = pos.x === 2 ? 1 : 2;
-  put(s, kx, pos.y, 'kappa', 'e');
-  cap(s, kx, pos.y, pos.x, pos.y, { rng: false });
-  expect(s.board.flat().some(pc => pc?.id === 'yamata'), '2度目で討ち取られる').toBe(false);
+  const recapture = () => {
+    const pos = findYamata(s);
+    s.turn = 'e';
+    const kx = pos.x === 2 ? 1 : 2;
+    put(s, kx, pos.y, 'kappa', 'e');
+    cap(s, kx, pos.y, pos.x, pos.y, { rng: false });
+  };
+
+  recapture();
+  expect(s.hands.e.yamata, '2度目も持ち駒にならない').toBeUndefined();
+  const second = s.board.flat().find(pc => pc?.id === 'yamata');
+  expect(second, '2度目も盤上に残る').toBeTruthy();
+  expect(second?.hydra).toBe(0);
+
+  recapture();
+  expect(s.board.flat().some(pc => pc?.id === 'yamata'), '3度目で討ち取られる').toBe(false);
   expect(s.hands.e.yamata).toBe(1);
+});
+
+test('hydra: 八岐大蛇は大将を取れない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'yamata', 'p');
+  put(s, 2, 2, 'shuten', 'e');
+  put(s, 1, 3, 'ittan', 'e');
+  expect(Game.getMoves(s, 2, 3).some(m => m.x === 2 && m.y === 2), '大将マスへ進めない').toBe(false);
+  expect(Game.getMoves(s, 2, 3).some(m => m.x === 1 && m.y === 3), '大将以外は取れる').toBe(true);
+  expect(Game.getAllActions(s, 'p').some(a =>
+    a.kind === 'move' && a.to.x === 2 && a.to.y === 2,
+  )).toBe(false);
 });
 
 /* ---------- 百鬼の陣(legion) ---------- */

@@ -283,6 +283,7 @@ export const Game = {
       if (!this.inBounds(nx, ny)) return false;
       const occ = s.board[ny][nx];
       if (occ && occ.owner === pc.owner) return false;
+      if (occ && def.skill.kind === 'hydra' && YOKAI[occ.id].boss) return false;
       out.push({ x: nx, y: ny, capture: !!occ });
       return !occ;
     };

@@ -358,7 +358,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'yamata', name: '八岐大蛇', atk: 420, rarity: 'SSR', gachaOnly: true,
     img: img('yamata'), imgSm: imgSm('yamata'),
     moveText: '前3方向と横2方向、後ろに1マス',
-    skill: { kind: 'hydra', name: '八岐の首', desc: '取られても隣接の空きマスへ逃げ、首が1つ減る。1回まで逃げ、2度目で討ち取られる', extra: 1 },
+    skill: { kind: 'hydra', name: '八岐の首', desc: '取られても隣接の空きマスへ逃げ、首が1つ減る。2回まで逃げ、3度目で討ち取られる。大将は取れない', extra: 2 },
     moves: { steps: [[0,-1], [1,-1], [-1,-1], [1,0], [-1,0], [0,1]] },
     awakenName: '八岐咆哮',
   },
