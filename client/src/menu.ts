@@ -668,7 +668,7 @@ export const MenuUI = {
     this.rows = Meta.formationRows();
     this.benchSel = null;
     $('form-error').textContent = '';
-    $('form-info').innerHTML = '配置する妖怪を選ぼう(大将は1体必須)';
+    $('form-info').innerHTML = '配置する妖怪を選択、盤面を選択し配置してください';
     this.ensureBossPlaced();
     showScreen('screen-formation');
     FX.setAmbient(['rgba(88,182,255,0.45)', 'rgba(232,196,106,0.4)'], 0.04);
