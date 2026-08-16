@@ -1619,8 +1619,11 @@ async function doAction(action: Action) {
   if (G!.turn === 'e') {
     showBanner('e');
     $('thinking').classList.remove('hidden');
-    await sleep(850 + Math.random() * 550);
+    await sleep(40);
+    const started = performance.now();
     const act = AI.chooseAction(G!, HYAKKI_RANK_DIFFICULTY);
+    const leftover = 420 + Math.random() * 180 - (performance.now() - started);
+    if (leftover > 0) await sleep(leftover);
     $('thinking').classList.add('hidden');
     if (act) { doAction(act); return; }
     // 指し手なし(エンジン側で勝敗確定済みのはず)
