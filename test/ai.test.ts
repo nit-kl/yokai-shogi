@@ -36,4 +36,3 @@ test('持ち駒が多い局面でも hard は予算内に合法手を返す', ()
   expect(Game.getAllActions(s, 'e')).toContainEqual(action);
   expect(ms, `hard think ${ms.toFixed(1)}ms`).toBeLessThan(900);
 });
-});
