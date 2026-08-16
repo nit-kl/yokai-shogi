@@ -384,6 +384,22 @@ export const Game = {
     return out;
   },
 
+  /* 合法手が1つでもあるか。勝敗判定用で全列挙しない */
+  hasAnyAction(s: GameState, side: Side): boolean {
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const pc = s.board[y][x];
+        if (!pc || pc.owner !== side) continue;
+        if (this.getMoves(s, x, y).length > 0) return true;
+      }
+    }
+    for (const id in s.hands[side]) {
+      if (s.hands[side][id] <= 0) continue;
+      if (this.getDrops(s, side, id).length > 0) return true;
+    }
+    return this.awakenReady(s, side) && this.awakenTargets(s, side).length > 0;
+  },
+
   getAllActions(s: GameState, side: Side): Action[] {
     const acts: Action[] = [];
     for (let y = 0; y < ROWS; y++) {
@@ -646,7 +662,7 @@ export const Game = {
     if (!s.winner && s.reason !== 'draw') {
       s.turn = foe;
       s.lastMove = { to: { ...action.to } };
-      if (this.getAllActions(s, foe).length === 0) {
+      if (!this.hasAnyAction(s, foe)) {
         s.winner = side;
         s.reason = 'nomoves';
         events.push({ t: 'gameover', winner: side, reason: 'nomoves' });
