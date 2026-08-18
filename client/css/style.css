@@ -1,5 +1,6 @@
 /* ============================================================
-   妖怪封E��E〜百鬼夜行�E盤上決戦、E   ============================================================ */
+   百鬼盤 〜妖怪を集めて、取って、HPを削る対戦ゲーム〜
+   ============================================================ */
 :root {
   --gold: #e8c46a;
   --gold-deep: #b8860b;
@@ -250,11 +251,14 @@ html[data-script="latn"] .screen h3 {
 }
 .title-emblem span { transform: rotate(-45deg); color: var(--gold); font: 1rem "Yu Mincho", serif; }
 .title-sub-top {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
   font-family: "Yu Mincho", serif;
-  letter-spacing: 0.55em; text-indent: 0.55em;
-  color: #c2b5dd; font-size: clamp(0.62rem, 1.8vw, 0.82rem);
+  letter-spacing: 0.08em; text-indent: 0;
+  color: #c2b5dd; font-size: clamp(0.58rem, 1.7vw, 0.78rem);
   margin: 0.55em 0 0.25em;
+  max-width: min(100%, 28em);
+  line-height: 1.55;
+  text-align: center;
 }
 .title-sub-top i { display: block; width: 30px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
 .title-sub-top i:last-child { transform: rotate(180deg); }

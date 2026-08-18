@@ -3,7 +3,7 @@
 import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import type { Env } from '../env';
 
-const RP_NAME = '妖怪将棋';
+const RP_NAME = '百鬼盤';
 const CHALLENGE_TTL_MS = 5 * 60_000;
 
 export function rpName(): string {
