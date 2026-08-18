@@ -1,7 +1,7 @@
 # 16. 独自ドメイン取得・移行手順
 
 Amazon Route 53で `nit-games.com` を取得し、ゲーム共通ドメインとして利用する。
-DNSはCloudflareへ委譲し、妖怪将棋を専用サブドメインから利用できるようにするための作業手順。
+DNSはCloudflareへ委譲し、百鬼盤を専用サブドメインから利用できるようにするための作業手順。
 
 現在の本番配信先は `https://yokai-shogi.pages.dev`、本番APIは `https://yokai-shogi-api-production.kojileo0178.workers.dev`。
 
@@ -17,7 +17,7 @@ DNSはCloudflareへ委譲し、妖怪将棋を専用サブドメインから利�
 | `www` | `https://www.nit-games.com` → `https://nit-games.com` へリダイレクト | Cloudflare Redirect Rules |
 
 `nit-games.com` は複数ゲームを案内するポータル用に確保し、各ゲームを `<game>.nit-games.com` 形式で追加する。
-妖怪将棋のゲームとAPIを同じサブドメイン階層に置くことで、利用者から見た信頼性と運用時の識別性を高める。
+百鬼盤のゲームとAPIを同じサブドメイン階層に置くことで、利用者から見た信頼性と運用時の識別性を高める。
 APIは既存コードと同様に別オリジンになるため、CORS設定は引き続き必要。
 
 ## DNS管理方針
@@ -84,7 +84,7 @@ Cloudflareが `nit-games.com` のDNSを管理していれば、PagesとWorkers�
 4. TLS証明書が発行され、ステータスがActiveになるまで待つ。
 
 DNSレコードだけを手動追加せず、必ずPagesのCustom domains画面から関連付ける。
-`nit-games.com` 自体は妖怪将棋Pagesへ割り当てず、ゲーム一覧ポータル用として残す。
+`nit-games.com` 自体は百鬼盤Pagesへ割り当てず、ゲーム一覧ポータル用として残す。
 
 一時的に AdSense 審査用へルートをゲームへ向ける場合は、Pages に apex を載せず、Cloudflare の **Redirect Rule** で
 `nit-games.com` / `www` → `https://yokai-shogi.nit-games.com` とする(手順の正本は doc 22 の B-0)。
@@ -174,7 +174,7 @@ node test/manual/security-check.mjs https://api.yokai-shogi.nit-games.com
 - ゲスト作成、ガチャ、編成、ソロ、オンライン対戦が動作する。
 - ブラウザの開発者ツールでCORSエラーがない。
 - WebSocketが `wss://api.yokai-shogi.nit-games.com` へ接続できる。
-- `nit-games.com` と `www.nit-games.com` が妖怪将棋とは独立したポータルURLとして維持されている。
+- `nit-games.com` と `www.nit-games.com` が百鬼盤とは独立したポータルURLとして維持されている。
 - `api.yokai-shogi.nit-games.com/healthz` を監視できる。
 
 ### 7. 正式URLへの切替

@@ -1,4 +1,4 @@
-// 妖怪将棋 API(Cloudflare Workers + Hono + D1)
+// 百鬼盤 API(Cloudflare Workers + Hono + D1)
 // ローカル開発: npm run api:dev(ローカルD1。マイグレーション: npm run db:migrate:local)
 // シークレット: JWT_SECRET(必須)/ TURNSTILE_SECRET_KEY(任意: 未設定なら検証スキップ)
 {

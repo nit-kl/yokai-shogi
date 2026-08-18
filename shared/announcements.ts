@@ -31,7 +31,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
       DISCORD_INVITE_URL,
     ].join('\n'),
     bodyEn: [
-      'NIT GAMES | Yokai Shogi is now open.', '',
+      'NIT GAMES | Hyakkiban is now open.', '',
       'Use it to find opponents, follow Saturday Battle announcements, discuss formations, and report bugs.',
       'The busiest battle hours are 20:00–22:00 JST daily, and players also gather on Discord then.', '',
       'Joining is optional. You can continue playing entirely in your browser.', DISCORD_INVITE_URL,

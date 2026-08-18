@@ -174,7 +174,7 @@ Invoke-WebRequest https://www.nit-games.com/ -MaximumRedirection 0 -ErrorAction 
 
 **前提:** AdSense が承認済みであること。未承認だと「AdSense アカウントが必要です」で止まる。
 
-#### C-1. スタートガイドの回答例(妖怪将棋向け)
+#### C-1. スタートガイドの回答例(百鬼盤向け)
 
 1. [ ] [Ad Manager](https://admanager.google.com/) に **AdSense と同じ Google アカウント**でログイン
 2. [ ] 「使ってみる」→ ビジネス種別: **ウェブサイトまたは動画のパブリッシャー**
@@ -194,7 +194,7 @@ Invoke-WebRequest https://www.nit-games.com/ -MaximumRedirection 0 -ErrorAction 
 #### C-2. 費用
 
 - 通常の Ad Manager は **小規模なら利用料無料**(月間インプレッションの無料枠内)
-- 妖怪将棋の規模では有料の Ad Manager 360 は不要
+- 百鬼盤の規模では有料の Ad Manager 360 は不要
 - 詳細は [Ad Manager の課金説明](https://support.google.com/admanager/answer/6214526)
 
 ---

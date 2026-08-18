@@ -66,15 +66,15 @@ const add = (ja: string, en: string): void => { if (ja) EN.set(ja, en); };
 // Static UI copy. Text is keyed by the Japanese source so existing rendering code
 // stays untouched and server/storage values never become locale-dependent.
 const STATIC: Record<string, string> = {
-  '妖怪将棋｜無料ブラウザ将棋ゲーム': 'Yokai Shogi | Free Browser Strategy Game',
+  '百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム': 'Hyakkiban | Collect yokai, capture, and drain HP',
   '百鬼召喚中…': 'Summoning the Night Parade…',
   '初回登録の確認': 'Verifying your first visit',
   'メンテナンス中': 'Under Maintenance',
   'オンライン機能は一時停止しています。しばらくしてからお試しください。': 'Online features are temporarily unavailable. Please try again shortly.',
   '再試行': 'Try Again', 'ソロで遊ぶ': 'Play Solo', '妖力': 'Spirit Power',
   '音量設定': 'Audio Settings', 'プレイヤーネームを変更': 'Change player name',
-  'プレイヤー': 'Player', '百鬼夜行の盤上決戦': 'A Night Parade Showdown',
-  '妖怪': 'Yokai', '将棋': 'Shogi', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
+  'プレイヤー': 'Player', '妖怪を集めて、取って、HPを削る対戦ゲーム': 'Collect yokai, capture, and drain HP',
+  '妖怪': 'Yokai', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
   '猛者と競う': 'Face other players', 'オンライン対戦': 'Online Battle',
   '登録プレイヤー': 'Registered Players', '人': 'players', 'メニュー': 'Menu',
   '妖怪ガチャ': 'Yokai Summon', '編 成': 'Formation', '駒一覧': 'Compendium',
@@ -253,8 +253,9 @@ const resonanceEn = [
 RESONANCES.forEach((r, i) => { add(r.name, resonanceEn[i][0]); add(r.desc, resonanceEn[i][1]); });
 
 const HTML_OVERRIDES: Record<string, string> = {
+  '.title-logo': '<span>Hyakkiban</span>',
   '.rules-scroll': `
-    <p class="rules-lead">Shogi captures plus HP. Skills differ by yokai — <b>press and hold</b> a piece, or open the <b>Compendium</b>.</p>
+    <p class="rules-lead">Collect yokai, capture them, and drain HP. Skills differ by yokai — <b>press and hold</b> a piece, or open the <b>Compendium</b>.</p>
     <h3>How to Win</h3>
     <ul>
       <li>Reduce the opponent's <b>HP to 0</b></li>
@@ -404,15 +405,15 @@ function updateHead(): void {
   root.dataset.locale = def.id;
 
   if (def.id === 'en') {
-    document.title = STATIC['妖怪将棋｜無料ブラウザ将棋ゲーム'];
-    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', 'A free browser strategy game combining shogi-inspired tactics with Japanese yokai. Play solo, build your army, summon yokai, or battle online.');
-    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', 'Build a yokai army and battle in this free shogi-inspired browser strategy game.');
-    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', 'Build a yokai army and battle in this free shogi-inspired browser strategy game.');
+    document.title = STATIC['百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム'];
+    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', 'Collect yokai, capture, and drain HP in this free browser battle game. Play solo, build your army, summon yokai, or battle online.');
+    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', 'Collect yokai, capture, and drain HP in this free browser battle game.');
+    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', 'Collect yokai, capture, and drain HP in this free browser battle game.');
   } else {
-    document.title = '妖怪将棋｜無料ブラウザ将棋ゲーム';
-    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', '妖怪の駒で戦う無料ブラウザ将棋ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。登録なしですぐに遊べます。');
-    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', '妖怪の駒で戦う無料ブラウザ将棋ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。');
-    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', '妖怪の駒で戦う無料ブラウザ将棋ゲーム。登録なしですぐに遊べます。');
+    document.title = '百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム';
+    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', '妖怪を集めて、取って、HPを削る対戦ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。登録なしですぐに遊べます。');
+    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', '妖怪を集めて、取って、HPを削る対戦ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。');
+    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', '妖怪を集めて、取って、HPを削る対戦ゲーム。登録なしですぐに遊べます。');
   }
   document.querySelector<HTMLMetaElement>('meta[property="og:locale"]')?.setAttribute('content', def.ogLocale);
   document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', document.title);
