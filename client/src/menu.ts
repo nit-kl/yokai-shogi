@@ -10,6 +10,7 @@ import { Meta } from './meta';
 import type { GachaResult } from './meta';
 import { ensureAdRewardConsent, getRewardedProvider } from './ads/rewarded';
 import type { AdsStatus } from './ads/rewarded';
+import { adsAllowed } from './platform';
 import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
@@ -472,7 +473,7 @@ export const MenuUI = {
     const btn = $<HTMLButtonElement>('btn-ad-reward');
     const note = $('ad-reward-note');
     const st = this.adsStatus;
-    const show = !!(st?.enabled && Meta.data.online && this.onboardingMode !== 'gacha');
+    const show = !!(adsAllowed() && st?.enabled && Meta.data.online && this.onboardingMode !== 'gacha');
     btn.classList.toggle('hidden', !show);
     note.classList.toggle('hidden', !show);
     if (!show || !st) return;
@@ -485,7 +486,7 @@ export const MenuUI = {
   },
 
   async refreshAdsStatus() {
-    if (!Meta.data.online) {
+    if (!adsAllowed() || !Meta.data.online) {
       this.adsStatus = null;
       this.refreshAdRewardButton();
       return;
@@ -495,6 +496,7 @@ export const MenuUI = {
   },
 
   async watchAdReward() {
+    if (!adsAllowed()) return;
     const st = this.adsStatus;
     if (!st?.enabled || st.remaining <= 0) return;
     if (!ensureAdRewardConsent()) return;

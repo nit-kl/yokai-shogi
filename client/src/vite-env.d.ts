@@ -4,3 +4,4 @@
 declare const __API_URL__: string;
 declare const __SENTRY_DSN__: string;
 declare const __RELEASE__: string;
+declare const __PLATFORM__: 'web' | 'steam';

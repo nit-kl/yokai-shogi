@@ -1,5 +1,8 @@
 /* リワード広告プロバイダ抽象(doc 22)
-   UI は showRewardedAd() だけを呼ぶ。実広告 SDK の差はここに閉じ込める。 */
+   UI は showRewardedAd() だけを呼ぶ。実広告 SDK の差はここに閉じ込める。
+   Steam ビルドでは adsAllowed()=false のため SDK をロードしない(doc 23)。 */
+
+import { adsAllowed } from '../platform';
 
 export type AdsProviderKind = 'mock' | 'gpt';
 
@@ -50,6 +53,7 @@ function gpt(): GptNamespace | undefined {
 }
 
 function loadGptScript(): Promise<void> {
+  if (!adsAllowed()) return Promise.reject(new Error('ads disabled on this platform'));
   if (gpt()?.cmd) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const existing = document.querySelector('script[data-yokai-gpt]');
@@ -79,6 +83,9 @@ const mockProvider: RewardedAdProvider = {
 const gptProvider: RewardedAdProvider = {
   kind: 'gpt',
   async show(config) {
+    if (!adsAllowed()) {
+      return { ok: false, reason: 'unavailable', message: 'このビルドでは広告は利用できません' };
+    }
     const adUnitPath = config.adUnitPath?.trim();
     if (!adUnitPath) {
       return { ok: false, reason: 'unavailable', message: '広告ユニットが未設定です' };
@@ -150,7 +157,15 @@ const gptProvider: RewardedAdProvider = {
   },
 };
 
+const disabledProvider: RewardedAdProvider = {
+  kind: 'mock',
+  async show() {
+    return { ok: false, reason: 'unavailable', message: 'このビルドでは広告は利用できません' };
+  },
+};
+
 export function getRewardedProvider(kind: AdsProviderKind): RewardedAdProvider {
+  if (!adsAllowed()) return disabledProvider;
   return kind === 'gpt' ? gptProvider : mockProvider;
 }
 
@@ -169,6 +184,7 @@ export function setAdRewardConsent(ok: boolean): void {
 
 /** 初回のみ同意を取る。拒否なら false */
 export function ensureAdRewardConsent(): boolean {
+  if (!adsAllowed()) return false;
   if (hasAdRewardConsent()) return true;
   const ok = window.confirm(
     '広告を視聴すると、広告配信のため第三者(広告ネットワーク)へ端末・接続情報が送信される場合があります。\n\n'

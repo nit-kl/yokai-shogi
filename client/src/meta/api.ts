@@ -5,6 +5,8 @@
    ============================================================ */
 
 import { validateDisplayName, validateFormation } from '../../../shared/validate';
+import { isSteam } from '../platform';
+import { getMockOwnedSteamDlcIds } from '../steam/auth';
 import { ApiClient, ApiError } from './client';
 import { ownedSet } from './types';
 import type { GachaResult } from './types';
@@ -41,6 +43,14 @@ export class ApiMeta implements MetaProvider {
 
   async init(): Promise<LoginBonus | null> {
     await this.client.ensureSession(getTurnstileToken);
+    if (isSteam()) {
+      try {
+        await this.client.post2('/v1/steam/dlc/sync', { dlcIds: getMockOwnedSteamDlcIds() });
+      } catch (e) {
+        /* DLC 同期失敗でも起動は継続(ソロ/メタは使える) */
+        console.warn('[meta] steam dlc sync failed', e);
+      }
+    }
     return this.reload();
   }
 

@@ -24,6 +24,12 @@ export interface Env {
   ADS_REWARD_DAILY_CAP?: string;
   /* GPT の広告ユニットパス(例: /network/unit)。provider=gpt 時にクライアントへ返す */
   ADS_GPT_AD_UNIT_PATH?: string;
+  /* Steam Web API キー(Partner)。未設定時は mock チケットのみ(ローカル/CI) */
+  STEAM_WEB_API_KEY?: string;
+  /* Steam App ID。本番検証に必要 */
+  STEAM_APP_ID?: string;
+  /* '1' で mock:<steamId> を明示許可。未設定でもキー未設定時は mock 可 */
+  STEAM_AUTH_MOCK?: string;
 }
 
 /* Honoのコンテキスト型 */

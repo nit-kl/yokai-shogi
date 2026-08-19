@@ -2,6 +2,7 @@
    doc 10 の「改ざん検証」: 不正リクエストがサーバーで拒否されることを確認する */
 import { env, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
+import { ANNOUNCEMENTS, currentAnnouncements } from '../../shared/announcements';
 import { runDailyJobs } from '../../server/src/cron';
 import { gameDate, gameWeek, prevGameDate } from '../../server/src/lib/time';
 
@@ -35,7 +36,80 @@ describe('認証', () => {
   it('認証設定: Turnstile未設定時は不要と返す', async () => {
     const config = await api('/v1/auth/config');
     expect(config.status).toBe(200);
-    expect(config.body).toEqual({ turnstileRequired: false, passkeyEnabled: true });
+    expect(config.body).toMatchObject({
+      turnstileRequired: false,
+      passkeyEnabled: true,
+      steamAuth: { mockAllowed: true, configured: expect.any(Boolean) },
+    });
+  });
+
+  it('Steam ログイン: mock チケットで作成・再ログイン', async () => {
+    const steamId = '76561198000001234';
+    const created = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: `mock:${steamId}` }),
+      ip: freshIp(),
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.userId).toBeTruthy();
+    expect(created.body.steamId).toBe(steamId);
+    expect(created.body.created).toBe(true);
+    expect(created.body.accessToken).toBeTruthy();
+
+    const me = await api('/v1/me', { token: created.body.accessToken });
+    expect(me.status).toBe(200);
+    expect(me.body.isGuest).toBe(false);
+    expect(me.body.tickets).toBe(10);
+
+    const again = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: `mock:${steamId}` }),
+      ip: freshIp(),
+    });
+    expect(again.status).toBe(200);
+    expect(again.body.userId).toBe(created.body.userId);
+    expect(again.body.created).toBe(false);
+
+    const bad = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: 'mock:not-a-number' }),
+      ip: freshIp(),
+    });
+    expect(bad.status).toBe(401);
+  });
+
+  it('Steam DLC: mock full_collection でガチャプールを冪等付与', async () => {
+    const steamId = '76561198000005678';
+    const login = await api('/v1/auth/steam', {
+      method: 'POST',
+      body: JSON.stringify({ ticket: `mock:${steamId}` }),
+      ip: freshIp(),
+    });
+    expect(login.status).toBe(201);
+    const token = login.body.accessToken as string;
+
+    const sync = await api('/v1/steam/dlc/sync', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ dlcIds: ['full_collection'] }),
+    });
+    expect(sync.status).toBe(200);
+    expect(sync.body.fullCollection).toBe(true);
+    expect(sync.body.newlyGrantedDlc).toEqual(['full_collection']);
+    expect(sync.body.collectionCount).toBeGreaterThan(10);
+
+    const again = await api('/v1/steam/dlc/sync', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ dlcIds: ['full_collection'] }),
+    });
+    expect(again.status).toBe(200);
+    expect(again.body.newlyGrantedDlc).toEqual([]);
+    expect(again.body.collectionCount).toBe(sync.body.collectionCount);
+
+    const status = await api('/v1/steam/dlc', { token });
+    expect(status.status).toBe(200);
+    expect(status.body.ownedDlc).toEqual(['full_collection']);
   });
 
   it('ゲスト作成: 初期チケット10・所持なし・オンボーディング未完了', async () => {
@@ -682,69 +756,33 @@ describe('共通', () => {
   it('お知らせ一覧を公開APIで返す', async () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
+    expect(r.body.announcements).toEqual(currentAnnouncements());
+    expect(r.body.announcements.length).toBeGreaterThan(0);
     expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-08-02-discord-community',
-      type: 'campaign',
-      priority: 'high',
-      title: '公式Discordコミュニティを開設しました',
+      id: expect.any(String),
+      type: expect.stringMatching(/^(update|maintenance|campaign)$/),
+      title: expect.any(String),
+      body: expect.any(String),
+      publishedAt: expect.any(String),
+      priority: expect.stringMatching(/^(normal|high)$/),
     });
-    expect(r.body.announcements).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: '2026-08-01-new-pieces-gift',
-        type: 'campaign',
-        priority: 'high',
-        title: '新妖怪追加記念！ガチャチケット🎟50枚配布',
-      }),
-      expect.objectContaining({
-        id: '2026-08-01-hunger-ember-pieces',
-        type: 'update',
-        priority: 'high',
-        title: 'ゲーム性改善：飢餓の夜と新妖怪6体を追加',
-      }),
-      expect.objectContaining({
-        id: '2026-07-24-hyakki-frontier',
-        type: 'update',
-        priority: 'high',
-        title: 'ソロを百鬼夜行の連戦施設に刷新しました',
-      }),
-      expect.objectContaining({
-        id: '2026-07-19-random-match-anytime',
-        type: 'update',
-        priority: 'high',
-        title: 'ランダムマッチをいつでも利用できるようにしました',
-      }),
-      expect.objectContaining({
-        id: '2026-07-19-hyakki-hasha-kyubi',
-        type: 'campaign',
-        priority: 'high',
-        title: '百鬼夜行ランキング1位に「覇者・九尾」を授与',
-      }),
-      expect.objectContaining({
-        id: '2026-07-18-release-gift',
-        type: 'campaign',
-        priority: 'high',
-        title: 'リリース記念！ガチャチケット🎟100枚配布',
-      }),
-      expect.objectContaining({
-        id: '2026-07-05-hyakki-weekly-ranking',
-        type: 'update',
-        priority: 'high',
-        title: '百鬼夜行の週間連勝ランキングが始まりました',
-      }),
-      expect.objectContaining({ id: '2026-07-04-hyakki-nurarihyon-event' }),
-    ]));
   });
 
   it('お知らせ一覧は公開中のものを新しい順で返す', async () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);
-    expect(r.body.announcements[0]).toMatchObject({
-      id: '2026-08-02-discord-community',
-      type: 'campaign',
-      priority: 'high',
-    });
+    const now = Date.now();
+    expect(r.body.announcements.every((item: { showUntil?: string }) =>
+      !item.showUntil || Date.parse(item.showUntil) >= now)).toBe(true);
     const timestamps = r.body.announcements.map((item: { publishedAt: string }) => Date.parse(item.publishedAt));
     expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
+  });
+
+  it('期限切れお知らせは一覧から外す', () => {
+    const expired = ANNOUNCEMENTS.find(item => item.showUntil);
+    expect(expired?.showUntil).toBeTruthy();
+    const afterExpiry = new Date(Date.parse(expired!.showUntil!) + 1000);
+    expect(currentAnnouncements(afterExpiry).some(item => item.id === expired!.id)).toBe(false);
   });
 });
 

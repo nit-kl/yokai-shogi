@@ -5,6 +5,10 @@
 ## 前提
 
 - 個人〜少人数での開発・運用を想定し、低コストで始めて段階的にスケールできる構成を選ぶ
+- **有償ガチャ・有償チケット・強駒のバラ売りはしない**。コレクションはプレイ報酬でも完走できる設計を維持する
+- **Web**: 無料配信。運営収入として**任意のリワード広告**を許可する(チケットはログインボーナス、勝利報酬、参加報酬、広告視聴、運営配布)。doc 22
+- **Steam**(計画): 本体無料・**広告なし**。収益は **全駒解放DLC**(収集時短)と **異装等の見た目DLC**。オンラインは Web と同一マッチプールでクロスプレイ。doc 23
+- 現行の主配信は Web。Steam は Web と並行運用する追加チャネル(実装は Phase Steam)
 - **ユーザー課金(IAP・有償チケット)は実装しない**方針を継続する。運営収入として**任意のリワード広告**は許可する(チケットはログインボーナス、勝利報酬、参加報酬、広告視聴、運営配布)
 - Webブラウザ向けで運用する。ネイティブアプリ(ストア配信)とPWAは当面スコープ外
 - **インフラはCloudflareに統一**: Pages(配信)/ Workers(API)/ Durable Objects(対戦)/ D1(DB)/ Cron・Turnstile・Analytics Engine(補助)
@@ -35,6 +39,10 @@
 | 20 | [検索インデックス対応手順](20-search-indexing.md) | Google Search Console登録・sitemap送信・外部リンク整備など検索流入向けの運営作業 |
 | 21 | [百鬼夜行 週間連勝ランキング](21-hyakki-weekly-ranking.md) | ソロ連戦ランキングの仕様・DB・API・UI方針 |
 | 22 | [リワード広告](22-rewarded-ads.md) | 任意視聴リワード・日次上限・API・運営者の開設/有効化手順 |
+| 23 | [Steam配信方針](23-steam.md) | 無料本体・DLC・Web並行・技術方針・実装順 |
+| 24 | [Steam Partner 設定手順](24-steam-partner-setup.md) | App ID・Publisher Web API キー取得と Workers 投入 |
+| - | [アセット権利棚卸し](asset-licenses.md) | 駒・BGM の商用/Steam可否（要運営者記入） |
+| - | [商標先行調査メモ](trademark-research.md) | 「妖怪将棋」机上調査・J-PlatPat 記入欄 |
 | - | [Analytics Engine 確認クエリ](analytics-queries.md) | 登録・オンボーディング・対戦・ランキングの確認用SQL |
 
 ## 読み方

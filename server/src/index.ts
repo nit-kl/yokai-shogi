@@ -19,6 +19,7 @@ import { statsRoutes } from './routes/stats';
 import { announcementRoutes } from './routes/announcements';
 import { rankingRoutes } from './routes/rankings';
 import { adsRoutes } from './routes/ads';
+import { steamRoutes } from './routes/steam';
 import { BattleRoom } from './do/battle-room';
 import { Matchmaker } from './do/matchmaker';
 
@@ -64,6 +65,7 @@ v1.route('/', statsRoutes);
 v1.route('/', announcementRoutes);
 v1.route('/', rankingRoutes);
 v1.route('/', adsRoutes);
+v1.route('/', steamRoutes);
 app.route('/v1', v1);
 
 app.notFound(c => apiError(c, 'VALIDATION', '不明なエンドポイントです'));

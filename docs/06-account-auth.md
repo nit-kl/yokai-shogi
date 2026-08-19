@@ -61,13 +61,23 @@ WebAuthn(discoverable credential)。`auth_identities.provider='passkey'` に cre
 
 OAuth(Google等)は未実装。追加する場合は同じ `auth_identities` に `provider='google'` を足し、既存のゲスト/パスキー/引き継ぎコードと併存させる。
 
+### Steam(doc 23)
+
+`POST /v1/auth/steam` で `provider='steam'` を紐付ける。
+
+1. クライアントが Steam Session Ticket を取得し API へ送る(開発時は `mock:<steamId64>`)
+2. サーバーが Steam Web API `AuthenticateUserTicket` で検証し、Steam ID に紐づくユーザーを発行または復元する
+3. 環境変数: `STEAM_WEB_API_KEY` / `STEAM_APP_ID`。未設定または `STEAM_AUTH_MOCK=1` のときのみ mock チケットを許可
+4. 既存の引き継ぎコードで Web 進行とマージできる(二重進行の防止)
+5. DLC 所有は Steam entitlement 同期でサーバー権威の所持に反映する(計画・doc 08)
+
 ### auth_identities テーブル
 ```sql
 CREATE TABLE auth_identities (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    TEXT NOT NULL REFERENCES users(id),
-  provider   TEXT NOT NULL,           -- 'link_code' / 'passkey' / 'google'
-  subject    TEXT NOT NULL,           -- 引き継ぎコードSHA-256 / credential ID / OAuth sub
+  provider   TEXT NOT NULL,           -- 'link_code' / 'passkey' / 'google' / 'steam'
+  subject    TEXT NOT NULL,           -- 引き継ぎコードSHA-256 / credential ID / OAuth sub / SteamID64
   public_key BLOB,
   counter    INTEGER,
   transports TEXT,                    -- パスキー: JSON配列
