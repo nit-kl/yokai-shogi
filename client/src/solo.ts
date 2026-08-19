@@ -28,7 +28,7 @@ export const HYAKKI_STAGE: SoloStage = {
 export function soloBattleStage(rand: () => number = Math.random): SoloStage {
   const bosses = [...BOSS_CHOICES];
   const bossId = bosses[Math.floor(rand() * bosses.length)];
-  const pieces = Object.values(YOKAI).filter(piece => piece.type !== 'boss').map(piece => piece.id);
+  const pieces = Object.values(YOKAI).filter(piece => !piece.boss).map(piece => piece.id);
   for (let i = pieces.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [pieces[i], pieces[j]] = [pieces[j], pieces[i]];

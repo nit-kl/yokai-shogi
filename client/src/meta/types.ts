@@ -85,20 +85,19 @@ export interface MetaProvider {
 
 export function bossIdOf(data: MetaState): string {
   for (const id of data.formation.flat()) {
-    if (id && YOKAI[id].type === 'boss') return id;
+    if (id && YOKAI[id].boss) return id;
   }
   return PLAYER_BOSS;
 }
 
 export function ownedListOf(data: MetaState): string[] {
   const rOrder: Record<string, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
-  const tOrder: Record<string, number> = { boss: 0, attack: 1, defense: 2, ambush: 3 };
   return Object.keys(data.owned)
     .filter(id => data.owned[id])
     .sort((a, b) => {
       const A = YOKAI[a], B = YOKAI[b];
-      return (rOrder[A.rarity] - rOrder[B.rarity]) ||
-             ((tOrder[A.type] ?? 9) - (tOrder[B.type] ?? 9)) ||
+      return Number(!A.boss) - Number(!B.boss) ||
+             (rOrder[A.rarity] - rOrder[B.rarity]) ||
              (B.atk - A.atk) || a.localeCompare(b);
     });
 }

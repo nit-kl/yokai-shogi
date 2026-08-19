@@ -11,7 +11,7 @@ await page.waitForFunction(() => document.documentElement.lang === 'en' && docum
 await page.waitForSelector('#pieces-list .piece-card', { state: 'attached' });
 await page.waitForTimeout(200);
 
-if (await page.title() !== 'Yokai Shogi | Free Browser Strategy Game') errors.push('English document title was not applied');
+if (await page.title() !== 'Hyakkiban | Collect yokai, capture, and drain HP') errors.push('English document title was not applied');
 if ((await page.locator('#locale-select').inputValue()) !== 'en') errors.push('Language select is not set to English');
 const localeOptions = await page.locator('#locale-select option').evaluateAll(opts => opts.map(o => o.value));
 if (!localeOptions.includes('ja') || !localeOptions.includes('en')) errors.push(`Language select missing locales: ${localeOptions.join(',')}`);
@@ -70,7 +70,7 @@ await page.screenshot({ path: 'test/e2e/i18n-en.png', fullPage: true });
 
 await page.locator('#locale-select').selectOption('ja');
 await page.waitForFunction(() => document.documentElement.lang === 'ja' && document.documentElement.dataset.script === 'jpan');
-if (await page.title() !== '妖怪将棋｜無料ブラウザ将棋ゲーム') errors.push('Japanese title was not restored');
+if (await page.title() !== '百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム') errors.push('Japanese title was not restored');
 if ((await page.locator('#btn-start').textContent())?.includes('百鬼夜行') !== true) errors.push('Japanese UI was not restored');
 if (!(await page.locator('a[href="/legal/terms.html"]').count())) errors.push('Japanese terms link was not restored');
 

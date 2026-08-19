@@ -28,7 +28,7 @@ function currentScreenLabel(): string {
 function buildDmText(context?: string): string {
   const screen = context ?? currentScreenLabel();
   return [
-    '【妖怪将棋】不具合・お問い合わせ',
+    '【百鬼盤】不具合・お問い合わせ',
     '',
     '【内容】',
     '',

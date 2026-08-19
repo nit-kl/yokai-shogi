@@ -1,8 +1,8 @@
 /* ============================================================
-   妖怪将棋 - ガチャ・編成・ログインボーナスUI
+   百鬼盤 - ガチャ・編成・ログインボーナスUI
    ============================================================ */
 
-import { COLS, YOKAI, TYPE_INFO, RARITY_INFO } from '../../shared/data';
+import { COLS, YOKAI, RARITY_INFO } from '../../shared/data';
 import { $, sleep, showScreen } from './util';
 import { AudioSys } from './audio';
 import { FX } from './effects';
@@ -670,7 +670,7 @@ export const MenuUI = {
     this.rows = Meta.formationRows();
     this.benchSel = null;
     $('form-error').textContent = '';
-    $('form-info').innerHTML = '配置する妖怪を選ぼう(大将は1体必須)';
+    $('form-info').innerHTML = '配置する妖怪を選択、盤面を選択し配置してください';
     this.ensureBossPlaced();
     showScreen('screen-formation');
     FX.setAmbient(['rgba(88,182,255,0.45)', 'rgba(232,196,106,0.4)'], 0.04);
@@ -689,11 +689,11 @@ export const MenuUI = {
   },
 
   bossIds(): string[] {
-    return this.rows.flat().filter((id): id is string => !!id && YOKAI[id].type === 'boss');
+    return this.rows.flat().filter((id): id is string => !!id && !!YOKAI[id].boss);
   },
 
   firstOwnedBoss(): string | null {
-    return Meta.ownedList().find(id => YOKAI[id].type === 'boss') || null;
+    return Meta.ownedList().find(id => YOKAI[id].boss) || null;
   },
 
   ensureBossPlaced() {
@@ -728,7 +728,7 @@ export const MenuUI = {
         if (id) {
           const def = YOKAI[id];
           cell.classList.add(RARITY_INFO[def.rarity].cls);
-          if (def.type === 'boss') cell.classList.add('form-boss');
+          if (def.boss) cell.classList.add('form-boss');
           cell.innerHTML = `<img src="${def.imgSm}" alt="${def.name}" draggable="false">`;
         }
         cell.onclick = () => this.onCellClick(ry, x);
@@ -757,9 +757,8 @@ export const MenuUI = {
 
   showFormInfo(id: string) {
     const def = YOKAI[id];
-    const ti = TYPE_INFO[def.type];
     $('form-info').innerHTML =
-      `<span class="type-chip ${ti.cls}">${ti.label}</span> ` +
+      (def.boss ? `<span class="type-chip t-boss">大将</span> ` : '') +
       `<b>${def.name}</b> <span class="fi-atk">ATK ${def.atk}</span><br>` +
       `${def.moveText}<br>【${def.skill.name}】${def.skill.desc}`;
   },
@@ -768,7 +767,7 @@ export const MenuUI = {
     AudioSys.play('select');
     this.showFormInfo(id);
     if (this.placedIds().has(id)) {
-      if (YOKAI[id].type === 'boss') {
+      if (YOKAI[id].boss) {
         /* 大将は必須なので、控えタップでは外さず「移動対象」として扱う */
         this.benchSel = (this.benchSel === id) ? null : id;
       } else {
@@ -786,8 +785,8 @@ export const MenuUI = {
     const cur = this.rows[ry][x];
     if (this.benchSel) {
       const selected = this.benchSel;
-      const selectedIsBoss = YOKAI[selected].type === 'boss';
-      const replacingOnlyBoss = cur && YOKAI[cur].type === 'boss' && this.bossIds().length <= 1 && !selectedIsBoss;
+      const selectedIsBoss = !!YOKAI[selected].boss;
+      const replacingOnlyBoss = !!(cur && YOKAI[cur].boss && this.bossIds().length <= 1 && !selectedIsBoss);
       if (replacingOnlyBoss) {
         $('form-error').textContent = '⚠ 大将は必須です。大将以外は別のマスに配置してください';
         return;
@@ -803,7 +802,7 @@ export const MenuUI = {
       AudioSys.play('drop');
     } else if (cur) {
       this.showFormInfo(cur);
-      if (YOKAI[cur].type === 'boss') {
+      if (YOKAI[cur].boss) {
         /* うっかり大将を外して詰まらないよう、盤上タップでは移動選択にする */
         this.benchSel = cur;
       } else {

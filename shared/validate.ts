@@ -1,5 +1,5 @@
 /* ============================================================
-   妖怪将棋 - 共用バリデーション(クライアント/サーバー共用)
+   百鬼盤 - 共用バリデーション(クライアント/サーバー共用)
    編成検証はクライアント(即時フィードバック)とサーバー(権威検証)で
    必ず同一ロジックを使う(doc 02 / 04)
    ============================================================ */
@@ -22,7 +22,7 @@ export function validateFormation(rows: unknown, owned: ReadonlySet<string>): st
     if (!def || !owned.has(id)) return '所持していない妖怪が含まれています';
     if (seen.has(id)) return '同じ妖怪は1体しか配置できません';
     seen.add(id);
-    if (def.type === 'boss') bosses++;
+    if (def.boss) bosses++;
   }
   if (bosses !== 1) return '大将を1体配置してください';
   return null;

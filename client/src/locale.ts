@@ -1,4 +1,4 @@
-import { RESONANCES, TYPE_INFO, YOKAI } from '../../shared/data';
+import { RESONANCES, YOKAI } from '../../shared/data';
 
 /** Add a locale here (+ message tables) when shipping a new language. */
 export type AppLocale = 'ja' | 'en';
@@ -66,15 +66,15 @@ const add = (ja: string, en: string): void => { if (ja) EN.set(ja, en); };
 // Static UI copy. Text is keyed by the Japanese source so existing rendering code
 // stays untouched and server/storage values never become locale-dependent.
 const STATIC: Record<string, string> = {
-  '妖怪将棋｜無料ブラウザ将棋ゲーム': 'Yokai Shogi | Free Browser Strategy Game',
+  '百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム': 'Hyakkiban | Collect yokai, capture, and drain HP',
   '百鬼召喚中…': 'Summoning the Night Parade…',
   '初回登録の確認': 'Verifying your first visit',
   'メンテナンス中': 'Under Maintenance',
   'オンライン機能は一時停止しています。しばらくしてからお試しください。': 'Online features are temporarily unavailable. Please try again shortly.',
   '再試行': 'Try Again', 'ソロで遊ぶ': 'Play Solo', '妖力': 'Spirit Power',
   '音量設定': 'Audio Settings', 'プレイヤーネームを変更': 'Change player name',
-  'プレイヤー': 'Player', '百鬼夜行の盤上決戦': 'A Night Parade Showdown',
-  '妖怪': 'Yokai', '将棋': 'Shogi', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
+  'プレイヤー': 'Player', '妖怪を集めて、取って、HPを削る対戦ゲーム': 'Collect yokai, capture, and drain HP',
+  '妖怪': 'Yokai', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
   '猛者と競う': 'Face other players', 'オンライン対戦': 'Online Battle',
   '登録プレイヤー': 'Registered Players', '人': 'players', 'メニュー': 'Menu',
   '妖怪ガチャ': 'Yokai Summon', '編 成': 'Formation', '駒一覧': 'Compendium',
@@ -123,12 +123,12 @@ const STATIC: Record<string, string> = {
   'フレンドルーム作成': 'Create Friend Room', '6桁コード': '6-digit code', '参加': 'Join',
   'いつでもマッチ可能。集まりやすい時間は毎日 20:00〜22:00（逢魔が時）': 'Match anytime. The busiest hours are 20:00–22:00 JST daily.',
   '対戦募集は': 'Find opponents on the', 'でも行っています': 'as well.',
-  'レアリティで絞り込み': 'Filter by rarity', 'タイプで絞り込み': 'Filter by type', '駒画像の拡大表示': 'Enlarged yokai image',
+  'レアリティで絞り込み': 'Filter by rarity', '駒画像の拡大表示': 'Enlarged yokai image',
   'DMで報告する': 'Report via DM', 'プロフィールを開く': 'Open Profile', '対局の基本': 'Battle Basics',
-  '遊べるモードと報酬': 'Modes and Rewards', '妖怪タイプ': 'Yokai Types',
-  '全レア': 'All Rarities', '全タイプ': 'All Types', '条件に合う駒がありません。': 'No yokai match these filters.',
-  '異装': 'Alt', '大将': 'General', '攻': 'ATK', '守': 'DEF', '罠': 'Counter', '妨': 'Debuff',
-  '援': 'Support', '化': 'Trick', '爆': 'Blast', '成': 'Promoted', '覚': 'Awakened',
+  '勝ち方': 'How to Win', '動かし方': 'How to Move', '持ち駒と成り': 'Hand and Promotion',
+  '覚えておくこと': 'Worth Remembering', '遊べるモード': 'Modes', '遊べるモードと報酬': 'Modes and Rewards',
+  '全レア': 'All Rarities', '条件に合う駒がありません。': 'No yokai match these filters.',
+  '異装': 'Alt', '大将': 'General', '成': 'Promoted', '覚': 'Awakened',
   'メンテ': 'Maintenance', 'イベント': 'Event', 'アップデート': 'Update', '現在お知らせはありません。': 'There are no announcements.',
   '対戦相手を探しています…': 'Searching for an opponent…', 'ルームへ参加しています…': 'Joining the room…',
   '対局中': 'In Battle', '投了しますか?': 'Do you want to resign?', '対象: 百鬼夜行の連戦': 'Applies to Night Parade win streaks',
@@ -197,7 +197,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   karakasa: ['Karakasa-kozo', '1 forward or backward-diagonal (promoted: 1 in any direction)', 'Umbrella Guard', 'While on the board, your army takes 12% less damage'],
   chochin: ['Chochin-obake', '1 square orthogonally (promoted: 1 in any direction)', 'Lantern Light', 'Capturing restores 200 HP to your army'],
   baku: ['Baku', '1 forward/back, any distance sideways (promoted: orthogonal + forward diagonals)', 'Nightmare Eater', 'While on the board, reduces enemy damage by 15%'],
-  yamata: ['Yamata-no-Orochi', '1 in three forward, two sideways, and back', 'Eight Heads', 'When captured, slithers to an adjacent empty square and loses a head. Escapes twice; the third capture fells it', 'Eight-Headed Calamity'],
+  yamata: ['Yamata-no-Orochi', '1 in three forward, two sideways, and back', 'Eight Heads', 'When captured, slithers to an adjacent empty square and loses a head. Escapes twice; the third capture fells it. Cannot capture the general', 'Eight-Headed Calamity'],
   bakezouri: ['Bake-zori', '1 forward or forward-diagonal (promoted: Gold General movement)', 'Sandal Decoy', 'When captured, halves damage and does not enter the enemy hand'],
   sunekosuri: ['Sunekosuri', '1 forward or sideways (promoted: orthogonal + forward diagonals)', "Shin-Rubber's Curse", 'While on the board, seals enemy critical skills'],
   kodama: ['Kodama', '1 square orthogonally (promoted: 1 in any direction)', "Forest's Breath", 'Capturing restores 150 HP to your army'],
@@ -210,7 +210,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   yatagarasu: ['Yatagarasu', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Three-Legged Guidance', '28% chance for a capture to deal 1.9× damage'],
   oomyukade: ['Giant Centipede', '1 diagonal + leap 2 forward (promoted: +1 orthogonally)', "Centipede's Venom", 'While on the board, reduces enemy damage by 14%'],
   gashadokuro: ['Gashadokuro', '1 in three forward, two sideways, and back', "Starving Bones", 'During the Night of Hunger, captures deal 1.8× damage and restore 250 HP', 'Starving Skeleton King'],
-  sukuna: ['Sukuna', 'Gold General movement (promoted: 1 in any direction)', 'Two Faces', 'After a capture, may strike one more adjacent enemy (the second hit deals half damage)', 'Two-Faced Sukuna'],
+  sukuna: ['Sukuna', 'Gold General movement (promoted: 1 in any direction)', 'Two Faces', 'After a capture, may strike one more adjacent enemy other than the general (the second hit deals half damage)', 'Two-Faced Sukuna'],
   makuragaeshi: ['Makuragaeshi', '1 in the three forward directions and back (promoted: Gold General movement)', 'Pillow Shadow-Return', 'After a capture, automatically returns to its original square'],
   rinka: ['Rinka', '1 square orthogonally (promoted: 1 in any direction)', 'Lingering Phosphor', 'Leaves a flame for 4 moves. An ally entering, capturing, or dropping there restores 150 HP'],
   tsurube: ['Tsurube-otoshi', 'Any distance forward (promoted: +1 sideways/back)', 'Pit to Darkness', 'Leaves a pit for 4 moves. An enemy entering it takes 80 HP damage'],
@@ -246,7 +246,6 @@ for (const [id, values] of Object.entries(VARIANT_EN)) {
 }
 
 [['新月', 'New Moon'], ['三日月', 'Crescent Moon'], ['半月', 'Half Moon'], ['満月', 'Full Moon']].forEach(([ja, en]) => add(ja, en));
-Object.values(TYPE_INFO).forEach(info => add(info.label, STATIC[info.label] ?? info.label));
 const resonanceEn = [
   ['Oni Feast', 'While Shuten-doji and Ibaraki-doji are both on the board, Shuten-doji gains +15% critical chance'],
   ['Foxfire Bond', 'When Nine-Tailed Fox and Tamamo-no-Mae are together and one is captured, the other becomes enraged and its next attack is a guaranteed critical'],
@@ -254,32 +253,37 @@ const resonanceEn = [
 RESONANCES.forEach((r, i) => { add(r.name, resonanceEn[i][0]); add(r.desc, resonanceEn[i][1]); });
 
 const HTML_OVERRIDES: Record<string, string> = {
+  '.title-logo': '<span>Hyakkiban</span>',
   '.rules-scroll': `
-    <h3>Battle Basics</h3>
-    <p><b>Winning:</b> Reduce the opponent's <b>HP to 0</b>, capture their <b>General</b>, or leave them with no legal move.</p>
-    <p><b>Capturing:</b> Capturing an enemy deals damage to their HP based on the attack value of your capturing yokai.</p>
-    <p><b>Yokai details:</b> <b>Press and hold</b> a yokai on the board or in hand to see its movement and skill. A short tap selects or moves it.</p>
-    <p><b>Combos:</b> Consecutive captures during your turn raise the damage multiplier, up to 2×. A non-capture, summon, or awakening resets it.</p>
-    <p><b>Captured yokai:</b> Enemy yokai you capture join your hand. Select one and summon it onto an empty square. Some cannot be summoned into the farthest enemy ranks.</p>
-    <p><b>Promotion:</b> A non-General entering the last two enemy ranks promotes automatically, gaining 1.5× attack and stronger movement.</p>
-    <p><b>SSR Awakening:</b> Captures fill the awakening gauge. Once full, use a turn to empower one friendly SSR on the board, once per battle. It gains 1.5× ATK for three of your turns.</p>
-    <p><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP after every move. A capture resets the count. Open <b>Status</b> during battle to see the remaining moves.</p>
-    <p><b>Special captures:</b> Some yokai return, escape, convert a captured piece, or strike a second adjacent enemy. Others leave flames or pits, or place a real yokai such as Onibi nearby. See each entry in the <b>Yokai Compendium</b> for exact effects.</p>
-    <h3>Modes and Rewards</h3>
-    <p><b>Night Parade:</b> A solo win-streak challenge with a new enemy army each round. Your best streak enters the weekly rankings. Last week's #1 player receives the exclusive “Champion · Nine-Tails” alt (first time only).</p>
-    <p><b>Online Battle:</b> Random matchmaking is always available; 20:00–22:00 JST is the busiest period. Friend rooms use a six-digit code. Each move has 60 seconds plus a 30-second countdown. Completing enough moves grants a daily ticket, with extra Saturday event rewards.</p>
-    <p><b>Yokai Summon:</b> Spend tickets to summon yokai. A 10-pull guarantees at least one SR. Duplicates become Spirit Power; exchange 300 for one ticket.</p>
-    <p><b>Formation:</b> Your army must have exactly one General. Place owned yokai in the two starting ranks. Selecting a reserve shows its movement and skill.</p>
-    <p><b>Unique abilities:</b> Moon phases, army bonuses, resonances, retreats, lingering flames, and awakenings belong to specific yokai. Check their Compendium entries for details.</p>
-    <h3>Yokai Types</h3>
-    <p><span class="type-chip t-attack">ATK</span> Combat skills that add damage or trigger critical hits on capture.</p>
-    <p><span class="type-chip t-defense">DEF</span> Reduces damage to your army while on the board.</p>
-    <p><span class="type-chip t-ambush">Counter</span> Deals counter damage to the captor when captured.</p>
-    <p><span class="type-chip t-debuff">Debuff</span> Weakens the enemy while on the board.</p>
-    <p><span class="type-chip t-support">Support</span> Restores your army's HP on capture.</p>
-    <p><span class="type-chip t-transform">Trick</span> Uses deception or escapes after a capture.</p>
-    <p><span class="type-chip t-trap">Blast</span> Destroys its captor when captured. A General that captures it loses immediately.</p>
-    <p><span class="type-chip t-boss">General</span> Your king. Lose it and the battle ends immediately.</p>`,
+    <p class="rules-lead">Collect yokai, capture them, and drain HP. Skills differ by yokai — <b>press and hold</b> a piece, or open the <b>Compendium</b>.</p>
+    <h3>How to Win</h3>
+    <ul>
+      <li>Reduce the opponent's <b>HP to 0</b></li>
+      <li>Capture their <b>General</b></li>
+      <li>Leave them with no legal move</li>
+    </ul>
+    <h3>How to Move</h3>
+    <ul>
+      <li>A short tap selects and moves. <b>Press and hold</b> for details</li>
+      <li>Capturing deals damage equal to your yokai's <b>attack</b></li>
+      <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture, summon, or awakening resets it)</li>
+    </ul>
+    <h3>Hand and Promotion</h3>
+    <ul>
+      <li>Captured yokai join your hand and can be summoned onto empty squares (some cannot drop in the farthest ranks)</li>
+      <li>A non-General entering the last two enemy ranks <b>promotes</b> automatically: 1.5× attack and stronger movement</li>
+    </ul>
+    <h3>Worth Remembering</h3>
+    <ul>
+      <li><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP each move. A capture resets it. Check remaining moves in <b>Status</b></li>
+      <li><b>SSR Awakening:</b> Captures fill a gauge. Once full, spend a turn to empower one friendly SSR, once per battle (1.5× ATK for three of your turns)</li>
+    </ul>
+    <h3>Modes</h3>
+    <ul>
+      <li><b>Night Parade:</b> Solo win streaks. Weekly rankings; last week's #1 gets the exclusive “Champion · Nine-Tails” alt (first time only)</li>
+      <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Friend rooms use a 6-digit code</li>
+      <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
+    </ul>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',
   '.pieces-note': 'Review each yokai’s movement, abilities, SSR traits, awakening, and resonances. Promotion grants 1.5× attack and stronger movement.',
   '#modal-consent .link-desc': 'Online features store an account ID, play data, and access logs. Optional rewarded ads may send device and connection information to an ad network. Review the policies below before accepting.',
@@ -319,9 +323,9 @@ function translatePatterns(value: string): string {
     [/会心:\s*駒を取った時(\d+)%でダメージ×([\d.]+)/g, 'Critical: $1% chance for ×$2 damage on capture'],
     [/傾国:\s*取った駒をその場で味方にし、自身は元マスへ戻る/g, 'Calamity: After a capture, the yokai joins you and Tamamo returns'],
     [/回帰:\s*取られても自分の持ち駒に戻る/g, 'Return: When captured, returns to your hand'],
-    [/八岐:\s*取られても隣接へ逃げる\((\d+)回まで\)/g, 'Hydra: When captured, escapes adjacent (up to $1 times)'],
+    [/八岐:\s*取られても隣接へ逃げる\((\d+)回まで\)。大将は取れない/g, 'Hydra: When captured, escapes adjacent (up to $1 times). Cannot capture the general'],
     [/飢餓:\s*飢餓の夜の取りが×([\d.]+)かつ魂力(\d+)回復/g, 'Famine: During Hunger, captures deal ×$1 and restore $2 HP'],
-    [/双面:\s*取ったあと隣接の別敵を追撃\(2体目はダメージ半分\)/g, 'Two Faces: After a capture, may strike one more adjacent enemy at half damage'],
+    [/双面:\s*取ったあと隣接の別敵\(大将以外\)を追撃\(2体目はダメージ半分\)/g, 'Two Faces: After a capture, may strike one more adjacent enemy other than the general at half damage'],
     [/(.+)を味方にした!/g, '$1 joined your army!'],
     [/首が逃げた! 残り(\d+)首/g, 'A head slithered away! $1 heads left'],
     [/覚醒:\s*(.+) \/ 自分の手番3回のあいだATK×([\d.]+)/g, 'Awakening: $1 / ATK ×$2 for three of your turns'],
@@ -401,15 +405,15 @@ function updateHead(): void {
   root.dataset.locale = def.id;
 
   if (def.id === 'en') {
-    document.title = STATIC['妖怪将棋｜無料ブラウザ将棋ゲーム'];
-    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', 'A free browser strategy game combining shogi-inspired tactics with Japanese yokai. Play solo, build your army, summon yokai, or battle online.');
-    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', 'Build a yokai army and battle in this free shogi-inspired browser strategy game.');
-    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', 'Build a yokai army and battle in this free shogi-inspired browser strategy game.');
+    document.title = STATIC['百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム'];
+    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', 'Collect yokai, capture, and drain HP in this free browser battle game. Play solo, build your army, summon yokai, or battle online.');
+    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', 'Collect yokai, capture, and drain HP in this free browser battle game.');
+    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', 'Collect yokai, capture, and drain HP in this free browser battle game.');
   } else {
-    document.title = '妖怪将棋｜無料ブラウザ将棋ゲーム';
-    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', '妖怪の駒で戦う無料ブラウザ将棋ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。登録なしですぐに遊べます。');
-    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', '妖怪の駒で戦う無料ブラウザ将棋ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。');
-    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', '妖怪の駒で戦う無料ブラウザ将棋ゲーム。登録なしですぐに遊べます。');
+    document.title = '百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム';
+    document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', '妖怪を集めて、取って、HPを削る対戦ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。登録なしですぐに遊べます。');
+    document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', '妖怪を集めて、取って、HPを削る対戦ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。');
+    document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', '妖怪を集めて、取って、HPを削る対戦ゲーム。登録なしですぐに遊べます。');
   }
   document.querySelector<HTMLMetaElement>('meta[property="og:locale"]')?.setAttribute('content', def.ogLocale);
   document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', document.title);

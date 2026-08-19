@@ -1,13 +1,13 @@
 /* ============================================================
-   妖怪将棋 - メインUIコントローラ
+   百鬼盤 - メインUIコントローラ
    ============================================================ */
 
 import {
-  COLS, ROWS, MAX_HP, ZONE_DEPTH, YOKAI, TYPE_INFO, RARITY_INFO,
+  COLS, ROWS, MAX_HP, ZONE_DEPTH, YOKAI, RARITY_INFO,
   ALL_IMAGES, ENEMY_BOSS, GACHA_POOL, SETUP,
   RESONANCES, MOON_PHASES, baseIdOf,
 } from '../../shared/data';
-import type { Rarity, Side, YokaiType } from '../../shared/data';
+import type { Rarity, Side } from '../../shared/data';
 import { AWAKEN_ATK, AWAKEN_MAX, Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
 import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
@@ -96,7 +96,7 @@ function specialFxColors(id: string): readonly string[] | null {
   const def = YOKAI[id];
   if (!def) return null;
   if (def.variantOf) return def.summonColors ?? SSR_FX_COLORS;
-  if (def.type === 'boss') return def.summonColors ?? BOSS_FX_COLORS[id] ?? SSR_FX_COLORS;
+  if (def.boss) return def.summonColors ?? BOSS_FX_COLORS[id] ?? SSR_FX_COLORS;
   if (def.rarity === 'SSR' && (def.gachaOnly || def.limited)) return SSR_FX_COLORS;
   return null;
 }
@@ -960,7 +960,7 @@ function positionPiece(el: HTMLElement, x: number, y: number) {
 function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement {
   const el = document.createElement('div');
   el.className = `piece owner-${pc.owner}`
-    + (YOKAI[pc.id].type === 'boss' ? ' boss-piece' : '')
+    + (YOKAI[pc.id].boss ? ' boss-piece' : '')
     + (YOKAI[pc.id].variantOf ? ' special-piece' : '')
     + (YOKAI[pc.id].rarity === 'SSR' && !YOKAI[pc.id].variantOf ? ' ssr-piece' : '')
     + (YOKAI[pc.id].skill.kind === 'moon' ? ' moon-piece' : '');
@@ -1207,11 +1207,18 @@ const LONG_PRESS_MOVE_PX = 14;
 
 function showInfo(id: string, promoted: boolean) {
   const def = YOKAI[id];
-  const ti = TYPE_INFO[def.type];
   $('piece-info').classList.remove('hidden');
   $<HTMLImageElement>('info-img').src = def.imgSm;
-  $('info-type').textContent = ti.label;
-  $('info-type').className = `type-chip ${ti.cls}`;
+  const typeEl = $('info-type');
+  if (def.boss) {
+    typeEl.hidden = false;
+    typeEl.textContent = '大将';
+    typeEl.className = 'type-chip t-boss';
+  } else {
+    typeEl.hidden = true;
+    typeEl.textContent = '';
+    typeEl.className = 'type-chip';
+  }
   $('info-name').textContent = def.name + (promoted ? '【成】' : '');
   $('info-atk').textContent = `ATK ${promoted ? Math.round(def.atk * 1.5) : def.atk}`;
   $('info-move').textContent = def.moveText;
@@ -1612,8 +1619,11 @@ async function doAction(action: Action) {
   if (G!.turn === 'e') {
     showBanner('e');
     $('thinking').classList.remove('hidden');
-    await sleep(850 + Math.random() * 550);
+    await sleep(40);
+    const started = performance.now();
     const act = AI.chooseAction(G!, HYAKKI_RANK_DIFFICULTY);
+    const leftover = 420 + Math.random() * 180 - (performance.now() - started);
+    if (leftover > 0) await sleep(leftover);
     $('thinking').classList.add('hidden');
     if (act) { doAction(act); return; }
     // 指し手なし(エンジン側で勝敗確定済みのはず)
@@ -1827,7 +1837,7 @@ async function animCapture(ev: CaptureEvent) {
       FX.converge(c.x, c.y, kindFx[1], Math.round(16 * scale), 80);
     }
     await FX.cutin(proc.img, proc.name, proc.text,
-      aDef.type === 'boss' ? 'boss' : 'skill', isSkillProc ? kindFx : SSR_FX_COLORS, tier);
+      aDef.boss ? 'boss' : 'skill', isSkillProc ? kindFx : SSR_FX_COLORS, tier);
   }
 
   if (passiveEffects.length > 0) {
@@ -2154,9 +2164,15 @@ const PIECE_CATALOG_ORDER = [
   'aoandon', 'umibozu', 'wanyudo', 'yatagarasu', 'oomyukade', 'shiranui', 'enenra', 'inugami', 'tenome', 'nopperabo',
   'makuragaeshi', 'rinka', 'tsurube', 'bakezouri', 'sunekosuri', 'kodama',
 ];
-const PIECE_TYPE_ORDER: YokaiType[] = ['boss', 'attack', 'defense', 'ambush', 'debuff', 'support', 'transform', 'trap'];
 const PIECE_RARITY_ORDER: Rarity[] = ['SSR', 'SR', 'R', 'N'];
 const PIECE_RARITY_RANK: Record<Rarity, number> = { SSR: 0, SR: 1, R: 2, N: 3 };
+
+function bossChip(): HTMLSpanElement {
+  const type = document.createElement('span');
+  type.className = 'type-chip t-boss';
+  type.textContent = '大将';
+  return type;
+}
 
 function ssrIntroLines(id: string): string[] {
   const def = YOKAI[id];
@@ -2176,11 +2192,11 @@ function ssrIntroLines(id: string): string[] {
   } else if (def.skill.kind === 'recall') {
     lines.push('回帰: 取られても自分の持ち駒に戻る');
   } else if (def.skill.kind === 'hydra') {
-    lines.push(`八岐: 取られても隣接へ逃げる(${def.skill.extra}回まで)`);
+    lines.push(`八岐: 取られても隣接へ逃げる(${def.skill.extra}回まで)。大将は取れない`);
   } else if (def.skill.kind === 'famine') {
     lines.push(`飢餓: 飢餓の夜の取りが×${def.skill.mult}かつ魂力${def.skill.heal}回復`);
   } else if (def.skill.kind === 'dual') {
-    lines.push('双面: 取ったあと隣接の別敵を追撃(2体目はダメージ半分)');
+    lines.push('双面: 取ったあと隣接の別敵(大将以外)を追撃(2体目はダメージ半分)');
   }
   /* veil のスキル本文が十分なため、SSR特性での重複要約は出さない */
   if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 自分の手番3回のあいだATK×${AWAKEN_ATK}`);
@@ -2196,14 +2212,10 @@ function buildPieceCatalog() {
 
 function buildPieceCatalogControls() {
   const rarity = $<HTMLSelectElement>('pieces-rarity-filter');
-  const type = $<HTMLSelectElement>('pieces-type-filter');
   rarity.replaceChildren(new Option('全レア', 'all'));
   for (const r of PIECE_RARITY_ORDER) rarity.appendChild(new Option(RARITY_INFO[r].label, r));
-  type.replaceChildren(new Option('全タイプ', 'all'));
-  for (const t of PIECE_TYPE_ORDER) type.appendChild(new Option(TYPE_INFO[t].label, t));
   $('pieces-search').oninput = renderPieceCatalogCards;
   rarity.onchange = renderPieceCatalogCards;
-  type.onchange = renderPieceCatalogCards;
 }
 
 function renderPieceCatalogCards() {
@@ -2211,19 +2223,17 @@ function renderPieceCatalogCards() {
   wrap.replaceChildren();
   const q = $<HTMLInputElement>('pieces-search').value.trim().toLowerCase();
   const rarityFilter = $<HTMLSelectElement>('pieces-rarity-filter').value;
-  const typeFilter = $<HTMLSelectElement>('pieces-type-filter').value;
   const pieces = PIECE_CATALOG_ORDER
     .map(id => YOKAI[id])
     .filter(def => !!def)
     .filter(def => rarityFilter === 'all' || def.rarity === rarityFilter)
-    .filter(def => typeFilter === 'all' || def.type === typeFilter)
     .filter(def => {
       if (!q) return true;
       return `${def.name} ${def.moveText} ${def.skill.name} ${def.skill.desc} ${ssrIntroLines(def.id).join(' ')}`.toLowerCase().includes(q);
     })
     .sort((a, b) =>
-      PIECE_RARITY_RANK[a.rarity] - PIECE_RARITY_RANK[b.rarity]
-      || PIECE_TYPE_ORDER.indexOf(a.type) - PIECE_TYPE_ORDER.indexOf(b.type)
+      Number(!a.boss) - Number(!b.boss)
+      || PIECE_RARITY_RANK[a.rarity] - PIECE_RARITY_RANK[b.rarity]
       || PIECE_CATALOG_ORDER.indexOf(a.id) - PIECE_CATALOG_ORDER.indexOf(b.id));
 
   $('pieces-summary').textContent = `${pieces.length} / ${PIECE_CATALOG_ORDER.length} 体`;
@@ -2236,7 +2246,6 @@ function renderPieceCatalogCards() {
   }
 
   for (const def of pieces) {
-    const ti = TYPE_INFO[def.type];
     const ri = RARITY_INFO[def.rarity];
     const card = document.createElement('article');
     card.className = `piece-card ${ri.cls}${def.variantOf ? ' special-catalog-card' : ''}`;
@@ -2272,10 +2281,8 @@ function renderPieceCatalogCards() {
     const rarity = document.createElement('span');
     rarity.className = `rarity-chip ${ri.cls}`;
     rarity.textContent = def.variantOf ? `${ri.label} 異装` : ri.label;
-    const type = document.createElement('span');
-    type.className = `type-chip ${ti.cls}`;
-    type.textContent = ti.label;
-    top.append(rarity, type);
+    top.append(rarity);
+    if (def.boss) top.append(bossChip());
 
     const name = document.createElement('div');
     name.className = 'rp-name';
@@ -2289,7 +2296,6 @@ function renderPieceCatalogCards() {
 
 function openPieceDetail(id: string) {
   const def = YOKAI[id];
-  const ti = TYPE_INFO[def.type];
   const ri = RARITY_INFO[def.rarity];
   const img = $<HTMLImageElement>('piece-detail-img');
   img.src = def.img;
@@ -2297,7 +2303,7 @@ function openPieceDetail(id: string) {
   $('btn-piece-detail-zoom').setAttribute('aria-label', `${def.name}の画像を拡大`);
   $('piece-detail-tags').innerHTML =
     `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span>` +
-    `<span class="type-chip ${ti.cls}">${ti.label}</span>`;
+    (def.boss ? `<span class="type-chip t-boss">大将</span>` : '');
   $('piece-detail-name').textContent = def.name;
   $('piece-detail-atk').textContent = `ATK ${def.atk}`;
   $('piece-detail-move').textContent = def.moveText;
@@ -2341,7 +2347,6 @@ function renderPieceCatalog() {
   ];
   for (const id of order) {
     const def = YOKAI[id];
-    const ti = TYPE_INFO[def.type];
     const ri = RARITY_INFO[def.rarity];
     const row = document.createElement('div');
     row.className = `piece-card ${ri.cls}${def.variantOf ? ' special-catalog-card' : ''}`;
@@ -2352,7 +2357,8 @@ function renderPieceCatalog() {
     row.innerHTML =
       `<img src="${def.imgSm}" alt="${def.name}">` +
       `<div class="rp-body">` +
-      `<div class="rp-name"><span class="type-chip ${ti.cls}">${ti.label}</span>` +
+      `<div class="rp-name">` +
+      (def.boss ? `<span class="type-chip t-boss">大将</span>` : '') +
       `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span> ${def.name} <b>ATK ${def.atk}</b>` +
       `</div>` +
       `<div class="rp-move">${def.moveText}</div>` +

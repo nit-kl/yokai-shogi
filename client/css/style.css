@@ -1,5 +1,6 @@
 /* ============================================================
-   妖怪封E��E〜百鬼夜行�E盤上決戦、E   ============================================================ */
+   百鬼盤 〜妖怪を集めて、取って、HPを削る対戦ゲーム〜
+   ============================================================ */
 :root {
   --gold: #e8c46a;
   --gold-deep: #b8860b;
@@ -10,9 +11,6 @@
   --e-red: #ff5d5d;
   --board-wood: #d9b36c;
   --board-wood2: #c69d52;
-  --c-attack: #ff6b4a;
-  --c-defense: #4aa8ff;
-  --c-ambush: #b06bff;
   --c-boss: #ffc83d;
 }
 
@@ -253,11 +251,14 @@ html[data-script="latn"] .screen h3 {
 }
 .title-emblem span { transform: rotate(-45deg); color: var(--gold); font: 1rem "Yu Mincho", serif; }
 .title-sub-top {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
   font-family: "Yu Mincho", serif;
-  letter-spacing: 0.55em; text-indent: 0.55em;
-  color: #c2b5dd; font-size: clamp(0.62rem, 1.8vw, 0.82rem);
+  letter-spacing: 0.08em; text-indent: 0;
+  color: #c2b5dd; font-size: clamp(0.58rem, 1.7vw, 0.78rem);
   margin: 0.55em 0 0.25em;
+  max-width: min(100%, 28em);
+  line-height: 1.55;
+  text-align: center;
 }
 .title-sub-top i { display: block; width: 30px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
 .title-sub-top i:last-child { transform: rotate(180deg); }
@@ -1227,13 +1228,6 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
   padding: 2px 8px; border-radius: 3px;
   color: #14101f; font-family: sans-serif;
 }
-.t-attack { background: var(--c-attack); }
-.t-defense { background: var(--c-defense); }
-.t-ambush { background: var(--c-ambush); }
-.t-debuff { background: #6bd6e8; }
-.t-support { background: #7cf2a4; }
-.t-transform { background: #d8a05a; }
-.t-trap { background: #ff9a3c; }
 .t-boss { background: var(--c-boss); }
 
 /* チE�Eルボタン */
@@ -1632,8 +1626,12 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
   border-bottom: 1px solid rgba(232,196,106,0.3);
   padding-bottom: 0.3em;
 }
-.rules-scroll { overflow-y: auto; line-height: 1.9; font-size: 0.88rem; padding-right: 6px; }
+.rules-scroll { overflow-y: auto; line-height: 1.7; font-size: 0.88rem; padding-right: 6px; }
+.rules-scroll h3:first-of-type { margin-top: 0.35em; }
+.rules-scroll .rules-lead { margin: 0 0 0.7em; opacity: 0.88; }
 .rules-scroll p { margin: 0.35em 0; }
+.rules-scroll ul { margin: 0.15em 0 0.85em; padding-left: 1.15em; }
+.rules-scroll li { margin: 0.28em 0; }
 .rules-scroll b { color: #ffd76a; }
 .rules-scroll::-webkit-scrollbar { width: 6px; }
 .rules-scroll::-webkit-scrollbar-thumb { background: rgba(232,196,106,0.35); border-radius: 3px; }
@@ -1697,7 +1695,7 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
 }
 .pieces-toolbar {
   display: grid;
-  grid-template-columns: minmax(210px, 1fr) minmax(120px, 150px) minmax(120px, 150px);
+  grid-template-columns: minmax(210px, 1fr) minmax(120px, 160px);
   gap: 8px;
   width: 100%;
 }
