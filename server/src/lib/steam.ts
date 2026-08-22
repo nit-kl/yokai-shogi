@@ -2,7 +2,12 @@
    - 本番: Steam Web API AuthenticateUserTicket
    - 開発: STEAM_AUTH_MOCK=1 または API キー未設定時に mock:<steamId> を許可 */
 
-import type { Env } from '../env';
+/** Env の Steam 関連だけ。単体テストが Workers 型に依存しないように切り出す */
+export type SteamEnv = {
+  STEAM_WEB_API_KEY?: string;
+  STEAM_APP_ID?: string;
+  STEAM_AUTH_MOCK?: string;
+};
 
 export type SteamTicketResult =
   | { ok: true; steamId: string; mock: boolean }
@@ -14,14 +19,14 @@ export const STEAM_WEB_API_IDENTITY = 'hyakkiban';
 /** `src-tauri/src/steam.rs` の APP_ID。secret が depot ID でもここを使う */
 export const STEAM_APP_ID = '5138130';
 
-export function steamMockAllowed(env: Env): boolean {
+export function steamMockAllowed(env: SteamEnv): boolean {
   if (env.STEAM_AUTH_MOCK === '1') return true;
   /* キー未設定のローカル/CI はモック可。本番でキーを入れたらモック不可 */
   return !env.STEAM_WEB_API_KEY;
 }
 
 /** Session Ticket(hex または mock:…) を検証し SteamID64 を返す */
-export async function verifySteamSessionTicket(env: Env, ticket: string): Promise<SteamTicketResult> {
+export async function verifySteamSessionTicket(env: SteamEnv, ticket: string): Promise<SteamTicketResult> {
   const trimmed = ticket.trim();
   if (!trimmed || trimmed.length > 8192) {
     return { ok: false, reason: 'チケットが不正です' };
