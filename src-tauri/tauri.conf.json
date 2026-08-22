@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "妖怪将棋",
+  "productName": "百鬼盤",
   "version": "0.1.0",
   "identifier": "com.nitgames.yokai-shogi",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "妖怪将棋",
+        "title": "百鬼盤",
         "width": 1280,
         "height": 800,
         "minWidth": 960,

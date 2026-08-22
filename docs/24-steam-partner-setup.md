@@ -1,7 +1,7 @@
 # 24. Steam Partner: App ID と Web API キー取得手順
 
 > 運営者作業用。コード実装ではなく Valve 側の登録・設定。  
-> 関連: [23-steam.md](23-steam.md) / [06-account-auth.md](06-account-auth.md)  
+> 関連: [23-steam.md](23-steam.md) / [25-steam-release.md](25-steam-release.md) / [06-account-auth.md](06-account-auth.md)  
 > 公式: [Onboarding](https://partner.steamgames.com/doc/gettingstarted/onboarding) · [Web API Keys](https://partner.steamgames.com/doc/webapi_overview/auth) · [AuthenticateUserTicket](https://partner.steamgames.com/doc/webapi/ISteamUserAuth)
 
 この手順が終わると、本リポジトリに渡すべき値は次の2つだけです。
@@ -111,7 +111,7 @@
 
 ### DLC（全駒解放）について
 
-- 全駒解放は **本体 App に紐づく DLC App** として後から追加する（別途 DLC 用 App ID が付く）  
+- **初回リリースには載せない**（[doc 25](25-steam-release.md)）。公開後に本体の「Add New DLC」で子 App ID を付ける  
 - **今回そろえる本体の App ID / Publisher キー**があれば、まず Session Ticket 認証まで実装できる  
 - DLC 用 App ID が取れたら `shared/steam-dlc.ts` と所有確認 API に追記する  
 
@@ -228,17 +228,18 @@ Invoke-RestMethod "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUser
 
 ## チェックリスト（コピー用）
 
-- [ ] Steam アカウント作成・Steam Guard
-- [ ] Steamworks オンボーディング完了（契約・銀行・税）
-- [ ] $100 支払い・App 作成
-- [ ] **App ID** を控えた
-- [ ] Users & Permissions で Publisher グループ作成 / App 関連付け
-- [ ] **General** 権限付き Publisher Web API Key を発行・保管
-- [ ] `wrangler secret put` で staging（必要なら production）へ投入
-- [ ] staging で `STEAM_AUTH_MOCK` を方針どおり無効化 / デプロイ
-- [ ] `/v1/auth/config` で `steamAuth.configured: true` を確認
-- [ ] （任意）DLC 用 App を作成し DLC App ID を控える
-- [ ] チャットで「設定完了」を共有（**キーは貼らない**。App ID 数字だけなら可）
+- [x] Steam アカウント作成・Steam Guard
+- [x] Steamworks オンボーディング完了（契約・銀行・税）
+- [x] $100 支払い・App 作成
+- [x] **App ID** を控えた（`5138130`）
+- [x] Users & Permissions で Publisher グループ作成 / App 関連付け
+- [x] **General** 権限付き Publisher Web API Key を発行・保管
+- [x] production Workers へ投入済み（本番 `/v1/auth/config` が `configured: true`）
+- [ ] staging の `STEAM_AUTH_MOCK=1` は実チケット接続後に外す
+- [x] 本番 `/v1/auth/config` で `steamAuth.configured: true` / `mockAllowed: false` を確認
+- [ ] （公開後）DLC 用 App を作成し DLC App ID を控える。初回リリースでは作らない
+- [x] チャットで「設定完了」を共有（**キーは貼らない**。App ID 数字だけなら可）
+- [ ] 以降の審査・Coming Soon・公開は [25-steam-release.md](25-steam-release.md)
 
 ---
 

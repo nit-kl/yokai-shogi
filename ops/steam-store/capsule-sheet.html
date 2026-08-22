@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Steam capsules</title>
+<style>
+  :root {
+    --gold: #e8c46a;
+    --ink: #0c0915;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #111; }
+  body { padding: 16px; display: flex; flex-wrap: wrap; gap: 16px; }
+  .cap {
+    position: relative;
+    overflow: hidden;
+    background: var(--ink);
+    color: #f3e7c9;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "Yu Gothic", serif;
+    isolation: isolate;
+  }
+  .cap img { position: absolute; pointer-events: none; user-select: none; }
+  .glow {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 55% 70% at 72% 42%, rgba(90, 48, 140, 0.55), transparent 70%),
+      radial-gradient(ellipse 50% 55% at 18% 80%, rgba(80, 20, 40, 0.4), transparent 70%),
+      linear-gradient(180deg, #120b1c 0%, #0c0915 100%);
+    z-index: 0;
+  }
+  .logo {
+    position: relative; z-index: 3;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    background: linear-gradient(175deg, #fff6d8 8%, var(--gold) 38%, #8a5d10 60%, #f7df9a 82%, #c99a2e 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.9)) drop-shadow(0 0 14px rgba(232,196,106,0.35));
+  }
+  html[lang="en"] .logo {
+    font-family: Georgia, "Palatino Linotype", "Yu Mincho", serif;
+    letter-spacing: 0.06em;
+  }
+  .sub {
+    position: relative; z-index: 3;
+    color: #c2b5dd;
+    letter-spacing: 0.18em;
+    text-shadow: 0 1px 3px #000;
+  }
+  .vignette {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    box-shadow: inset 0 0 48px rgba(0,0,0,0.45);
+  }
+
+  /* Steamworks 掲載サイズ（2x） */
+  #header { width: 920px; height: 430px; }
+  #header .glow { background:
+    radial-gradient(ellipse 70% 90% at 78% 55%, rgba(110, 60, 160, 0.5), transparent 62%),
+    linear-gradient(180deg, #161022, #0a0712);
+  }
+  #header .kyubi { right: -56px; top: -72px; height: 560px; z-index: 1; }
+  #header .logo { position: absolute; left: 44px; top: 116px; font-size: 116px; }
+  #header .sub { position: absolute; left: 52px; top: 264px; font-size: 26px; }
+  html[lang="en"] #header .logo { font-size: 72px; top: 140px; left: 40px; }
+  html[lang="en"] #header .sub { top: 228px; font-size: 28px; letter-spacing: 0.22em; }
+
+  #small { width: 462px; height: 174px; }
+  #small .glow { background: radial-gradient(ellipse 80% 120% at 88% 50%, rgba(100,50,150,0.55), #0c0915 70%); }
+  #small .kyubi { right: -44px; top: -36px; height: 256px; z-index: 1; }
+  #small .logo { position: absolute; left: 24px; top: 44px; font-size: 68px; letter-spacing: 0.08em; }
+  html[lang="en"] #small .logo { font-size: 36px; top: 62px; left: 18px; letter-spacing: 0.04em; }
+
+  #main { width: 1232px; height: 706px; }
+  #main .glow { background:
+    radial-gradient(ellipse 50% 70% at 58% 40%, rgba(120,70,180,0.42), transparent 65%),
+    radial-gradient(ellipse 40% 50% at 12% 85%, rgba(90,20,40,0.35), transparent 70%),
+    linear-gradient(180deg, #140d22, #08060e);
+  }
+  #main .shuten { left: -140px; bottom: -80px; height: 760px; z-index: 1; }
+  #main .kyubi { left: 50%; top: -40px; height: 800px; transform: translateX(-42%); z-index: 2; }
+  #main .nurari { right: -160px; bottom: -60px; height: 780px; z-index: 1; }
+  #main .logo { position: absolute; left: 56px; bottom: 116px; font-size: 144px; }
+  #main .sub { position: absolute; left: 64px; bottom: 56px; font-size: 28px; }
+  html[lang="en"] #main .logo { font-size: 92px; bottom: 120px; }
+  html[lang="en"] #main .sub { bottom: 64px; font-size: 28px; letter-spacing: 0.22em; }
+
+  #vertical { width: 748px; height: 896px; }
+  #vertical .glow { background:
+    radial-gradient(ellipse 80% 50% at 50% 28%, rgba(130,80,190,0.45), transparent 70%),
+    linear-gradient(180deg, #1a1228 0%, #0c0915 55%, #08060e 100%);
+  }
+  #vertical .kyubi { left: 50%; top: -20px; height: 860px; transform: translateX(-50%); z-index: 1; }
+  #vertical .logo { position: absolute; left: 0; right: 0; bottom: 104px; text-align: center; font-size: 112px; }
+  #vertical .sub { position: absolute; left: 0; right: 0; bottom: 48px; text-align: center; font-size: 26px; }
+  html[lang="en"] #vertical .logo { font-size: 68px; bottom: 108px; }
+  html[lang="en"] #vertical .sub { bottom: 52px; letter-spacing: 0.22em; }
+
+  #background { width: 1438px; height: 810px; }
+  #background .glow { background:
+    radial-gradient(ellipse 36% 70% at 50% 50%, rgba(12,9,21,0.2), #0c0915 72%),
+    linear-gradient(180deg, #120b1c, #08060e);
+  }
+  #background .kyubi { left: -120px; top: 40px; height: 820px; opacity: 0.18; filter: saturate(0.55) brightness(0.72); }
+  #background .shuten { left: 80px; bottom: -80px; height: 620px; opacity: 0.12; filter: brightness(0.7); }
+  #background .nurari { right: -140px; top: 20px; height: 840px; opacity: 0.16; filter: saturate(0.5) brightness(0.7); }
+  #background .center-dim {
+    position: absolute; inset: 0; z-index: 2;
+    background: radial-gradient(ellipse 62% 84% at 50% 48%, rgba(8,6,14,0.88), rgba(8,6,14,0.35) 70%, transparent 85%);
+  }
+
+  /* ライブラリアセット */
+  #library-capsule { width: 600px; height: 900px; }
+  #library-capsule .glow { background:
+    radial-gradient(ellipse 90% 50% at 50% 28%, rgba(130,80,190,0.48), transparent 70%),
+    linear-gradient(180deg, #1a1228 0%, #0c0915 58%, #08060e 100%);
+  }
+  #library-capsule .kyubi { left: 50%; top: 20px; height: 780px; transform: translateX(-50%); z-index: 1; }
+  #library-capsule .logo { position: absolute; left: 0; right: 0; bottom: 118px; text-align: center; font-size: 92px; }
+  #library-capsule .sub { position: absolute; left: 0; right: 0; bottom: 58px; text-align: center; font-size: 22px; }
+  html[lang="en"] #library-capsule .logo { font-size: 52px; bottom: 122px; }
+  html[lang="en"] #library-capsule .sub { bottom: 62px; letter-spacing: 0.22em; }
+
+  #library-hero { width: 3840px; height: 1240px; }
+  #library-hero .glow { background:
+    radial-gradient(ellipse 42% 80% at 50% 50%, rgba(110,70,170,0.38), transparent 70%),
+    radial-gradient(ellipse 30% 60% at 12% 70%, rgba(90,20,40,0.32), transparent 70%),
+    linear-gradient(180deg, #140d22, #08060e);
+  }
+  #library-hero .shuten { left: 80px; top: 120px; height: 1280px; z-index: 1; }
+  #library-hero .kyubi { left: 50%; top: 40px; height: 1380px; transform: translateX(-50%); z-index: 2; }
+  #library-hero .nurari { right: 40px; top: 80px; height: 1320px; z-index: 1; }
+
+  #library-logo {
+    width: 1100px; height: 320px;
+    background: transparent !important;
+    isolation: auto;
+    overflow: visible;
+    box-shadow: none;
+  }
+  #library-logo .logo {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-size: 220px;
+    line-height: 320px;
+  }
+  html[lang="en"] #library-logo { width: 1280px; height: 280px; }
+  html[lang="en"] #library-logo .logo {
+    font-size: 128px;
+    line-height: 280px;
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+  <div id="header" class="cap">
+    <div class="glow"></div>
+    <img class="kyubi" src="../../client/public/assets/pieces/kyubi.webp" alt="">
+    <div class="vignette"></div>
+    <div class="logo" data-ja="百鬼盤" data-en="HYAKKIBAN">百鬼盤</div>
+    <div class="sub" data-ja="HYAKKIBAN" data-en="百鬼盤">HYAKKIBAN</div>
+  </div>
+  <div id="small" class="cap">
+    <div class="glow"></div>
+    <img class="kyubi" src="../../client/public/assets/pieces/kyubi.webp" alt="">
+    <div class="vignette"></div>
+    <div class="logo" data-ja="百鬼盤" data-en="HYAKKIBAN">百鬼盤</div>
+  </div>
+  <div id="main" class="cap">
+    <div class="glow"></div>
+    <img class="shuten" src="../../client/public/assets/pieces/shuten.webp" alt="">
+    <img class="kyubi" src="../../client/public/assets/pieces/kyubi.webp" alt="">
+    <img class="nurari" src="../../client/public/assets/pieces/nurarihyon.webp" alt="">
+    <div class="vignette"></div>
+    <div class="logo" data-ja="百鬼盤" data-en="HYAKKIBAN">百鬼盤</div>
+    <div class="sub" data-ja="HYAKKIBAN" data-en="百鬼盤">HYAKKIBAN</div>
+  </div>
+  <div id="vertical" class="cap">
+    <div class="glow"></div>
+    <img class="kyubi" src="../../client/public/assets/pieces/kyubi.webp" alt="">
+    <div class="vignette"></div>
+    <div class="logo" data-ja="百鬼盤" data-en="HYAKKIBAN">百鬼盤</div>
+    <div class="sub" data-ja="HYAKKIBAN" data-en="百鬼盤">HYAKKIBAN</div>
+  </div>
+  <div id="background" class="cap">
+    <div class="glow"></div>
+    <img class="kyubi" src="../../client/public/assets/pieces/kyubi.webp" alt="">
+    <img class="shuten" src="../../client/public/assets/pieces/shuten.webp" alt="">
+    <img class="nurari" src="../../client/public/assets/pieces/nurarihyon.webp" alt="">
+    <div class="center-dim"></div>
+  </div>
+  <div id="library-capsule" class="cap">
+    <div class="glow"></div>
+    <img class="kyubi" src="../../client/public/assets/pieces/kyubi.webp" alt="">
+    <div class="vignette"></div>
+    <div class="logo" data-ja="百鬼盤" data-en="HYAKKIBAN">百鬼盤</div>
+    <div class="sub" data-ja="HYAKKIBAN" data-en="百鬼盤">HYAKKIBAN</div>
+  </div>
+  <div id="library-hero" class="cap">
+    <div class="glow"></div>
+    <img class="shuten" src="../../client/public/assets/pieces/shuten.webp" alt="">
+    <img class="kyubi" src="../../client/public/assets/pieces/kyubi.webp" alt="">
+    <img class="nurari" src="../../client/public/assets/pieces/nurarihyon.webp" alt="">
+  </div>
+  <div id="library-logo" class="cap">
+    <div class="logo" data-ja="百鬼盤" data-en="HYAKKIBAN">百鬼盤</div>
+  </div>
+</body>
+</html>

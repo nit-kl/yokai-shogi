@@ -77,7 +77,7 @@ let hyakkiRanking: HyakkiRanking | null = null;
 let hyakkiRankingAt = 0; // 最終取得時刻(60秒キャッシュ)
 let rankingReturn: 'title' | 'solo' = 'title';
 const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
-const CONSENT_KEY = 'yokaiShogi.consent.2026-06-13';
+const CONSENT_KEY = 'yokaiShogi.consent.2026-08-22';
 type StoredOnlineMatch = {
   matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string; side: Side;
 };

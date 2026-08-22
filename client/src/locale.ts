@@ -286,7 +286,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     </ul>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',
   '.pieces-note': 'Review each yokai’s movement, abilities, SSR traits, awakening, and resonances. Promotion grants 1.5× attack and stronger movement.',
-  '#modal-consent .link-desc': 'Online features store an account ID, play data, and access logs. Optional rewarded ads may send device and connection information to an ad network. Review the policies below before accepting.',
+  '#modal-consent .link-desc': 'Online features store an account ID, play data, and access logs. The Steam version sends a Session Ticket to Valve to authenticate with your Steam ID. On the browser version, optional rewarded ads may send device and connection information to an ad network. The Steam version has no ads. Review the policies below before accepting.',
   '#modal-link .link-desc:nth-of-type(1)': 'Clearing browser data can erase your progress. Register a <b>passkey</b> or create a <b>transfer code</b> so you can restore it.',
   '#modal-link .link-desc:nth-of-type(2)': 'Use this code to move your data to another device or browser. <b>Store it somewhere safe.</b>',
   '#modal-link .link-desc:nth-of-type(3)': 'Use a received code to transfer data to this device. <b>Current data on this device will be replaced.</b>',

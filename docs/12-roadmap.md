@@ -56,8 +56,8 @@
    - 前提: アセット権利棚卸し・商標調査(doc 11)。棚卸し表・机上メモは作成済み。運営者による権利確定と J-PlatPat 記入が残り。
    - 済: `__PLATFORM__` / `npm run build:steam` と広告経路分離。
    - 済: Tauri 2 シェル（`src-tauri/`）。`npm run tauri:dev` / `npm run tauri:build` で Windows オフライン起動。
-   - 次: 実 Steamworks チケット(App ID/キー待ち)、本番所有確認、ストア提出。開発用 Matchmaker / DLC mock は完了。
-   - 公開後に異装 DLC 第1弾。
+   - 次: 実 Steamworks チケット、本番 CORS、オンライン梱包、ストア/ビルド審査。残作業の正本は [doc 25](25-steam-release.md)。開発用 Matchmaker / DLC mock は完了。
+   - 公開後に全駒解放DLC、続いて異装 DLC 第1弾。初回リリースには DLC を載せない。
 
 ## 縮小・停止基準
 

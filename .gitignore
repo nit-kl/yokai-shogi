@@ -9,6 +9,10 @@ test/e2e/shot-*.png
 test/e2e/fx-*.png
 test/e2e/live-*.png
 test/e2e/i18n-*.png
+ops/steam-store/screenshots/
+ops/steam-store/capsules/
+ops/steam-store/library/
+ops/steam-store/icons/
 
 # ビルド成果物(Phase 0以降: Vite / wrangler / Tauri)
 dist/
