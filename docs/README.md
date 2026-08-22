@@ -42,6 +42,7 @@
 | 23 | [Steam配信方針](23-steam.md) | 無料本体・DLC・Web並行・技術方針・実装順 |
 | 24 | [Steam Partner 設定手順](24-steam-partner-setup.md) | App ID・Publisher Web API キー取得と Workers 投入 |
 | 25 | [Steam リリース残作業](25-steam-release.md) | 審査・Coming Soon・コードブロッカー・公開チェックリスト |
+| 26 | [UI/UX改善提案（Shadowverse参考）](26-uiux-shadowverse-inspired.md) | 現行画面のギャップ・継承/挑戦の指針・P0–P2の改善策。実装は未着手 |
 | - | [アセット権利棚卸し](asset-licenses.md) | 駒・BGM の商用/Steam可否（要運営者記入） |
 | - | [商標先行調査メモ](trademark-research.md) | 「妖怪将棋」机上調査・J-PlatPat 記入欄 |
 | - | [Analytics Engine 確認クエリ](analytics-queries.md) | 登録・オンボーディング・対戦・ランキングの確認用SQL |
@@ -52,6 +53,7 @@
 - API/DB/対戦仕様を確認する: 03 → 04 → 05 → 07
 - 運用・リリース手順を確認する: 09 → 10 → 11 → 13
 - Steam 公開まで: 23（方針）→ 24（キー）→ 25（残作業）
+- UI/UXの磨き込み: 26 → 12（候補5）
 
 ## 現状コードベースの概要(2026-08時点)
 

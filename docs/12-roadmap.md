@@ -43,16 +43,21 @@
    - `client/public/assets/pieces/stock/` に候補画像を保管し、採用時に `shared/data.ts`、画像の小サイズ、ガチャプール、テストを更新する。
    - 新妖怪は2-4体単位で追加し、既存の採用率・勝率を見ながら調整する。
 
-5. **リワード広告の本番有効化**(doc 22)
+5. **UI/UXの魅力化**（[doc 26](26-uiux-shadowverse-inspired.md)）
+   - Shadowverse のインタラクション設計（キャラを主役にする、演出の感情配分、結界遷移）を百鬼盤の夜・妖怪世界観へ翻訳する。見た目のコピーはしない。
+   - 着手順の目安: タイトル階層 → 画面遷移 → リザルトの勝敗トーン → ガチャの1枚開示 → バトルHUD / 図鑑。
+   - 指し方・長押し説明・編成の盤メタファーは維持する。
+
+6. **リワード広告の本番有効化**(doc 22)
    - コードは実装済み。本番は `ADS_REWARD_ENABLED=0` が既定。
    - Google Ad Manager の Rewarded ユニット開設後、`ADS_REWARD_PROVIDER=gpt` とユニットパスを設定して有効化する。
    - Steam ビルドには載せない(doc 23)。
 
-6. **リプレイ・観戦**
+7. **リプレイ・観戦**
    - `matches` / `match_actions` には対局ログを保存済み。リプレイ画面はイベント列の順再生として実装できる。
    - ライブ観戦は、利用者規模が増えてから検討する。
 
-7. **Phase Steam**(doc 23)
+8. **Phase Steam**(doc 23)
    - 前提: アセット権利棚卸し・商標調査(doc 11)。棚卸し表・机上メモは作成済み。運営者による権利確定と J-PlatPat 記入が残り。
    - 済: `__PLATFORM__` / `npm run build:steam` と広告経路分離。
    - 済: Tauri 2 シェル（`src-tauri/`）。`npm run tauri:dev` / `npm run tauri:build` で Windows オフライン起動。
