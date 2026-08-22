@@ -11,6 +11,8 @@ export type SteamTicketResult =
 const MOCK_PREFIX = 'mock:';
 /** GetAuthTicketForWebApi と同じ。`src-tauri/src/steam.rs` の WEB_IDENTITY と一致させる */
 export const STEAM_WEB_API_IDENTITY = 'hyakkiban';
+/** `src-tauri/src/steam.rs` の APP_ID。secret が depot ID でもここを使う */
+export const STEAM_APP_ID = '5138130';
 
 export function steamMockAllowed(env: Env): boolean {
   if (env.STEAM_AUTH_MOCK === '1') return true;
@@ -37,10 +39,14 @@ export async function verifySteamSessionTicket(env: Env, ticket: string): Promis
   }
 
   const key = env.STEAM_WEB_API_KEY;
-  const appId = env.STEAM_APP_ID;
-  if (!key || !appId) {
+  if (!key) {
     return { ok: false, reason: 'Steam 認証のサーバー設定が不足しています' };
   }
+  const fromEnv = env.STEAM_APP_ID?.trim();
+  if (fromEnv && fromEnv !== STEAM_APP_ID) {
+    console.warn('[steam] STEAM_APP_ID env ignored; verifying as', STEAM_APP_ID, 'not', fromEnv);
+  }
+  const appId = STEAM_APP_ID;
 
   /* Publisher Key は partner.steam-api.com 向け(公式 Web API Overview) */
   const url = new URL('https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/');
