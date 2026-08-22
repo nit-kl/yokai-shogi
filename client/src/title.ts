@@ -1,11 +1,22 @@
 import { YOKAI } from '../../shared/data';
+import { applyKnockout, opaqueBounds } from './knockout-black';
 import { $ } from './util';
 import { pickTitleLayout, TITLE_HEROES, type TitleHeroId } from './title-heroes';
 
 export { TITLE_HEROES } from './title-heroes';
 
-const TITLE_BG_CANDIDATES = ['/assets/ui/title-bg.webp', '/assets/ui/title-bg.png'];
-const TITLE_LOGO_CANDIDATES = ['/assets/ui/title-logo.webp', '/assets/ui/title-logo.png'];
+const TITLE_BG_CANDIDATES = [
+  '/assets/ui/title-bg.webp',
+  '/assets/ui/title-bg.png',
+  '/assets/ui/title-bg.jpg',
+  '/assets/ui/title-bg.jpeg',
+];
+const TITLE_LOGO_CANDIDATES = [
+  '/assets/ui/title-logo.webp',
+  '/assets/ui/title-logo.png',
+  '/assets/ui/title-logo.jpg',
+  '/assets/ui/title-logo.jpeg',
+];
 const TITLE_MOON_CANDIDATES = ['/assets/ui/title-moon.webp', '/assets/ui/title-moon.png'];
 const TITLE_PORTRAITS: Record<TitleHeroId, string[]> = {
   kyubi: ['/assets/ui/title-kyubi.png', '/assets/ui/title-kyubi.webp'],
@@ -17,6 +28,7 @@ const portraitUrl: Partial<Record<TitleHeroId, string>> = {};
 let layout = pickTitleLayout();
 let artProbed = false;
 let artReady: Promise<void> | null = null;
+let logoObjectUrl: string | null = null;
 
 function probeImage(url: string): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,6 +44,57 @@ async function firstExisting(urls: string[]): Promise<string | null> {
     if (await probeImage(url)) return url;
   }
   return null;
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`failed to load ${url}`));
+    img.src = url;
+  });
+}
+
+/** 黒背景のロゴを透過にして、余白を切り落とす */
+async function prepareLogoSrc(url: string): Promise<string> {
+  const img = await loadImage(url);
+  const maxEdge = 2048;
+  const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+  const width = Math.max(1, Math.round(img.naturalWidth * scale));
+  const height = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return url;
+  ctx.drawImage(img, 0, 0, width, height);
+  const image = ctx.getImageData(0, 0, width, height);
+  applyKnockout(image.data);
+  const box = opaqueBounds(image.data, width, height);
+  if (!box) return url;
+  ctx.putImageData(image, 0, 0);
+  const pad = Math.round(Math.max(width, height) * 0.02);
+  const sx = Math.max(0, box.x - pad);
+  const sy = Math.max(0, box.y - pad);
+  const sw = Math.min(width - sx, box.w + pad * 2);
+  const sh = Math.min(height - sy, box.h + pad * 2);
+  const cropped = document.createElement('canvas');
+  cropped.width = sw;
+  cropped.height = sh;
+  const cut = cropped.getContext('2d');
+  if (!cut) return url;
+  cut.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  return await new Promise(resolve => {
+    cropped.toBlob(blob => {
+      if (!blob) {
+        resolve(url);
+        return;
+      }
+      if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl);
+      logoObjectUrl = URL.createObjectURL(blob);
+      resolve(logoObjectUrl);
+    }, 'image/png');
+  });
 }
 
 /** 用意されたキーアートがあればタイトルに載せる。無い場合は既存の駒絵で成立させる */
@@ -59,7 +122,12 @@ async function loadOptionalTitleArt(): Promise<void> {
   }
   if (logo) {
     const logoEl = $<HTMLImageElement>('title-logo-art');
-    logoEl.src = logo;
+    try {
+      logoEl.src = await prepareLogoSrc(logo);
+    } catch {
+      logoEl.src = logo;
+      logoEl.classList.add('title-logo-art-blend');
+    }
     logoEl.classList.remove('hidden');
     screen.classList.add('has-title-logo');
   }
