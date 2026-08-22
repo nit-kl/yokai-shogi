@@ -170,7 +170,13 @@ authRoutes.post('/auth/steam', async c => {
   if (!body.success) return apiError(c, 'VALIDATION', 'リクエストが不正です');
 
   const verified = await verifySteamSessionTicket(c.env, body.data.ticket);
-  if (!verified.ok) return apiError(c, 'UNAUTHORIZED', verified.reason);
+  if (!verified.ok) {
+    console.warn('[steam] ticket verify failed', {
+      origin: c.req.header('Origin') || '',
+      reason: verified.reason,
+    });
+    return apiError(c, 'UNAUTHORIZED', verified.reason);
+  }
 
   const db = c.env.DB;
   const steamId = verified.steamId;

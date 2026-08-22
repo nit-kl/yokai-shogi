@@ -98,10 +98,11 @@
       ],
       "triggers": { "crons": ["0 19 * * *"] },
       "vars": {
-        "ALLOWED_ORIGINS": "https://yokai-shogi.nit-games.com,https://yokai-shogi.pages.dev",
+        "ALLOWED_ORIGINS": "https://yokai-shogi.nit-games.com,https://yokai-shogi.pages.dev,http://tauri.localhost,https://tauri.localhost,tauri://localhost",
         "MAINTENANCE": "0",
         "ADS_REWARD_ENABLED": "0",
-        "ADS_REWARD_PROVIDER": "mock"
+        "ADS_REWARD_PROVIDER": "mock",
+        "STEAM_AUTH_MOCK": "0"
       }
     }
   }

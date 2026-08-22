@@ -116,8 +116,18 @@ export class ApiClient {
     if (getTurnstileToken) this.turnstileProvider = getTurnstileToken;
     const rt = this.getRefreshToken();
     if (rt) {
-      await this.refreshOrExpire();
-      return;
+      try {
+        await this.refreshOrExpire();
+        return;
+      } catch (e) {
+        if (e instanceof NetworkError) throw e;
+        if (e instanceof ApiError && e.code === 'MAINTENANCE') throw e;
+        if (isSteam()) {
+          await this.createSteamSession();
+          return;
+        }
+        throw e;
+      }
     }
     if (isSteam()) {
       await this.createSteamSession();

@@ -28,7 +28,7 @@ Rust(stable) が必要。初回は依存のコンパイルに時間がかかる�
 
 ```
 npm run tauri:dev    # オフラインSteam相当でウィンドウ起動
-npm run tauri:build  # Windowsインストーラ生成(NSIS)
+npm run tauri:build  # 本番API向け Windowsインストーラ(NSIS)
 ```
 
 詳細は `docs/23-steam.md`。

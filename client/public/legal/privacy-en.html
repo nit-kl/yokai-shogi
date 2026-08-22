@@ -12,18 +12,19 @@ table{width:100%;border-collapse:collapse;margin:1em 0;font-size:.95rem}th,td{bo
 </head>
 <body>
 <h1>Hyakkiban Privacy Policy</h1>
-<p class="note">Operator: nit / Last updated: August 18, 2026</p>
+<p class="note">Operator: nit / Last updated: August 22, 2026</p>
 <p class="note">This English version is provided for convenience. If it differs from the Japanese version, the Japanese version controls.</p>
-<p>Independent developer nit (the “Operator”) establishes this Policy for information handled by the browser game Hyakkiban (the “Service”). The Service is designed to <strong>minimize collection of personal information</strong> and does not collect email addresses, legal names, phone numbers, or payment details.</p>
+<p>Independent developer nit (the “Operator”) establishes this Policy for information handled by the game Hyakkiban (the “Service”). The Service includes the browser version and the Steam desktop version. The Service is designed to <strong>minimize collection of personal information</strong> and does not collect email addresses, legal names, phone numbers, or payment details.</p>
 
 <h2>1. Information Collected</h2>
 <table><thead><tr><th>Category</th><th>Details</th><th>Collection</th></tr></thead><tbody>
-<tr><td>Authentication identifiers</td><td>Automatically issued account ID, authentication token (stored as a hash), passkey public key, and transfer code (stored as a hash)</td><td>Generated automatically or registered by the user</td></tr>
+<tr><td>Authentication identifiers</td><td>Automatically issued account ID, authentication token (stored as a hash), passkey public key, transfer code (stored as a hash), and Steam ID on the Steam version</td><td>Generated automatically, registered by the user, or obtained via Steam authentication</td></tr>
 <tr><td>Play data</td><td>Owned yokai, tickets, Spirit Power, formations, battle records, login history, currency logs, and ad-reward history</td><td>Recorded as you use the Service</td></tr>
 <tr><td>Display name</td><td>An optional name of 1–10 characters</td><td>Entered by the user</td></tr>
 <tr><td>Access logs</td><td>IP address, request time, and technical data needed to prevent abuse</td><td>Automatically recorded and retained briefly</td></tr>
-<tr><td>Bot-prevention data</td><td>Cloudflare Turnstile verification result when an account is issued</td><td>Automatic</td></tr>
-<tr><td>Advertising data (optional)</td><td>If you watch a rewarded ad, the ad network may collect device identifiers, IP address, browser information, advertising IDs, and similar data</td><td>When you consent to watch an ad</td></tr>
+<tr><td>Bot-prevention data</td><td>Cloudflare Turnstile verification result when an account is issued (mainly on the browser version)</td><td>Automatic</td></tr>
+<tr><td>Steam authentication data</td><td>Steam Session Ticket. Sent to Valve’s servers to authenticate the account and obtain a Steam ID</td><td>When the Steam version starts or signs in</td></tr>
+<tr><td>Advertising data (optional)</td><td>If you watch a rewarded ad on the browser version, the ad network may collect device identifiers, IP address, browser information, advertising IDs, and similar data</td><td>When you consent to watch an ad</td></tr>
 </tbody></table>
 <ul><li>The Service <strong>does not collect email addresses, legal names, addresses, phone numbers, or payment details</strong>.</li><li>The Service <strong>has no chat feature</strong>, except for preset expressions.</li></ul>
 
@@ -33,18 +34,19 @@ table{width:100%;border-collapse:collapse;margin:1em 0;font-size:.95rem}th,td{bo
 <li>Detecting and preventing cheating, multiple-account abuse, automation, and reward fraud;</li>
 <li>Incident response and user support;</li>
 <li>Aggregated usage statistics that do not identify individuals; and</li>
-<li>Delivering and measuring rewarded ads and preventing ad fraud when a user chooses to watch.</li>
+<li>Delivering and measuring rewarded ads and preventing ad fraud when a user chooses to watch on the browser version.</li>
 </ul>
 
 <h2>3. Disclosure to Third Parties</h2>
 <p>The Operator does not provide collected information to third parties except as required by law or as follows:</p>
 <ul>
 <li>The Service uses Cloudflare for delivery, compute, databases, and bot prevention. Cloudflare is treated as a service provider or equivalent party.</li>
-<li>If you watch a rewarded ad, device and connection information required to deliver it is sent to an ad network, such as Google's advertising services, under that network's policies.</li>
+<li>On the Steam version, a Steam Session Ticket is sent to Valve (Steam) to authenticate the Steam account. That transmission is governed by <a href="https://store.steampowered.com/privacy_agreement/" target="_blank" rel="noopener noreferrer">Valve’s privacy policy</a>.</li>
+<li>If you watch a rewarded ad on the browser version, device and connection information required to deliver it is sent to an ad network, such as Google's advertising services, under that network's policies. <strong>The Steam version does not show ads and does not send information to ad networks.</strong></li>
 </ul>
 
 <h2>4. Cookies and Local Storage</h2>
-<p>The Service uses browser storage and similar technology to maintain login state and progress, including authentication tokens, local saves, and ad-consent records. Ad networks may use cookies or similar technology when rewarded ads are used.</p>
+<p>The Service uses browser or desktop-client storage and similar technology to maintain login state and progress, including authentication tokens, local saves, and ad-consent records. Ad networks may use cookies or similar technology when rewarded ads are used on the browser version.</p>
 
 <h2>5. Retention</h2>
 <table><thead><tr><th>Data</th><th>Retention</th></tr></thead><tbody>
@@ -58,7 +60,7 @@ table{width:100%;border-collapse:collapse;margin:1em 0;font-size:.95rem}th,td{bo
 <ul><li>You may request deletion of your account and data through support. The account is then suspended and physically deleted after 90 days.</li><li>For other access, correction, or deletion requests, contact support. Authentication identifiers may be requested to verify your identity.</li></ul>
 
 <h2>7. Minors</h2>
-<p>The Service has no paid purchases and therefore no high-value payment risk. Rewarded ads are optional and subject to a daily limit. Display names are filtered for inappropriate expressions.</p>
+<p>The Service has no paid purchases and therefore no high-value payment risk. On the browser version, rewarded ads are optional and subject to a daily limit. The Steam version has no ads. Display names are filtered for inappropriate expressions.</p>
 
 <h2>8. Use Outside Japan</h2>
 <p>The Service is operated from Japan and intended primarily for users in Japan. Japanese is the canonical language; the English UI is provided for convenience. This English translation is provided to make the Service more accessible. The Service is governed by Japanese law.</p>
