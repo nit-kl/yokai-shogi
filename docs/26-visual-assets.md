@@ -12,11 +12,11 @@
 |---|---|---|
 | `title-bg.webp` | 1920×1080（横）と、可能なら 1080×1920（縦）のうち大きい方。正方形 1920×1920 でも可 | **夜のキービジュアル**。満月、霧、鳥居や盤が霞む夜。人物は描き込まない（大将立ち絵を重ねるため）。中央〜下は暗く、ロゴとボタンが読める余白 |
 | `title-logo.webp` | 幅 1600px 前後、高さは文字に合わせる。背景透過 | **『百鬼盤』のロゴ**。金の筆文字 or 明朝の飾り文字。英語版は後で `title-logo-en.webp` でも可。まずは日本語だけでよい |
-| `title-kyubi.png` | 高さ 1800–2400px、幅は構図任せ。**背景透過** | 九尾の狐の**全身立ち絵**。現行 `kyubi.webp` と同じキャラ・衣装で、顔が小さくならないこと |
-| `title-shuten.png` | 同上 | 酒呑童子の全身立ち絵 |
-| `title-nurarihyon.png` | 同上 | ぬらりひょんの全身立ち絵 |
+| `title-kyubi.png` | 高さ 1800–2400px、幅は構図任せ。**背景透過** | 九尾の狐の**全身立ち絵**。現行 `kyubi.webp` と同じキャラ・衣装 |
+| `title-ibaraki.png` | 同上 | 茨木童子の全身立ち絵。現行 `ibaraki.webp` と同じキャラ |
+| `title-tamamo.png` | 同上 | 玉藻前の全身立ち絵。現行 `tamamo.webp` と同じキャラ |
 
-立ち絵3枚が来たら、タイトルの大将表示を駒画像から差し替えます。
+タイトルの顔は選んだ大将ではなく、**九尾 / 茨木 / 玉藻の3体を起動ごとにランダム**で中央に出す。左右は残りの2体。専用立ち絵が無い間は既存の駒絵を使う。
 
 ## 次に欲しい（ストア画面・対戦スクショ用）
 
@@ -37,7 +37,7 @@
 ## いらないもの
 
 - UIのボタン枠を全部イラストにする必要はない（コードで組む）
-- 全56体の新規立ち絵は今は不要。タイトル用の大将3体が先
+- 全56体の新規立ち絵は今は不要。タイトル用は九尾・茨木・玉藻の3体が先
 - 既存駒絵の描き直しも今は不要（盤上・図鑑はそのまま使う）
 
 ## 渡し方
@@ -115,27 +115,23 @@ Keep the same face, costume, colors and accessories. More full-body and taller t
 No extra characters, no background scenery, no text.
 ```
 
-### 4. 酒呑童子 `title-shuten`（参照: `shuten.webp`）
+### 4. 茨木童子 `title-ibaraki`（参照: `ibaraki.webp`）
 
 ```
 Same character as the reference, do not redesign him.
 Full-body standing pose, feet visible, taller vertical canvas, isolated on pure black background.
-Red-skinned oni warlord, chibi-SD powerful build, spiky black ponytail, curved red horns with gold bands, glowing yellow eyes, fangs.
-Dark ornate robes, giant black prayer beads, gold oni-mask belt buckle, purple-red ropes, golden bells.
-Spiked black kanabo club on his right shoulder, large dark sake gourd in his left hand.
-Purple-magenta spirit flames and two small flaming skull wisps.
+Pale-skinned oni youth, long white hair, two sharp curved red horns, red eyes, confident smirk, monstrous lava-like right claw wreathed in magenta-red flame, red chest markings.
+Ornate red-black-purple robes, white fur mantle, gold oni-mask belt, shimenawa rope, spiked kanabo over the left shoulder.
 Keep the same face, costume, colors and props. No extra characters, no scenery, no text.
 ```
 
-### 5. ぬらりひょん `title-nurarihyon`（参照: `nurarihyon.webp`）
+### 5. 玉藻前 `title-tamamo`（参照: `tamamo.webp`）
 
 ```
-Same character as the reference, do not redesign him.
-Full-body standing pose, feet visible, taller vertical canvas, isolated on pure black background.
-Elderly yokai overlord, extremely elongated bald forehead, thin white goatee, knowing smirk, chibi-SD but tall silhouette.
-Deep purple-black-navy layered hakama robes with gold cloud and wave embroidery, purple tassels, gold charms.
-Long kiseru pipe, dark gold-pattern sake flask, tall staff with ornate gold head.
-White smoke swirls and two small round white spirit wisps near his head.
+Same character as the reference, do not redesign her.
+Full-body pose, taller vertical canvas, isolated on pure black background.
+Regal nine-tailed fox courtesan, long white hair, red fox ears, red eyes, red cross mark on forehead, nine huge white tails with red tips.
+Ornate white-red-black kimono with gold embroidery, gold jewelry, purple-blue spirit flames, ethereal white fox spirit near the tails.
 Keep the same face, costume, colors and props. No extra characters, no scenery, no text.
 ```
 

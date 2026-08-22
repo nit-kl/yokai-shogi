@@ -1,16 +1,20 @@
-import { BOSS_CHOICES, YOKAI } from '../../shared/data';
+import { YOKAI } from '../../shared/data';
 import { $ } from './util';
+import { pickTitleLayout, TITLE_HEROES, type TitleHeroId } from './title-heroes';
+
+export { TITLE_HEROES } from './title-heroes';
 
 const TITLE_BG_CANDIDATES = ['/assets/ui/title-bg.webp', '/assets/ui/title-bg.png'];
 const TITLE_LOGO_CANDIDATES = ['/assets/ui/title-logo.webp', '/assets/ui/title-logo.png'];
 const TITLE_MOON_CANDIDATES = ['/assets/ui/title-moon.webp', '/assets/ui/title-moon.png'];
-const TITLE_PORTRAITS: Record<string, string[]> = {
+const TITLE_PORTRAITS: Record<TitleHeroId, string[]> = {
   kyubi: ['/assets/ui/title-kyubi.png', '/assets/ui/title-kyubi.webp'],
-  shuten: ['/assets/ui/title-shuten.png', '/assets/ui/title-shuten.webp'],
-  nurarihyon: ['/assets/ui/title-nurarihyon.png', '/assets/ui/title-nurarihyon.webp'],
+  ibaraki: ['/assets/ui/title-ibaraki.png', '/assets/ui/title-ibaraki.webp'],
+  tamamo: ['/assets/ui/title-tamamo.png', '/assets/ui/title-tamamo.webp'],
 };
 
-const portraitUrl: Record<string, string> = {};
+const portraitUrl: Partial<Record<TitleHeroId, string>> = {};
+let layout = pickTitleLayout();
 let artProbed = false;
 let artReady: Promise<void> | null = null;
 
@@ -30,7 +34,7 @@ async function firstExisting(urls: string[]): Promise<string | null> {
   return null;
 }
 
-/** 用意されたキーアートがあればタイトルに載せる。無い場合はCSSの月と大将絵で成立させる */
+/** 用意されたキーアートがあればタイトルに載せる。無い場合は既存の駒絵で成立させる */
 export function applyOptionalTitleArt(): Promise<void> {
   if (!artReady) artReady = loadOptionalTitleArt();
   return artReady;
@@ -40,13 +44,13 @@ async function loadOptionalTitleArt(): Promise<void> {
   if (artProbed) return;
   artProbed = true;
   const screen = $('screen-title');
-  const [bg, logo, moon, kyubi, shuten, nurarihyon] = await Promise.all([
+  const [bg, logo, moon, kyubi, ibaraki, tamamo] = await Promise.all([
     firstExisting(TITLE_BG_CANDIDATES),
     firstExisting(TITLE_LOGO_CANDIDATES),
     firstExisting(TITLE_MOON_CANDIDATES),
     firstExisting(TITLE_PORTRAITS.kyubi),
-    firstExisting(TITLE_PORTRAITS.shuten),
-    firstExisting(TITLE_PORTRAITS.nurarihyon),
+    firstExisting(TITLE_PORTRAITS.ibaraki),
+    firstExisting(TITLE_PORTRAITS.tamamo),
   ]);
   if (bg) {
     const sky = screen.querySelector<HTMLElement>('.title-sky');
@@ -70,28 +74,24 @@ async function loadOptionalTitleArt(): Promise<void> {
     }
   }
   if (kyubi) portraitUrl.kyubi = kyubi;
-  if (shuten) portraitUrl.shuten = shuten;
-  if (nurarihyon) portraitUrl.nurarihyon = nurarihyon;
-  if (kyubi || shuten || nurarihyon) screen.classList.add('has-title-portraits');
+  if (ibaraki) portraitUrl.ibaraki = ibaraki;
+  if (tamamo) portraitUrl.tamamo = tamamo;
+  if (kyubi || ibaraki || tamamo) screen.classList.add('has-title-portraits');
 }
 
-function portraitSrc(bossId: string): string {
-  return portraitUrl[bossId] || YOKAI[bossId].img;
+function portraitSrc(id: TitleHeroId): string {
+  return portraitUrl[id] || YOKAI[id].img;
 }
 
-export function renderTitleBosses(selectedId: string): void {
-  const centerId = BOSS_CHOICES.find(id => id === selectedId) ?? BOSS_CHOICES[0];
-  const sideIds = BOSS_CHOICES.filter(id => id !== centerId);
-  const placements = [
-    ['title-boss-l', sideIds[0]],
-    ['title-boss-c', centerId],
-    ['title-boss-r', sideIds[1]],
-  ] as const;
+function placeHero(elementId: string, heroId: TitleHeroId): void {
+  const image = $<HTMLImageElement>(elementId);
+  image.src = portraitSrc(heroId);
+  image.alt = YOKAI[heroId].name;
+}
 
-  for (const [elementId, bossId] of placements) {
-    const boss = YOKAI[bossId];
-    const image = $<HTMLImageElement>(elementId);
-    image.src = portraitSrc(bossId);
-    image.alt = boss.name;
-  }
+/** タイトルの顔。選んだ大将ではなく、九尾 / 茨木 / 玉藻をセッション中は固定で出す */
+export function renderTitleHeroes(): void {
+  placeHero('title-boss-c', layout.center);
+  placeHero('title-boss-l', layout.left);
+  placeHero('title-boss-r', layout.right);
 }

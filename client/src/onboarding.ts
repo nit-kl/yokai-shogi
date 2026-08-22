@@ -7,7 +7,7 @@ import { $, showScreen } from './util';
 import { AudioSys } from './audio';
 import { Meta } from './meta';
 import { MenuUI } from './menu';
-import { applyOptionalTitleArt, renderTitleBosses } from './title';
+import { applyOptionalTitleArt, renderTitleHeroes } from './title';
 
 type Step = 'boss' | 'gacha' | 'formation';
 
@@ -23,8 +23,8 @@ export const Onboarding = {
 
   async start() {
     step = 'boss';
-    renderTitleBosses(Meta.bossId());
-    void applyOptionalTitleArt().then(() => renderTitleBosses(Meta.bossId()));
+    renderTitleHeroes();
+    void applyOptionalTitleArt().then(() => renderTitleHeroes());
     showScreen('screen-title');
     this.showBossPick();
   },
@@ -57,7 +57,7 @@ export const Onboarding = {
     }
     $('onboarding-boss-error').textContent = '';
     $('modal-onboarding-boss').classList.add('hidden');
-    renderTitleBosses(bossId);
+    renderTitleHeroes();
     step = 'gacha';
     MenuUI.setOnboardingMode('gacha');
     AudioSys.init();
