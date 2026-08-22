@@ -7,7 +7,7 @@ import { $, showScreen } from './util';
 import { AudioSys } from './audio';
 import { Meta } from './meta';
 import { MenuUI } from './menu';
-import { renderTitleBosses } from './title';
+import { applyOptionalTitleArt, renderTitleBosses } from './title';
 
 type Step = 'boss' | 'gacha' | 'formation';
 
@@ -24,6 +24,7 @@ export const Onboarding = {
   async start() {
     step = 'boss';
     renderTitleBosses(Meta.bossId());
+    void applyOptionalTitleArt().then(() => renderTitleBosses(Meta.bossId()));
     showScreen('screen-title');
     this.showBossPick();
   },

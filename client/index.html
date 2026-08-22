@@ -71,15 +71,19 @@
 
   <!-- タイトル画面 -->
   <div id="screen-title" class="screen">
-    <div class="fog fog-a"></div>
-    <div class="fog fog-b"></div>
-    <div class="title-moon"></div>
-    <div class="title-board-lines"></div>
+    <div class="title-art" aria-hidden="true">
+      <div class="title-sky"></div>
+      <div class="title-moon"></div>
+      <div class="fog fog-a"></div>
+      <div class="fog fog-b"></div>
       <div class="title-bosses">
-        <img id="title-boss-l" src="" alt="九尾の狐" draggable="false">
-        <img id="title-boss-c" src="" alt="ぬらりひょん" draggable="false">
-        <img id="title-boss-r" src="" alt="酒呑童子" draggable="false">
+        <img id="title-boss-l" src="" alt="" draggable="false">
+        <img id="title-boss-c" src="" alt="" draggable="false">
+        <img id="title-boss-r" src="" alt="" draggable="false">
       </div>
+      <div class="title-board-lines"></div>
+      <div class="title-ground"></div>
+    </div>
     <div class="title-currency">
       <span class="cur-tickets">🎟 ×0</span>
       <span class="cur-yoryoku">妖力 0</span>
@@ -93,6 +97,7 @@
       <span>プレイヤー</span><b id="title-player-name">プレイヤー</b>
     </button>
     <div class="title-center">
+      <img id="title-logo-art" class="title-logo-art hidden" alt="百鬼盤" draggable="false">
       <div class="title-emblem"><span>百</span></div>
       <div class="title-sub-top"><i></i>妖怪を集めて、取って、HPを削る対戦ゲーム<i></i></div>
       <h1 class="title-logo"><span>百鬼</span><span>盤</span></h1>

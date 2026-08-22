@@ -25,7 +25,7 @@ import { AudioSys } from './audio';
 import { $, sleep, showScreen } from './util';
 import { initSentry, captureException } from './sentry';
 import { fetchApiStatus } from './status';
-import { renderTitleBosses } from './title';
+import { applyOptionalTitleArt, renderTitleBosses } from './title';
 import { SupportUI } from './support';
 import { RegistrationStatsUI } from './registration-stats';
 import { MatchHourUI } from './match-hour';
@@ -276,9 +276,10 @@ function enterTitle() {
     return;
   }
   renderTitleBosses(Meta.bossId());
+  void applyOptionalTitleArt().then(() => renderTitleBosses(Meta.bossId()));
   showScreen('screen-title');
   trackLandingEvent('title_view', { online: Meta.online, onlineAvailable: Meta.onlineAvailable });
-  FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.05);
+  FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.08);
   AudioSys.init();
   AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
