@@ -1,4 +1,5 @@
 import { RESONANCES, YOKAI } from '../../shared/data';
+import { resolvePublicUrl, wireExternalLinks } from './external-links';
 
 /** Add a locale here (+ message tables) when shipping a new language. */
 export type AppLocale = 'ja' | 'en';
@@ -420,8 +421,8 @@ function updateHead(): void {
   document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', document.title);
 
   document.querySelectorAll<HTMLAnchorElement>('a[href*="/legal/terms"], a[href*="/legal/privacy"]').forEach(link => {
-    if (link.href.includes('/legal/terms')) link.href = def.termsPath;
-    if (link.href.includes('/legal/privacy')) link.href = def.privacyPath;
+    if (link.href.includes('/legal/terms')) link.href = resolvePublicUrl(def.termsPath);
+    if (link.href.includes('/legal/privacy')) link.href = resolvePublicUrl(def.privacyPath);
   });
 }
 
@@ -508,6 +509,7 @@ export function initializeLocale(): void {
   const preferred: AppLocale = isAppLocale(query) ? query : isAppLocale(saved) ? saved : SOURCE_LOCALE;
 
   populateLocaleSelect();
+  wireExternalLinks();
   document.querySelector<HTMLSelectElement>('#locale-select')?.addEventListener('change', ev => {
     const value = (ev.currentTarget as HTMLSelectElement).value;
     if (isAppLocale(value)) setLocale(value);

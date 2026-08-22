@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev:steam",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build:steam:offline",
+    "beforeBuildCommand": "npm run build:steam",
     "frontendDist": "../client/dist"
   },
   "app": {
@@ -29,6 +29,9 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "resources": {
+      "steam/steam_api64.dll": "steam_api64.dll"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

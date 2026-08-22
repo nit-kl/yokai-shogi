@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-get-steam-session-ticket"
+description = "Allow the frontend to request a Steam Web API session ticket."
+commands.allow = ["get_steam_session_ticket"]

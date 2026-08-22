@@ -16,7 +16,7 @@ import { HYAKKI_STAGE, soloBattleStage } from './solo';
 import type { SoloStage } from './solo';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
-import { SessionExpiredError } from './meta';
+import { SessionExpiredError, ApiError, NetworkError } from './meta';
 import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
@@ -622,6 +622,17 @@ function renderHyakkiEntries(emptyMessage = 'ランキングを読み込み中�
   $('btn-hyakki-name').classList.toggle('hidden', Meta.data.name !== 'プレイヤー');
 }
 
+function onlineConnectErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) return err.message;
+  if (err instanceof NetworkError) {
+    return 'サーバーに接続できません。通信状態を確認して、もう一度お試しください';
+  }
+  if (err instanceof Error && err.message && err.message !== 'online connection unavailable') {
+    return err.message;
+  }
+  return 'オンライン接続に失敗しました。通信状態を確認して、もう一度お試しください';
+}
+
 async function openOnline() {
   AudioSys.play('click');
   $('online-room-code').classList.add('hidden');
@@ -636,7 +647,7 @@ async function openOnline() {
     } catch (err) {
       console.error('[meta] online retry failed', err);
       captureException(err);
-      $('online-message').textContent = 'オンライン接続に失敗しました。通信状態を確認して、もう一度お試しください';
+      $('online-message').textContent = onlineConnectErrorMessage(err);
       return;
     }
   }

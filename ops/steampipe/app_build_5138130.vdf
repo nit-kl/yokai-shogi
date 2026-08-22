@@ -1,0 +1,22 @@
+"AppBuild"
+{
+	"AppID" "5138130"
+	"Desc" "hyakkiban online 0.1.0"
+	"Preview" "0"
+	"ContentRoot" "..\content\hyakkiban\"
+	"BuildOutput" "..\output\"
+	"Depots"
+	{
+		"5138131"
+		{
+			"FileMapping"
+			{
+				"LocalPath" "*"
+				"DepotPath" "."
+				"Recursive" "1"
+			}
+			"FileExclusion" "*.pdb"
+			"FileExclusion" "steam_appid.txt"
+		}
+	}
+}

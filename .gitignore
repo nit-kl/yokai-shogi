@@ -19,6 +19,11 @@ dist/
 .wrangler/
 src-tauri/target/
 src-tauri/gen/
+src-tauri/steam/*.dll
+src-tauri/steam/*.lib
+src-tauri/steam/*.so
+src-tauri/steam/*.dylib
+src-tauri/**/*.pdb
 src-tauri/app-icon.png
 # tauri icon 再生成時の余剰(Windows/Steam では不要)
 src-tauri/icons/ios/

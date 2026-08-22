@@ -1,8 +1,9 @@
-/* Steam Session Ticket 取得(doc 23)
-   Steamworks 未接続時は安定した mock:<steamId> を返す(サーバー STEAM_AUTH_MOCK / キー未設定で受理)
+/* Steam Session Ticket 取得(doc 23 / 25)
+   Tauri+Steamworks では GetAuthTicketForWebApi の hex。失敗時は開発ビルドのみ mock:<steamId>。
    開発用クエリ: ?steamMockId=76561198… / ?steamDlc=full_collection */
 
 import { STEAM_DLC_FULL_COLLECTION, isSteamDlcId } from '../../../shared/steam-dlc';
+import { isTauriRuntime } from '../platform';
 
 const MOCK_STEAM_ID_KEY = 'yokaiShogi.steamMockId.v1';
 const MOCK_DLC_KEY = 'yokaiShogi.steamMockDlc.v1';
@@ -30,10 +31,30 @@ function mockSteamId(): string {
   return id;
 }
 
+function mockTicket(): string {
+  return `mock:${mockSteamId()}`;
+}
+
+async function invokeSteamSessionTicket(): Promise<string> {
+  const { invoke } = await import('@tauri-apps/api/core');
+  return invoke<string>('get_steam_session_ticket');
+}
+
 /** Session Ticket(hex) または開発用 mock:<steamId> */
 export async function getSteamSessionTicket(): Promise<string> {
-  /* 将来: Tauri コマンド / Steamworks から実チケットを取得 */
-  return `mock:${mockSteamId()}`;
+  applyDevQueryOverrides();
+  if (isTauriRuntime()) {
+    try {
+      const ticket = (await invokeSteamSessionTicket()).trim();
+      if (ticket) return ticket;
+    } catch (err) {
+      if (!import.meta.env.DEV) throw err;
+      console.warn('[steam] Steamworks ticket unavailable, using mock', err);
+    }
+  } else if (!import.meta.env.DEV) {
+    throw new Error('Steam 認証はデスクトップ版でのみ利用できます');
+  }
+  return mockTicket();
 }
 
 /** 開発用に申告する所有 DLC 一覧(本番では Steamworks 所有確認に置き換え) */

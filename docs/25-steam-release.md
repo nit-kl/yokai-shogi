@@ -20,7 +20,7 @@
 ## 最短経路
 
 1. **ストア審査は投入済みの想定**（レビュー準備完了まで到達。Request Review 未クリックならすぐ押す）
-2. **ゲームビルド審査は、今の depot のまま出さない**。現行梱包は `build:steam:offline` で、Steamworks 実チケットも本番 CORS デプロイも未完。ストアがオンライン／クロスプレイを謳うなら矛盾する
+2. **ゲームビルド審査は、オンライン梱包に差し替えてから出す**。`beforeBuildCommand` は `build:steam`。depot へ上げ直したあと申請する。現行のオフライン depot のまま出さない
 3. Coming Soon 14日と手数料支払から30日は審査と並行して進む。**審査を先に回す**
 
 リリースボタンは次が揃うまで押せない。ストア審査とビルド審査は順不同。
@@ -28,7 +28,7 @@
 | ゲート | 現状 | 所要 | 次の操作 |
 |---|---|---|---|
 | ストア審査 | 表記・アセット投入済み。レビュー準備完了まで到達 | 3〜5営業日 | Request Review 未クリックなら押す。仮リリース日が残っていれば消す |
-| ゲームビルド審査 | ビルドアップロード済・**未提出** | 3〜5営業日 | オンライン本番ビルドに差し替えてから申請 |
+| ゲームビルド審査 | オフライン depot のまま **未提出** | 3〜5営業日 | `npm run tauri:build` のオンライン NSIS を depot に上げてから申請 |
 | Coming Soon 14日 | 未公開 | ストア承認後に起算 | 承認当日に Coming Soon を出す |
 | 手数料から30日 | 支払日を未確認 | 支払日依存 | Partner の支払日を見て不足日数を把握 |
 
@@ -76,7 +76,7 @@
 | ドキュメント / マニュアル | `https://nit-games.com/guide.html` | 遊び方ガイド |
 | オンラインマニュアル | （空） | 上と重複させない |
 | バグ / 開発報告 | `https://discord.gg/qhm6YSSUz` | 公式Discord。個人DM誘導はしない |
-| プライバシーポリシー | `https://yokai-shogi.nit-games.com/legal/privacy.html` | **必須**。Steam ID / Session Ticket / Valve 送信を追記済み。Pages へデプロイしてからストアリンクを再確認 |
+| プライバシーポリシー | `https://yokai-shogi.nit-games.com/legal/privacy.html` | **必須**。Steam ID / Session Ticket / Valve 送信を追記済み（2026-08-22 公開） |
 | Metacritic | （空） | ない |
 
 ### ソーシャル
@@ -178,9 +178,9 @@ Microsoft Edge WebView2 Runtime が必要です（Windows 10 / 11 には通常�
 
 - [x] Publisher Web API キーを発行し、production Workers に投入済み。本番 `GET /v1/auth/config` は `steamAuth.configured: true` / `mockAllowed: false`（キー本体はログに残さない）
 - [x] production の `ALLOWED_ORIGINS` に Tauri オリジンを `server/wrangler.jsonc` へ追記した（`http://tauri.localhost`、`https://tauri.localhost`、`tauri://localhost`）
-- [ ] 上記 CORS を本番 Worker へデプロイする（`npm run api:deploy`）。未デプロイだと Steam クライアントから API が通らない
-- [ ] Tauri に Steamworks を接続し、実 Session Ticket を返す。現状 `getSteamSessionTicket` は常に `mock:…`（`client/src/steam/auth.ts`）。本番は mock を拒否する
-- [ ] `src-tauri/tauri.conf.json` の `beforeBuildCommand` を `build:steam`（本番 API）に切り替え、オンライン梱包で depot を上げ直す。現状は `build:steam:offline`
+- [x] 上記 CORS を本番 Worker へデプロイした（`npm run api:deploy`、2026-08-22）
+- [x] Tauri に Steamworks を接続し、実 Session Ticket を返す（`src-tauri/src/steam.rs` → `get_steam_session_ticket`）。開発ビルドかつ Steam 未起動時のみ `mock:…` に落とす。本番ビルドは mock しない。`AuthenticateUserTicket` には identity `hyakkiban` を付ける
+- [x] `src-tauri/tauri.conf.json` の `beforeBuildCommand` を `build:steam`（本番 API）に切り替えた。オフライン梱包は `npm run tauri:build:offline`。**depot へ上げ直すのは運営者**
 - [x] インストール名・ウィンドウタイトルをストア名「百鬼盤」に揃える（`src-tauri/tauri.conf.json` の `productName` / `title`）。パッケージ ID `com.nitgames.yokai-shogi` はそのまま
 - [ ] staging の `wrangler.jsonc` に残る `STEAM_AUTH_MOCK=1` を、実チケット接続後に外す（本番はすでに mock 不可）
 - [ ] Steam クライアント実機で起動 → Steam ログイン → Web 版とのランダムマッチが成立することを確認する
@@ -189,10 +189,10 @@ Microsoft Edge WebView2 Runtime が必要です（Windows 10 / 11 には通常�
 
 | 箇所 | 今どうなっているか | 公開時に起きること |
 |---|---|---|
-| Steamworks SDK | Tauri に steamworks crate なし。チケットは mock 固定 | 本番 API は mock を拒否し、Steam ログインできない |
-| production CORS | `wrangler.jsonc` には追記済み。本番 Worker は未デプロイ | デスクトップ版から API / マッチングが失敗する |
-| 梱包コマンド | `beforeBuildCommand = build:steam:offline` | 審査用ビルドがオフライン専用になる |
-| Workers secrets | 本番は投入済み（`configured: true` / `mockAllowed: false`）。staging vars に `STEAM_AUTH_MOCK=1` が残る | 実チケットが無いと本番ログインは失敗する。staging は当面 mock 可 |
+| Steamworks SDK | Tauri に接続済み。実機（Steam 起動）スモーク未確認 | 実チケットが取れないと本番ログインできない |
+| production CORS | 本番 Worker へデプロイ済み（Tauri オリジン許可） | — |
+| 梱包コマンド | `beforeBuildCommand = build:steam`。NSIS は `npm run tauri:build`。depot 再アップロードは未実施 | 旧オフライン depot のまま出すとオンライン審査と矛盾する |
+| Workers secrets | 本番は投入済み（`configured: true` / `mockAllowed: false`）。staging vars に `STEAM_AUTH_MOCK=1` が残る | staging は当面 mock 可。本番は実チケット必須 |
 
 ---
 
@@ -202,7 +202,7 @@ Microsoft Edge WebView2 Runtime が必要です（Windows 10 / 11 には通常�
 
 - [x] 利用規約に Steam 版（無料・広告なし）を追記する。初回は有償販売なしなので「販売は行いません」は矛盾しない。DLC を出すときに改定する（`docs/legal/terms-of-service.md`）
 - [x] プラポリに Steam ID、Session Ticket 検証、Valve への送信、Steam 版に広告が無いことを追記する（`docs/legal/privacy-policy.md`）
-- [x] ゲーム内の規約・プラポリ HTML / 同意 UI を上記と同期する（同意キー `yokaiShogi.consent.2026-08-22`。公開 HTML は Pages / apex サイトへデプロイが必要）
+- [x] ゲーム内の規約・プラポリ HTML / 同意 UI を上記と同期する（同意キー `yokaiShogi.consent.2026-08-22`。Pages / apex へ 2026-08-22 デプロイ済み）
 
 ---
 
@@ -236,7 +236,7 @@ Steam Cloud はサーバー権威（D1）があるので、未実装なら Steam
 |---|---|
 | ストア | 基本情報・説明・コンテンツ調査、言語、動作環境、スクリーンショット5枚以上、カプセル、ライブラリ、サポート、開発者/発売元、レビュー設定 |
 | ビルド | プラットフォーム種別、ビルドアップロード、depot、public ブランチ、インストール先と実行ファイル、ストアパッケージ、イベント準備 |
-| コード骨格 | `PLATFORM` 分岐、広告除去、Tauri シェル、`POST /v1/auth/steam`、DLC mock、クロスプレイ用同一 Matchmaker |
+| コード骨格 | `PLATFORM` 分岐、広告除去、Tauri シェル、Steamworks 実チケット、`POST /v1/auth/steam`、DLC mock、クロスプレイ用同一 Matchmaker |
 | 権利 | 駒・BGM の商用可否（条件付き）、商標の主要検索 |
 
 Partner オンボーディング（契約・銀行・税）と `$100` 支払い・App 作成は、App ID が付いている時点で完了済みとみなす。キー発行と Workers 投入は [doc 24](24-steam-partner-setup.md) の残り。

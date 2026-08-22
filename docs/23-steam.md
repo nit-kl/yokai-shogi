@@ -57,10 +57,10 @@
 | 2 | アセット権利・商標クリア | 駒・BGM OK(条件付き)。J-PlatPat 主要検索0件でクリア。Steam AI 開示は提出時 |
 | 3 | `PLATFORM` ビルドフラグと広告経路の完全分離 | `__PLATFORM__` + `npm run build:steam`。広告 UI/GPT/AdSense を Steam で無効化 — **完了** |
 | 4 | Tauri シェル + オフライン起動 | `src-tauri/` + `npm run tauri:build`（steam-offline）— **完了** |
-| 5 | Steam Auth + アカウント連携/マージ | `POST /v1/auth/steam` + クライアント Steam セッション — **骨格完了**(実チケットは Steamworks 接続後) |
+| 5 | Steam Auth + アカウント連携/マージ | `POST /v1/auth/steam` + Tauri Steamworks 実チケット — **コード完了**（Steam クライアント実機スモークは運営者確認） |
 | 6 | オンライン接続(同一 Matchmaker) | `tauri:dev:local` / staging で API 接続可能 — **開発経路完了**(クロスプレイ手動スモークは運営者確認) |
 | 7 | 全駒解放 entitlement API | `POST /v1/steam/dlc/sync` + mock 付与 — **骨格完了**。本番所有確認は **DLC 公開時**(初回リリース対象外) |
-| 8 | Steamworks 接続とストア提出 | 審査提出可能。残作業の正本は [doc 25](25-steam-release.md) |
+| 8 | Steamworks 接続とストア提出 | 実チケット接続はコード完了。審査・Coming Soon の正本は [doc 25](25-steam-release.md) |
 | 9 | 公開後: 全駒解放DLC → 異装 DLC | 有料パックと見た目装備 |
 
 ## 公開前チェック(抜粋)
@@ -69,7 +69,7 @@
 
 - [x] アセット商用権利クリア（駒・BGM 主要。フォント等は任意残り）([asset-licenses.md](asset-licenses.md))
 - [x] 商標調査（主要パターン0件・[trademark-research.md](trademark-research.md)）
-- [ ] 利用規約・プラポリの Steam / Steam ID 追記（DLC 条項は DLC 公開時）
+- [x] 利用規約・プラポリの Steam / Steam ID 追記（DLC 条項は DLC 公開時）
 - [ ] Steam Direct・年齢レーティング・税務情報
 - [x] 広告コードが Steam ビルドに含まれないことの確認（`build:steam` で AdSense 除去・`adsAllowed()` ガード）
 - [ ] Web クロスプレイの接続スモーク
@@ -84,7 +84,8 @@
 | `npm run tauri:dev` | オフライン(APIなし)。ソロ検証用 |
 | `npm run tauri:dev:local` | ローカル API(`8787`)へ接続。**別ターミナルで `npm run api:dev` 必須** |
 | `npm run tauri:dev:staging` | staging Workers へ接続 |
-| `npm run tauri:build` | オフライン NSIS |
+| `npm run tauri:build` | 本番 API の NSIS（ストア候補） |
+| `npm run tauri:build:offline` | オフライン NSIS |
 | `npm run tauri:build:staging` | staging API 梱包ビルド |
 | `npm run build:steam` | Web 資産のみ（本番 API・広告なし） |
 | `npm run dev:steam:local` | ブラウザだけで Steam+local API(Tauri なし) |
@@ -103,12 +104,21 @@
 - URL に `?steamDlc=full_collection` を付けて起動 → ガチャプールが一括所持される
 - 外す: `?steamDlc=none`(localStorage クリア)
 
-### Steam Auth の検証手順(開発)
+### Steam Auth の検証手順
 
-1. `npm run api:dev`(ローカルは `STEAM_AUTH_MOCK=1`)
+**開発（mock、Steam クライアント不要）**
+
+1. `npm run api:dev`（ローカルは `STEAM_AUTH_MOCK=1`）
 2. `npm run tauri:dev:local` または `dev:steam:local`
-3. 起動時に `POST /v1/auth/steam`（チケットは `mock:<steamId>`）でメタが載る
-4. 本番では Partner の Web API キーと App ID を Workers secrets に入れ、mock を無効化する
+3. Steam が起動していなければチケットは `mock:<steamId>`。`POST /v1/auth/steam` でメタが載る
+
+**実チケット（Steam クライアント必須）**
+
+1. Steam にログインする。未公開 App `5138130` を Partner アカウントで所有していること
+2. `src-tauri/steam_appid.txt` は開発用。**出荷ビルドには同梱しない**（`bundle.resources` にも入れない）
+3. `npm run tauri:dev:staging`（またはキーを入れた `api:dev` + `tauri:dev:local`）
+4. 起動後の `POST /v1/auth/steam` の `ticket` が `mock:` で始まらないこと
+5. `steam_api64.dll` は **exe と同じフォルダ**に置く（`bundle.resources` でファイル名だけ指定）。`steam/` 配下に入れると Windows が読めない
 
 `cargo: program not found` になるとき: Rust は `%USERPROFILE%\.cargo\bin` に入っている。**ターミナルを開き直す**か、PowerShell で次を実行してから再試行する。
 
@@ -117,7 +127,7 @@ $env:Path = "$env:USERPROFILE\.cargo\bin;" + $env:Path
 npm run tauri:dev:local
 ```
 
-`src-tauri/tauri.conf.json` の `beforeBuildCommand` は当面 `build:steam:offline`。オンライン本番梱包は `build:steam` に切り替える。
+`src-tauri/tauri.conf.json` の `beforeBuildCommand` は **`build:steam`**（本番 API）。オフライン梱包は `npm run tauri:build:offline`。
 
 ## 運営者側で必要な対応(コード外)
 
@@ -132,7 +142,7 @@ npm run tauri:dev:local
 | 後 | 利用規約・プラポリに Steam / Steam ID 追記 | doc 11 / 25。DLC 条項は DLC 公開時 |
 | 後 | 全駒解放DLC（初回対象外） | 価格は ¥980 前後を仮置き可。[doc 25](25-steam-release.md) 節 E |
 
-コード側が次にやるのは **Steamworks 実チケット接続**と **本番 CORS**。所有確認 API は DLC 公開時。詳細は doc 25。
+コード側の次は Steam 実機スモークと、オンライン NSIS を depot へ上げ直すこと。詳細は doc 25。
 
 ## 未決定の細部
 

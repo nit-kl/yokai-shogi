@@ -220,7 +220,7 @@ Invoke-RestMethod "https://partner.steam-api.com/ISteamUserAuth/AuthenticateUser
 
 - キー誤り: 認可エラー  
 - キー正しいが ticket 不正: チケット検証失敗（想定どおり）  
-- 本リポジトリの検証実装は `server/src/lib/steam.ts`（Publisher 向けに `partner.steam-api.com` を使用）
+- 本リポジトリの検証実装は `server/src/lib/steam.ts`（Publisher 向けに `partner.steam-api.com` を使用）。`GetAuthTicketForWebApi` と同じ `identity=hyakkiban` を付ける
 
 実クライアントの Session Ticket は、Steamworks SDK / Tauri プラグイン接続後にエンドツーエンドで確認する。
 

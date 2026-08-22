@@ -9,6 +9,8 @@ export type SteamTicketResult =
   | { ok: false; reason: string };
 
 const MOCK_PREFIX = 'mock:';
+/** GetAuthTicketForWebApi と同じ。`src-tauri/src/steam.rs` の WEB_IDENTITY と一致させる */
+export const STEAM_WEB_API_IDENTITY = 'hyakkiban';
 
 export function steamMockAllowed(env: Env): boolean {
   if (env.STEAM_AUTH_MOCK === '1') return true;
@@ -45,6 +47,7 @@ export async function verifySteamSessionTicket(env: Env, ticket: string): Promis
   url.searchParams.set('key', key);
   url.searchParams.set('appid', appId);
   url.searchParams.set('ticket', trimmed);
+  url.searchParams.set('identity', STEAM_WEB_API_IDENTITY);
 
   let res: Response;
   try {

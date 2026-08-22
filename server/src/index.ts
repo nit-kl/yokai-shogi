@@ -6,6 +6,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { AppEnv, Env } from './env';
+import { resolveCorsOrigin } from './lib/cors-origin';
 import { apiError } from './lib/errors';
 import { authRoutes } from './routes/auth';
 import { meRoutes } from './routes/me';
@@ -35,7 +36,7 @@ app.use('/v1/*', async (c, next) => {
 app.use('*', async (c, next) => {
   const allowed = (c.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   return cors({
-    origin: origin => (allowed.includes(origin) ? origin : null),
+    origin: origin => resolveCorsOrigin(origin, allowed),
     allowHeaders: ['Authorization', 'Content-Type'],
     maxAge: 86400,
   })(c, next);
