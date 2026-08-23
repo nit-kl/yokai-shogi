@@ -74,7 +74,8 @@ const STATIC: Record<string, string> = {
   'オンライン機能は一時停止しています。しばらくしてからお試しください。': 'Online features are temporarily unavailable. Please try again shortly.',
   '再試行': 'Try Again', 'ソロで遊ぶ': 'Play Solo', '妖力': 'Spirit Power',
   '音量設定': 'Audio Settings', 'プレイヤーネームを変更': 'Change player name',
-  'プレイヤー': 'Player', '妖怪を集めて、取って、HPを削る対戦ゲーム': 'Collect yokai, capture, and drain HP',
+  'プレイヤー': 'Player', '百鬼盤': 'Hyakkiban',
+  '妖怪を集めて、取って、HPを削る対戦ゲーム': 'Collect yokai, capture, and drain HP',
   '妖怪': 'Yokai', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
   '猛者と競う': 'Face other players', 'オンライン対戦': 'Online Battle',
   '登録プレイヤー': 'Registered Players', '人': 'players', 'メニュー': 'Menu',
@@ -254,7 +255,6 @@ const resonanceEn = [
 RESONANCES.forEach((r, i) => { add(r.name, resonanceEn[i][0]); add(r.desc, resonanceEn[i][1]); });
 
 const HTML_OVERRIDES: Record<string, string> = {
-  '.title-logo': '<span>Hyakkiban</span>',
   '.rules-scroll': `
     <p class="rules-lead">Collect yokai, capture them, and drain HP. Skills differ by yokai — <b>press and hold</b> a piece, or open the <b>Compendium</b>.</p>
     <h3>How to Win</h3>
