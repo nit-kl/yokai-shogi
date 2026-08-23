@@ -128,96 +128,49 @@ html[data-script="latn"] .screen h3 {
 /* ---------- タイトル ---------- */
 #screen-title {
   flex-direction: column; overflow: hidden;
+  background: #08060e;
+}
+.title-bg {
+  position: absolute; inset: 0;
+  z-index: 0;
   background:
-    radial-gradient(ellipse 65% 55% at 50% 38%, rgba(76,48,122,0.38), transparent 68%),
-    linear-gradient(180deg, #090713 0%, #110b1d 58%, #08060e 100%);
+    url("/assets/ui/title-bg.webp") center 30% / cover no-repeat;
+  transform: scale(1.04);
+  animation: titleBgDrift 28s ease-in-out infinite alternate;
 }
 #screen-title::before {
   content: "";
   position: absolute; inset: 0;
   background:
-    linear-gradient(90deg, rgba(0,0,0,0.55), transparent 24% 76%, rgba(0,0,0,0.55)),
-    linear-gradient(180deg, rgba(0,0,0,0.22), transparent 35%, rgba(0,0,0,0.5));
+    linear-gradient(90deg, rgba(0,0,0,0.38), transparent 18% 62%, rgba(0,0,0,0.22)),
+    linear-gradient(180deg, rgba(8,6,14,0.22), transparent 34%, rgba(8,6,14,0.58));
   pointer-events: none; z-index: 1;
 }
-.title-moon {
-  position: absolute; left: 50%; top: 7%;
-  width: min(55vw, 58vh); aspect-ratio: 1;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 37% 32%, rgba(255,255,255,0.42) 0 2%, transparent 3%),
-    radial-gradient(circle at 65% 58%, rgba(70,40,100,0.22) 0 8%, transparent 9%),
-    radial-gradient(circle at 42% 67%, rgba(70,40,100,0.18) 0 5%, transparent 6%),
-    radial-gradient(circle, #f7e7b8 0%, #d7b568 58%, #9b6b2e 100%);
-  box-shadow: 0 0 28px rgba(232,196,106,0.35), 0 0 100px rgba(200,138,255,0.18);
-  opacity: 0.36;
-  animation: moonPulse 6s ease-in-out infinite;
+@keyframes titleBgDrift {
+  0% { transform: scale(1.04) translate3d(0, 0, 0); }
+  100% { transform: scale(1.08) translate3d(-1.2%, -0.8%, 0); }
 }
-.title-board-lines {
-  position: absolute; inset: auto 0 0; height: 42%;
-  background-image:
-    linear-gradient(rgba(232,196,106,0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232,196,106,0.08) 1px, transparent 1px);
-  background-size: 68px 68px;
-  transform: perspective(430px) rotateX(62deg) scale(1.35);
-  transform-origin: bottom;
-  opacity: 0.35;
-  mask-image: linear-gradient(to bottom, transparent, #000 42%);
-}
-@keyframes moonPulse { 50% { opacity: 0.44; filter: brightness(1.12); } }
 
 .fog {
   position: absolute; inset: -20%;
   pointer-events: none;
+  z-index: 1;
   background:
-    radial-gradient(circle at 20% 60%, rgba(120, 90, 200, 0.13) 0%, transparent 30%),
-    radial-gradient(circle at 70% 30%, rgba(200, 80, 120, 0.10) 0%, transparent 28%),
-    radial-gradient(circle at 50% 80%, rgba(90, 140, 220, 0.10) 0%, transparent 32%);
+    radial-gradient(circle at 20% 60%, rgba(120, 90, 200, 0.08) 0%, transparent 30%),
+    radial-gradient(circle at 70% 30%, rgba(200, 80, 120, 0.06) 0%, transparent 28%),
+    radial-gradient(circle at 50% 80%, rgba(90, 140, 220, 0.07) 0%, transparent 32%);
   animation: fogDrift 26s linear infinite;
 }
 .fog-b {
   background:
-    radial-gradient(circle at 80% 70%, rgba(120, 90, 200, 0.12) 0%, transparent 26%),
-    radial-gradient(circle at 30% 20%, rgba(232, 196, 106, 0.07) 0%, transparent 30%);
+    radial-gradient(circle at 80% 70%, rgba(120, 90, 200, 0.07) 0%, transparent 26%),
+    radial-gradient(circle at 30% 20%, rgba(232, 196, 106, 0.05) 0%, transparent 30%);
   animation-duration: 38s; animation-direction: reverse;
 }
 @keyframes fogDrift {
   0% { transform: translate(0, 0) rotate(0deg); }
   50% { transform: translate(4%, -3%) rotate(2deg); }
   100% { transform: translate(0, 0) rotate(0deg); }
-}
-
-.title-bosses { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
-.title-bosses img {
-    position: absolute; bottom: -5%;
-    width: min(38vw, 48vh);
-    filter: saturate(0.85) brightness(0.78) drop-shadow(0 0 30px rgba(0,0,0,0.9));
-    opacity: 0.72;
-    animation: bossFloat 5s ease-in-out infinite;
-}
-#title-boss-l { left: -3%; animation-delay: 0s; }
-#title-boss-c {
-    top: 4%; bottom: auto; left: 50%;
-    width: min(32vw, 42vh);
-    transform: translateX(-50%);
-    opacity: 0.5;
-    filter: saturate(0.75) brightness(0.68) drop-shadow(0 0 38px rgba(0,0,0,0.95));
-    animation-name: bossFloatC;
-    animation-delay: 0.6s;
-}
-#title-boss-r { right: -3%; transform: scaleX(-1); animation-name: bossFloatR; animation-delay: 1.2s; }
-@keyframes bossFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-14px); }
-}
-@keyframes bossFloatR {
-    0%, 100% { transform: translateY(0) scaleX(-1); }
-    50% { transform: translateY(-14px) scaleX(-1); }
-}
-@keyframes bossFloatC {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-12px); }
 }
 
 .title-center {
@@ -2706,6 +2659,10 @@ html[data-script="latn"] .cur-yoryoku {
     border-radius: 16px;
     transform: translateY(1.5vh);
   }
+  .title-bg {
+    /* 提供画像のキャラ（右寄り）を優先して見せる */
+    background-position: 72% 28%;
+  }
   .title-sub-top { margin-top: 0.2em; letter-spacing: 0.08em; text-indent: 0; }
   .title-sub-top i { width: 16px; }
   .title-logo { width: min(100%, 420px); margin-bottom: 0.25em; }
@@ -2719,10 +2676,6 @@ html[data-script="latn"] .cur-yoryoku {
   .title-menu-btn b { width: 26px; height: 26px; }
   .title-menu-btn span { font-size: 0.6rem; }
   .announcement-badge { top: 3px; right: 4px; min-width: 15px; height: 15px; font-size: 0.55rem; }
-    .title-bosses img { width: min(54vw, 38vh); bottom: -1%; opacity: 0.48; }
-    #title-boss-l { left: -21%; }
-    #title-boss-c { top: 7%; bottom: auto; left: 50%; width: min(50vw, 33vh); opacity: 0.32; }
-    #title-boss-r { right: -21%; }
   .title-profile { top: 8px; left: 8px; max-width: 38vw; padding: 4px 10px; }
   .title-currency { top: 8px; right: 8px; gap: 4px; font-size: 0.66rem; }
   .title-currency span { padding: 3px 7px; }
