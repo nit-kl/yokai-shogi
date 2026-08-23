@@ -33,7 +33,6 @@ html[data-script="latn"] body {
 }
 html[data-script="latn"] .serif,
 html[data-script="latn"] .btn,
-html[data-script="latn"] .title-logo,
 html[data-script="latn"] .title-catch,
 html[data-script="latn"] .title-sub-top,
 html[data-script="latn"] .gc-name,
@@ -129,58 +128,43 @@ html[data-script="latn"] .screen h3 {
 /* ---------- タイトル ---------- */
 #screen-title {
   flex-direction: column; overflow: hidden;
+  background: #08060e;
+}
+.title-bg {
+  position: absolute; inset: 0;
+  z-index: 0;
   background:
-    radial-gradient(ellipse 65% 55% at 50% 38%, rgba(76,48,122,0.38), transparent 68%),
-    linear-gradient(180deg, #090713 0%, #110b1d 58%, #08060e 100%);
+    url("/assets/ui/title-bg.webp") center 30% / cover no-repeat;
+  transform: scale(1.04);
+  animation: titleBgDrift 28s ease-in-out infinite alternate;
 }
 #screen-title::before {
   content: "";
   position: absolute; inset: 0;
   background:
-    linear-gradient(90deg, rgba(0,0,0,0.55), transparent 24% 76%, rgba(0,0,0,0.55)),
-    linear-gradient(180deg, rgba(0,0,0,0.22), transparent 35%, rgba(0,0,0,0.5));
+    linear-gradient(90deg, rgba(0,0,0,0.38), transparent 18% 62%, rgba(0,0,0,0.22)),
+    linear-gradient(180deg, rgba(8,6,14,0.22), transparent 34%, rgba(8,6,14,0.58));
   pointer-events: none; z-index: 1;
 }
-.title-moon {
-  position: absolute; left: 50%; top: 7%;
-  width: min(55vw, 58vh); aspect-ratio: 1;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 37% 32%, rgba(255,255,255,0.42) 0 2%, transparent 3%),
-    radial-gradient(circle at 65% 58%, rgba(70,40,100,0.22) 0 8%, transparent 9%),
-    radial-gradient(circle at 42% 67%, rgba(70,40,100,0.18) 0 5%, transparent 6%),
-    radial-gradient(circle, #f7e7b8 0%, #d7b568 58%, #9b6b2e 100%);
-  box-shadow: 0 0 28px rgba(232,196,106,0.35), 0 0 100px rgba(200,138,255,0.18);
-  opacity: 0.36;
-  animation: moonPulse 6s ease-in-out infinite;
+@keyframes titleBgDrift {
+  0% { transform: scale(1.04) translate3d(0, 0, 0); }
+  100% { transform: scale(1.08) translate3d(-1.2%, -0.8%, 0); }
 }
-.title-board-lines {
-  position: absolute; inset: auto 0 0; height: 42%;
-  background-image:
-    linear-gradient(rgba(232,196,106,0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232,196,106,0.08) 1px, transparent 1px);
-  background-size: 68px 68px;
-  transform: perspective(430px) rotateX(62deg) scale(1.35);
-  transform-origin: bottom;
-  opacity: 0.35;
-  mask-image: linear-gradient(to bottom, transparent, #000 42%);
-}
-@keyframes moonPulse { 50% { opacity: 0.44; filter: brightness(1.12); } }
 
 .fog {
   position: absolute; inset: -20%;
   pointer-events: none;
+  z-index: 1;
   background:
-    radial-gradient(circle at 20% 60%, rgba(120, 90, 200, 0.13) 0%, transparent 30%),
-    radial-gradient(circle at 70% 30%, rgba(200, 80, 120, 0.10) 0%, transparent 28%),
-    radial-gradient(circle at 50% 80%, rgba(90, 140, 220, 0.10) 0%, transparent 32%);
+    radial-gradient(circle at 20% 60%, rgba(120, 90, 200, 0.08) 0%, transparent 30%),
+    radial-gradient(circle at 70% 30%, rgba(200, 80, 120, 0.06) 0%, transparent 28%),
+    radial-gradient(circle at 50% 80%, rgba(90, 140, 220, 0.07) 0%, transparent 32%);
   animation: fogDrift 26s linear infinite;
 }
 .fog-b {
   background:
-    radial-gradient(circle at 80% 70%, rgba(120, 90, 200, 0.12) 0%, transparent 26%),
-    radial-gradient(circle at 30% 20%, rgba(232, 196, 106, 0.07) 0%, transparent 30%);
+    radial-gradient(circle at 80% 70%, rgba(120, 90, 200, 0.07) 0%, transparent 26%),
+    radial-gradient(circle at 30% 20%, rgba(232, 196, 106, 0.05) 0%, transparent 30%);
   animation-duration: 38s; animation-direction: reverse;
 }
 @keyframes fogDrift {
@@ -189,43 +173,11 @@ html[data-script="latn"] .screen h3 {
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
-.title-bosses { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
-.title-bosses img {
-    position: absolute; bottom: -5%;
-    width: min(38vw, 48vh);
-    filter: saturate(0.85) brightness(0.78) drop-shadow(0 0 30px rgba(0,0,0,0.9));
-    opacity: 0.72;
-    animation: bossFloat 5s ease-in-out infinite;
-}
-#title-boss-l { left: -3%; animation-delay: 0s; }
-#title-boss-c {
-    top: 4%; bottom: auto; left: 50%;
-    width: min(32vw, 42vh);
-    transform: translateX(-50%);
-    opacity: 0.5;
-    filter: saturate(0.75) brightness(0.68) drop-shadow(0 0 38px rgba(0,0,0,0.95));
-    animation-name: bossFloatC;
-    animation-delay: 0.6s;
-}
-#title-boss-r { right: -3%; transform: scaleX(-1); animation-name: bossFloatR; animation-delay: 1.2s; }
-@keyframes bossFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-14px); }
-}
-@keyframes bossFloatR {
-    0%, 100% { transform: translateY(0) scaleX(-1); }
-    50% { transform: translateY(-14px) scaleX(-1); }
-}
-@keyframes bossFloatC {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-12px); }
-}
-
 .title-center {
   position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center;
-  width: min(94vw, 620px);
-  padding: clamp(14px, 2.5vh, 26px) clamp(14px, 4vw, 34px);
+  width: min(94vw, 640px);
+  padding: clamp(12px, 2vh, 22px) clamp(14px, 4vw, 34px);
   text-align: center;
   border: 1px solid rgba(232,196,106,0.24);
   border-radius: 22px;
@@ -242,20 +194,12 @@ html[data-script="latn"] .screen h3 {
 }
 .title-center::before { left: 8px; top: 8px; border-left: 1px solid; border-top: 1px solid; }
 .title-center::after { right: 8px; bottom: 8px; border-right: 1px solid; border-bottom: 1px solid; }
-.title-emblem {
-  position: absolute; top: -20px;
-  display: grid; place-items: center;
-  width: 40px; height: 40px; transform: rotate(45deg);
-  background: #171020; border: 1px solid var(--gold);
-  box-shadow: 0 0 18px rgba(232,196,106,0.35);
-}
-.title-emblem span { transform: rotate(-45deg); color: var(--gold); font: 1rem "Yu Mincho", serif; }
 .title-sub-top {
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
   font-family: "Yu Mincho", serif;
   letter-spacing: 0.08em; text-indent: 0;
   color: #c2b5dd; font-size: clamp(0.58rem, 1.7vw, 0.78rem);
-  margin: 0.55em 0 0.25em;
+  margin: 0.15em 0 0.1em;
   max-width: min(100%, 28em);
   line-height: 1.55;
   text-align: center;
@@ -263,25 +207,19 @@ html[data-script="latn"] .screen h3 {
 .title-sub-top i { display: block; width: 30px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
 .title-sub-top i:last-child { transform: rotate(180deg); }
 .title-logo {
-  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
-  display: flex; gap: 0.08em;
-  font-size: clamp(3.2rem, 11vw, 6.5rem);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  line-height: 1.1;
-  margin-bottom: 0.55em;
-  background: linear-gradient(175deg, #fff6d8 8%, var(--gold) 38%, #8a5d10 60%, #f7df9a 82%, #c99a2e 100%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.85)) drop-shadow(0 0 26px rgba(232,196,106,0.35));
+  display: block;
+  width: min(100%, 540px);
+  margin: 0 0 0.35em;
+  line-height: 0;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.75)) drop-shadow(0 0 28px rgba(232,196,106,0.28));
   animation: logoGlow 3s ease-in-out infinite;
 }
-.title-logo span:last-child { color: #fff6d8; }
-html[data-script="latn"] .title-logo {
-  gap: 0.18em;
-  font-size: clamp(3rem, 9vw, 5.5rem);
-  letter-spacing: 0.04em;
-  text-indent: 0;
+.title-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
 }
 html[data-script="latn"] .title-catch {
   letter-spacing: 0.06em;
@@ -304,8 +242,8 @@ html[data-script="latn"] .title-sub-top {
   letter-spacing: 0.05em;
 }
 @keyframes logoGlow {
-  0%, 100% { filter: drop-shadow(0 4px 4px rgba(0,0,0,0.85)) drop-shadow(0 0 18px rgba(232,196,106,0.25)); }
-  50% { filter: drop-shadow(0 4px 4px rgba(0,0,0,0.85)) drop-shadow(0 0 40px rgba(232,196,106,0.55)); }
+  0%, 100% { filter: drop-shadow(0 6px 18px rgba(0,0,0,0.75)) drop-shadow(0 0 18px rgba(232,196,106,0.22)); }
+  50% { filter: drop-shadow(0 6px 18px rgba(0,0,0,0.75)) drop-shadow(0 0 42px rgba(232,196,106,0.5)); }
 }
 .title-buttons { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
 .title-main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: min(100%, 460px); }
@@ -2721,10 +2659,13 @@ html[data-script="latn"] .cur-yoryoku {
     border-radius: 16px;
     transform: translateY(1.5vh);
   }
-  .title-emblem { top: -15px; width: 32px; height: 32px; }
-  .title-sub-top { margin-top: 0.45em; letter-spacing: 0.28em; text-indent: 0.28em; }
+  .title-bg {
+    /* 提供画像のキャラ（右寄り）を優先して見せる */
+    background-position: 72% 28%;
+  }
+  .title-sub-top { margin-top: 0.2em; letter-spacing: 0.08em; text-indent: 0; }
   .title-sub-top i { width: 16px; }
-  .title-logo { font-size: clamp(2.8rem, 15vw, 4.2rem); }
+  .title-logo { width: min(100%, 420px); margin-bottom: 0.25em; }
   .title-catch { margin-bottom: 0.45em; font-size: 0.62rem; letter-spacing: 0.12em; }
   .title-lead { margin-bottom: 0.65em; font-size: 0.66rem; line-height: 1.5; }
   .title-main-actions { gap: 7px; }
@@ -2735,10 +2676,6 @@ html[data-script="latn"] .cur-yoryoku {
   .title-menu-btn b { width: 26px; height: 26px; }
   .title-menu-btn span { font-size: 0.6rem; }
   .announcement-badge { top: 3px; right: 4px; min-width: 15px; height: 15px; font-size: 0.55rem; }
-    .title-bosses img { width: min(54vw, 38vh); bottom: -1%; opacity: 0.48; }
-    #title-boss-l { left: -21%; }
-    #title-boss-c { top: 7%; bottom: auto; left: 50%; width: min(50vw, 33vh); opacity: 0.32; }
-    #title-boss-r { right: -21%; }
   .title-profile { top: 8px; left: 8px; max-width: 38vw; padding: 4px 10px; }
   .title-currency { top: 8px; right: 8px; gap: 4px; font-size: 0.66rem; }
   .title-currency span { padding: 3px 7px; }

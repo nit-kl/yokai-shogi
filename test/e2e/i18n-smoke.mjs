@@ -26,7 +26,7 @@ for (const path of ['legal/terms-en.html', 'legal/privacy-en.html']) {
 
 // Decorative kanji are part of the visual identity and intentionally remain.
 const untranslated = await page.evaluate(() => {
-  const decorative = '.loading-mark, .title-emblem, .title-menu-btn > b, .gacha-orb > span, .summon-circle > span';
+  const decorative = '.loading-mark, .title-menu-btn > b, .gacha-orb > span, .summon-circle > span';
   const found = new Set();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   let node;

@@ -17,7 +17,7 @@ const BASE_URL = `http://localhost:${PORT}/`;
 
 const PAUSE_MOTION = `
   #board-frame, #board-frame::after, #board-wrap::before,
-  .fog, .title-moon { animation: none !important; }
+  .fog, .title-bg { animation: none !important; }
 `;
 
 function cell(page, x, y) {
