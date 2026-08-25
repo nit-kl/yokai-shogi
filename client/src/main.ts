@@ -278,7 +278,11 @@ function enterTitle() {
   renderTitleBosses(Meta.bossId());
   showScreen('screen-title');
   trackLandingEvent('title_view', { online: Meta.online, onlineAvailable: Meta.onlineAvailable });
-  FX.setAmbient(['rgba(130,160,255,0.55)', 'rgba(200,120,255,0.5)', 'rgba(232,196,106,0.45)'], 0.05);
+  FX.setAmbient(
+    ['rgba(190,230,255,0.55)', 'rgba(232,196,106,0.5)', 'rgba(200,150,255,0.45)', 'rgba(255,255,255,0.4)'],
+    0.08,
+    { bubbles: true, dust: true },
+  );
   AudioSys.init();
   AudioSys.startTitleBgm();
   MenuUI.onEnterTitle();
