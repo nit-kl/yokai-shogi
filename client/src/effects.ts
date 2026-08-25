@@ -6,7 +6,7 @@
 import { AudioSys } from './audio';
 
 interface Particle {
-  kind: 'spark' | 'glow' | 'petal' | 'wisp';
+  kind: 'spark' | 'glow' | 'petal' | 'wisp' | 'bubble';
   x: number; y: number;
   vx: number; vy: number;
   size: number;
@@ -17,12 +17,20 @@ interface Particle {
   rot?: number; vr?: number;
 }
 
+interface AmbientFx {
+  colors: string[];
+  rate: number;
+  bubbles?: boolean;
+  dust?: boolean;
+}
+
 export const FX = {
   canvas: null as HTMLCanvasElement | null,
   g: null as CanvasRenderingContext2D | null,
   parts: [] as Particle[],
-  ambient: null as { colors: string[]; rate: number } | null, // 環境演出(漂う魂火)
+  ambient: null as AmbientFx | null, // 環境演出(漂う魂火 / 泡)
   _raf: 0,
+  _reduceMotion: false,
 
   init() {
     this.canvas = document.getElementById('fx-canvas') as HTMLCanvasElement;
@@ -35,6 +43,9 @@ export const FX = {
     };
     fit();
     addEventListener('resize', fit);
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    this._reduceMotion = motion.matches;
+    motion.addEventListener('change', ev => { this._reduceMotion = ev.matches; });
     const loop = () => { this._tick(); this._raf = requestAnimationFrame(loop); };
     loop();
   },
@@ -44,18 +55,46 @@ export const FX = {
     g.clearRect(0, 0, innerWidth, innerHeight);
 
     // 環境パーティクル生成
-    if (this.ambient && Math.random() < this.ambient.rate) {
+    if (!this._reduceMotion && this.ambient && Math.random() < this.ambient.rate) {
       const c = this.ambient.colors[Math.floor(Math.random() * this.ambient.colors.length)];
-      this.parts.push({
-        kind: 'wisp',
-        x: Math.random() * innerWidth,
-        y: innerHeight + 14,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: -(0.25 + Math.random() * 0.55),
-        size: 1.5 + Math.random() * 3.2,
-        life: 1, decay: 0.0018 + Math.random() * 0.002,
-        color: c, wob: Math.random() * 6.28,
-      });
+      const roll = Math.random();
+      if (this.ambient.dust && roll < 0.18) {
+        this.parts.push({
+          kind: 'petal',
+          x: Math.random() * innerWidth,
+          y: -8,
+          vx: -0.18 + Math.random() * 0.28,
+          vy: 0.22 + Math.random() * 0.32,
+          size: 1.1 + Math.random() * 1.7,
+          life: 1, decay: 0.0011 + Math.random() * 0.0012,
+          color: c,
+          rot: Math.random() * 6.28,
+          vr: (Math.random() - 0.5) * 0.05,
+          wob: Math.random() * 6.28,
+        });
+      } else if (this.ambient.bubbles && roll < 0.52) {
+        this.parts.push({
+          kind: 'bubble',
+          x: Math.random() * innerWidth,
+          y: innerHeight + 18,
+          vx: (Math.random() - 0.5) * 0.22,
+          vy: -(0.18 + Math.random() * 0.42),
+          size: 5 + Math.random() * 11,
+          life: 1, decay: 0.0011 + Math.random() * 0.0014,
+          color: c, wob: Math.random() * 6.28,
+        });
+      } else {
+        this.parts.push({
+          kind: 'wisp',
+          x: Math.random() * innerWidth,
+          y: innerHeight + 14,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: -(0.25 + Math.random() * 0.55),
+          size: 1.5 + Math.random() * 3.2,
+          life: 1, decay: 0.0018 + Math.random() * 0.002,
+          color: c, wob: Math.random() * 6.28,
+        });
+      }
     }
 
     for (let i = this.parts.length - 1; i >= 0; i--) {
@@ -66,6 +105,8 @@ export const FX = {
       if (p.grav) p.vy += p.grav;
       if (p.drag) { p.vx *= p.drag; p.vy *= p.drag; }
       if (p.kind === 'wisp') { p.wob! += 0.03; p.x += Math.sin(p.wob!) * 0.4; }
+      if (p.kind === 'bubble') { p.wob! += 0.022; p.x += Math.sin(p.wob!) * 0.55; }
+      if (p.kind === 'petal' && p.wob != null) { p.wob += 0.02; p.x += Math.sin(p.wob) * 0.28; }
 
       const a = Math.max(0, Math.min(1, p.life));
       g.globalAlpha = a;
@@ -85,6 +126,30 @@ export const FX = {
         g.fillStyle = p.color;
         g.fillRect(-p.size, -p.size * 0.55, p.size * 2, p.size * 1.1);
         g.restore();
+      } else if (p.kind === 'bubble') {
+        const r = p.size * (0.85 + Math.sin(p.wob! * 1.6) * 0.08);
+        g.globalAlpha = a * 0.42;
+        const fill = g.createRadialGradient(p.x - r * 0.28, p.y - r * 0.32, 0, p.x, p.y, r);
+        fill.addColorStop(0, 'rgba(255,255,255,0.55)');
+        fill.addColorStop(0.22, p.color);
+        fill.addColorStop(0.72, 'rgba(255,255,255,0.04)');
+        fill.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = fill;
+        g.beginPath();
+        g.arc(p.x, p.y, r, 0, 6.28318);
+        g.fill();
+        g.globalAlpha = a * 0.7;
+        g.strokeStyle = p.color;
+        g.lineWidth = 1.15;
+        g.beginPath();
+        g.arc(p.x, p.y, r, 0, 6.28318);
+        g.stroke();
+        g.globalAlpha = a * 0.85;
+        g.strokeStyle = 'rgba(255,255,255,0.75)';
+        g.lineWidth = 1;
+        g.beginPath();
+        g.arc(p.x - r * 0.28, p.y - r * 0.32, r * 0.28, -0.6, 1.1);
+        g.stroke();
       } else { // glow / wisp
         const r = p.size * (p.kind === 'wisp' ? (1 + Math.sin(p.wob! * 2) * 0.2) : (0.4 + a));
         const grad = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
@@ -101,8 +166,10 @@ export const FX = {
     if (this.parts.length > 900) this.parts.splice(0, this.parts.length - 900);
   },
 
-  setAmbient(colors: string[] | null, rate?: number) {
-    this.ambient = colors ? { colors, rate: rate || 0.06 } : null;
+  setAmbient(colors: string[] | null, rate?: number, opts?: { bubbles?: boolean; dust?: boolean }) {
+    this.ambient = colors
+      ? { colors, rate: rate || 0.06, bubbles: opts?.bubbles, dust: opts?.dust }
+      : null;
   },
 
   /* ---------- バースト系 ---------- */

@@ -17,7 +17,10 @@ const BASE_URL = `http://localhost:${PORT}/`;
 
 const PAUSE_MOTION = `
   #board-frame, #board-frame::after, #board-wrap::before,
-  .fog, .title-bg { animation: none !important; }
+  .fog, .title-bg, .title-rays, .title-embers, .title-orbs i,
+  .title-logo, .title-logo-shine, .title-center, .title-frame-glow,
+  .title-action-primary, .title-action-primary::after, .title-action-online::after,
+  .title-mandala, .title-grain { animation: none !important; }
 `;
 
 function cell(page, x, y) {
