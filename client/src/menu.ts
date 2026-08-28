@@ -13,7 +13,6 @@ import type { AdsStatus } from './ads/rewarded';
 import { adsAllowed } from './platform';
 import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
-import { RegistrationStatsUI } from './registration-stats';
 import { passkeySupported } from './meta/passkey';
 
 const LINK_NUDGE_KEY = 'yokaiShogi.linkNudge.v1';
@@ -541,7 +540,6 @@ export const MenuUI = {
 
   /* ============================== ガチャ ============================== */
   openGacha() {
-    RegistrationStatsUI.stopPolling();
     this.refreshCurrency();
     void this.refreshAdsStatus();
     $('gacha-result').classList.add('hidden');
@@ -666,7 +664,6 @@ export const MenuUI = {
   /* ============================== 編成 ============================== */
   openFormation(opts?: { onReturn?: () => void }) {
     this._returnFromFormation = opts?.onReturn ?? this._enterTitle;
-    RegistrationStatsUI.stopPolling();
     this.rows = Meta.formationRows();
     this.benchSel = null;
     $('form-error').textContent = '';

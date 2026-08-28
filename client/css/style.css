@@ -469,13 +469,6 @@ html[data-script="latn"] .title-sub-top {
   0%, 55%, 100% { transform: translateX(-120%); }
   78% { transform: translateX(120%); }
 }
-.title-registration-stats {
-  margin: 0.35rem 0 0;
-  color: #8f9eb8;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-}
-.title-registration-stats b { color: #e8c46a; font-weight: 700; }
 .online-random-schedule {
   margin: 0;
   color: #a99dbd;
