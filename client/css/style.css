@@ -378,14 +378,6 @@ html[data-script="latn"] .screen h3 {
   pointer-events: none;
   user-select: none;
 }
-.title-logo-shine {
-  position: absolute; inset: -8% -20%;
-  z-index: 2;
-  pointer-events: none;
-  background: linear-gradient(108deg, transparent 38%, rgba(255,255,255,0.38) 50%, transparent 62%);
-  mix-blend-mode: overlay;
-  animation: titleLogoSheen 5.8s ease-in-out infinite;
-}
 html[data-script="latn"] .title-catch {
   letter-spacing: 0.06em;
 }
@@ -417,11 +409,6 @@ html[data-script="latn"] .title-sub-top {
 @keyframes titleFrameSpin {
   to { --title-spin: 360deg; }
 }
-@keyframes titleLogoSheen {
-  0%, 58%, 100% { transform: translateX(-55%) skewX(-12deg); opacity: 0; }
-  68% { opacity: 1; }
-  82% { transform: translateX(55%) skewX(-12deg); opacity: 0; }
-}
 .title-buttons { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
 .title-main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: min(100%, 460px); }
 .title-main-actions:has(#btn-online.hidden) { grid-template-columns: minmax(220px, 260px); justify-content: center; }
@@ -440,42 +427,12 @@ html[data-script="latn"] .title-sub-top {
   color: #241704; border-color: #e8c46a;
   background: linear-gradient(150deg, #fff0b8, #d9a93b 58%, #9b661e);
   box-shadow: 0 0 24px rgba(232,196,106,0.35), inset 0 1px rgba(255,255,255,0.7);
-  animation: titleCtaPulse 2.8s ease-in-out infinite;
 }
-.title-action-primary::after,
-.title-action-online::after {
-  content: "";
-  position: absolute; inset: 0;
-  pointer-events: none;
-  background: linear-gradient(105deg, transparent 32%, rgba(255,255,255,0.42) 48%, transparent 64%);
-  transform: translateX(-120%);
-  animation: titleBtnSheen 4.2s ease-in-out infinite;
-}
-.title-action-online::after {
-  animation-delay: 1.4s;
-  background: linear-gradient(105deg, transparent 32%, rgba(180,220,255,0.35) 48%, transparent 64%);
-}
-.title-action-primary:hover { animation: none; }
 .title-action-online {
   color: #e7f6ff; border-color: rgba(88,182,255,0.7);
   background: linear-gradient(150deg, #315f8c, #203452 58%, #15152b);
   box-shadow: 0 0 20px rgba(88,182,255,0.2), inset 0 1px rgba(255,255,255,0.15);
 }
-@keyframes titleCtaPulse {
-  0%, 100% { box-shadow: 0 0 22px rgba(232,196,106,0.32), inset 0 1px rgba(255,255,255,0.7); }
-  50% { box-shadow: 0 0 42px rgba(255,224,140,0.7), inset 0 1px rgba(255,255,255,0.85); }
-}
-@keyframes titleBtnSheen {
-  0%, 55%, 100% { transform: translateX(-120%); }
-  78% { transform: translateX(120%); }
-}
-.title-registration-stats {
-  margin: 0.35rem 0 0;
-  color: #8f9eb8;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-}
-.title-registration-stats b { color: #e8c46a; font-weight: 700; }
 .online-random-schedule {
   margin: 0;
   color: #a99dbd;
@@ -549,14 +506,12 @@ html[data-script="latn"] .title-sub-top {
 }
 @media (prefers-reduced-motion: reduce) {
   .title-bg, .fog, .title-rays, .title-embers, .title-orbs i,
-  .title-logo, .title-logo-shine, .title-center, .title-frame-glow,
-  .title-action-primary, .title-action-primary::after, .title-action-online::after,
+  .title-logo, .title-center, .title-frame-glow,
   .title-mandala, .title-grain {
     animation: none !important;
   }
   .title-orbs { display: none; }
   .title-rays, .title-mandala { opacity: 0.28; }
-  .title-logo-shine { display: none; }
 }
 
 /* ---------- 百鬼夜衁Eソロ連戦) ---------- */

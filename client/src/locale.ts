@@ -78,7 +78,7 @@ const STATIC: Record<string, string> = {
   '妖怪を集めて、取って、HPを削る対戦ゲーム': 'Collect yokai, capture, and drain HP',
   '妖怪': 'Yokai', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
   '猛者と競う': 'Face other players', 'オンライン対戦': 'Online Battle',
-  '登録プレイヤー': 'Registered Players', '人': 'players', 'メニュー': 'Menu',
+  'メニュー': 'Menu',
   '妖怪ガチャ': 'Yokai Summon', '編 成': 'Formation', '駒一覧': 'Compendium',
   'ランキング': 'Rankings', '遊び方': 'How to Play', 'お知らせ': 'News',
   '公式Discord': 'Official Discord', '遊び方ガイド': 'How-to Guide', '利用規約': 'Terms',
