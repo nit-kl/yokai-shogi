@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="mist" x2="0" y2="1"><stop stop-color="#827199" stop-opacity="0"/><stop offset="1" stop-color="#827199" stop-opacity=".22"/></linearGradient>
+    <linearGradient id="gate" x2="0" y2="1"><stop stop-color="#593138"/><stop offset="1" stop-color="#100e19"/></linearGradient>
+  </defs>
+  <path fill="#0b0c16" d="M0 550 100 430 200 485 350 340 510 490 700 410 900 480 1100 325 1270 470 1440 385 1600 510V1000H0Z"/>
+  <path fill="url(#mist)" d="M0 690Q300 490 800 660T1600 600V1000H0Z"/>
+  <g fill="url(#gate)" stroke="#a68560" stroke-opacity=".3" stroke-width="2">
+    <path d="M140 250Q335 300 530 250L515 280Q335 320 155 280Z"/>
+    <path d="M172 343H498V359H172Z M213 292H238L228 790H199Z M434 292H459L473 790H443Z M321 299H347V370H321Z"/>
+    <path d="M1070 250Q1265 300 1460 250L1445 280Q1265 320 1085 280Z"/>
+    <path d="M1102 343H1428V359H1102Z M1143 292H1168L1158 790H1129Z M1364 292H1389L1403 790H1373Z M1251 299H1277V370H1251Z"/>
+  </g>
+  <g stroke="#d0ab68" stroke-opacity=".13">
+    <ellipse cx="800" cy="870" rx="730" ry="105"/><ellipse cx="800" cy="870" rx="690" ry="90"/>
+    <path d="M0 1000 700 650M350 1000 750 650M1250 1000 850 650M1600 1000 900 650M0 910H1600M180 810H1420"/>
+  </g>
+</svg>

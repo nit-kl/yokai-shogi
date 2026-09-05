@@ -902,9 +902,9 @@ async function startOnlineBattle() {
   setBattleStatusOpen(false);
   showScreen('screen-battle');
   const boss = YOKAI[Meta.bossId()];
-  $<HTMLImageElement>('player-avatar').src = boss.img;
+  const enemyBoss = YOKAI[onlineMatch?.opponentBossId || ENEMY_BOSS];
+  setBattleGenerals(boss.img, Meta.data.name, enemyBoss.img, onlineMatch?.opponentName || '対戦相手');
   $('player-name').textContent = Meta.data.name;
-  $<HTMLImageElement>('enemy-avatar').src = YOKAI[onlineMatch?.opponentBossId || ENEMY_BOSS].img;
   $('enemy-hud').querySelector('.hud-name')!.lastChild!.textContent = onlineMatch?.opponentName || '対戦相手';
   $('online-status').classList.remove('hidden');
   $('hyakki-round-hud').classList.add('hidden');
@@ -1085,6 +1085,39 @@ function updateHUD() {
   updateMoonHUD();
   updateAwakenHUD();
   updateHungerHUD();
+  updateBattleWorld();
+}
+
+function setBattleGenerals(playerImg: string, playerAlt: string, enemyImg: string, enemyAlt: string) {
+  const player = $<HTMLImageElement>('player-avatar');
+  const enemy = $<HTMLImageElement>('enemy-avatar');
+  player.src = playerImg;
+  player.alt = playerAlt;
+  enemy.src = enemyImg;
+  enemy.alt = enemyAlt;
+  for (const [side, img] of [['p', playerImg], ['e', enemyImg]] as const) {
+    const def = Object.values(YOKAI).find(y => y.img === img);
+    const color = def?.summonColors?.[1] ??
+      (/tamamo|kyubi/.test(def?.id ?? '') ? '#efc96c' :
+        /shuten|ibaraki/.test(def?.id ?? '') ? '#ff7459' : '#ab98ef');
+    $('screen-battle').style.setProperty(`--realm-${side}`, color);
+  }
+}
+
+function updateBattleWorld(turn: Side = G?.turn === 'e' ? 'e' : 'p', hp = G?.hp) {
+  const el = $('screen-battle');
+  el.classList.toggle('world-p', turn === 'p');
+  el.classList.toggle('world-e', turn === 'e');
+  el.classList.toggle('world-hunger', !!(G && Game.hungerActive(G)));
+  const full = !!(G && moonSkillInvolved() && Game.moonPhase(G) === MOON_CYCLE - 1);
+  el.classList.toggle('world-moon', full);
+  el.classList.toggle('world-critical', !!hp && Math.min(hp.p, hp.e) <= MAX_HP * 0.25);
+  for (const side of ['p', 'e'] as const) {
+    const pre = side === 'p' ? 'player' : 'enemy';
+    $(`${pre}-hud`).classList.toggle('soul-critical', !!hp && hp[side] <= MAX_HP * 0.25);
+  }
+  $('statue-player').classList.toggle('active', turn === 'p');
+  $('statue-enemy').classList.toggle('active', turn === 'e');
 }
 
 function setBattleStatusOpen(open: boolean) {
@@ -1581,10 +1614,10 @@ async function startBattle() {
   document.querySelectorAll('.cell').forEach(c => c.classList.remove('hl-last'));
   showScreen('screen-battle');
   const boss = YOKAI[Meta.bossId()];
-  $<HTMLImageElement>('player-avatar').src = boss.img;
+  const enemyBoss = YOKAI[stage.bossId];
+  setBattleGenerals(boss.img, boss.name, enemyBoss.img, enemyBoss.name);
   $('player-name').textContent = Meta.data.name;
-  $<HTMLImageElement>('enemy-avatar').src = YOKAI[stage.bossId].img;
-  $('enemy-name').textContent = YOKAI[stage.bossId].name;
+  $('enemy-name').textContent = enemyBoss.name;
   $('hyakki-round-hud').classList.remove('hidden');
   $('hyakki-round-label').textContent = `${soloStreak + 1}戦目`;
   renderAll();
@@ -1941,6 +1974,9 @@ async function animCapture(ev: CaptureEvent) {
     if (ev.combo >= 3) FX.shake(ev.combo >= 4);
   }
 
+  if (ev.damage > 0) {
+    await FX.soulStrike(c.x, c.y, $(isPlayer ? 'enemy-hud' : 'player-hud'), colors[0], big);
+  }
   updateHP(ev.hp);
   updateCombo(ev.attacker.owner);
   await sleep(big ? 600 : 480);
@@ -2021,6 +2057,7 @@ function updateHP(hp: Record<Side, number>) {
     $(`${pre}-hp-ghost`).style.width = pct;
     $(`${pre}-hp-text`).textContent = `${hp[side]} / ${MAX_HP}`;
   }
+  updateBattleWorld(undefined, hp);
 }
 
 /* ---------- ターンバナー ---------- */
@@ -2030,6 +2067,7 @@ function showBanner(side: Side) {
   b.className = '';
   void b.offsetWidth;
   b.classList.add(side === 'p' ? 'show-p' : 'show-e');
+  updateBattleWorld(side);
   if (side === 'p') AudioSys.play('turn');
 }
 
