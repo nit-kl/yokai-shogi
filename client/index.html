@@ -316,10 +316,29 @@
 
   <!-- バトル画面 -->
   <div id="screen-battle" class="screen">
+    <div class="battle-atmosphere" aria-hidden="true">
+      <picture class="battle-sanctuary">
+        <source media="(max-width: 859px) and (orientation: portrait)" srcset="/assets/ui/battle-shrine-mobile.webp">
+        <img src="/assets/ui/battle-shrine.webp" alt="" decoding="async" draggable="false" width="1536" height="1024">
+      </picture>
+      <div class="battle-seal"></div>
+      <div class="battle-mist"></div>
+      <div class="battle-moon"></div>
+      <div class="battle-glow battle-glow-e"></div>
+      <div class="battle-glow battle-glow-p"></div>
+      <div class="battle-embers"></div>
+      <div class="battle-grain"></div>
+    </div>
     <div class="battle-col">
+      <div class="battle-stage">
+      <div class="general-statue statue-enemy" id="statue-enemy" aria-hidden="true">
+        <img id="enemy-avatar" src="" alt="" draggable="false">
+      </div>
+      <div class="general-statue statue-player" id="statue-player" aria-hidden="true">
+        <img id="player-avatar" src="" alt="" draggable="false">
+      </div>
 
       <div id="enemy-hud" class="hud hud-enemy">
-        <div class="hud-avatar"><img id="enemy-avatar" src="" alt="酒呑童子" draggable="false"></div>
         <div class="hud-mid">
           <div class="hud-name"><span class="hud-side-tag tag-enemy">敵将</span><span id="enemy-name">酒呑童子</span></div>
           <div class="hp-bar hp-enemy">
@@ -335,6 +354,7 @@
 
       <div id="board-wrap">
         <div id="board-frame">
+          <div class="board-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
           <div id="board-cells"></div>
           <div id="board-pieces"></div>
         </div>
@@ -344,7 +364,6 @@
       </div>
 
       <div id="player-hud" class="hud hud-player">
-        <div class="hud-avatar"><img id="player-avatar" src="" alt="九尾の狐" draggable="false"></div>
         <div class="hud-mid">
           <div class="hud-name"><span class="hud-side-tag tag-player">自軍</span><span id="player-name">九尾の狐</span></div>
           <div class="hp-bar hp-player">
@@ -359,6 +378,7 @@
           <div class="hand-tray" id="player-hand"></div>
         </div>
         <div class="combo-badge" id="player-combo"></div>
+      </div>
       </div>
 
       <div class="battle-tools">

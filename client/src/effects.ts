@@ -297,6 +297,35 @@ export const FX = {
   },
 
   /* ---------- DOM系演出 ---------- */
+  /* Captured soul travels to the damaged general before its HP changes. */
+  async soulStrike(x: number, y: number, target: HTMLElement, color: string, big = false) {
+    if (this._reduceMotion) return;
+    const rect = target.querySelector('.hp-bar')!.getBoundingClientRect();
+    const endX = rect.left + rect.width / 2;
+    const endY = rect.top + rect.height / 2;
+    const layer = document.getElementById('fx-layer')!;
+    const flights = Array.from({ length: big ? 5 : 3 }, (_, i) => {
+      const orb = document.createElement('div');
+      orb.className = 'fx-soul';
+      orb.style.setProperty('--soul-color', color);
+      layer.appendChild(orb);
+      const bend = (i - 1) * 34;
+      const animation = orb.animate([
+        { transform: `translate(${x}px, ${y}px) scale(0.5)`, opacity: 0 },
+        { transform: `translate(${x + (endX - x) * 0.35 + bend}px, ${y + (endY - y) * 0.4}px) scale(1)`, opacity: 1, offset: 0.4 },
+        { transform: `translate(${endX}px, ${endY}px) scale(0.35)`, opacity: 0.8 },
+      ], { duration: 300, delay: i * 24, easing: 'cubic-bezier(.3,0,.7,1)', fill: 'both' });
+      return animation.finished.catch(() => {}).finally(() => orb.remove());
+    });
+    await Promise.all(flights);
+    if (!target.closest('.screen.active')) return;
+    this.ring(endX, endY, color, 8, big ? 75 : 45);
+    target.classList.remove('soul-impact');
+    void target.offsetWidth;
+    target.classList.add('soul-impact');
+    setTimeout(() => target.classList.remove('soul-impact'), 420);
+  },
+
   /* 画面全体フラッシュ */
   flash(color = 'rgba(255,245,220,0.75)', dur = 180) {
     const el = document.createElement('div');
