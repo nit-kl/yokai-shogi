@@ -753,6 +753,12 @@ describe('共通', () => {
     expect(denied.headers.get('access-control-allow-origin')).toBeNull();
   });
 
+  it('未知のパスは NOT_FOUND(404)。Chrome/Cursor の /json/version 探査も含む', async () => {
+    const unknown = await api('/json/version');
+    expect(unknown.status).toBe(404);
+    expect(unknown.body.error.code).toBe('NOT_FOUND');
+  });
+
   it('お知らせ一覧を公開APIで返す', async () => {
     const r = await api('/v1/announcements');
     expect(r.status).toBe(200);

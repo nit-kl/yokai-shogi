@@ -167,7 +167,7 @@
       </div>
       <div class="hyakki-preview-card">
         <div id="hyakki-preview-round" class="hyakki-preview-round">第 1 戦</div>
-        <img id="hyakki-preview-boss" class="hyakki-preview-boss" src="" alt="" width="140" height="140" draggable="false">
+        <img id="hyakki-preview-boss" class="hyakki-preview-boss" alt="" width="140" height="140" draggable="false">
         <div id="hyakki-preview-boss-name" class="hyakki-preview-boss-name"></div>
         <p class="hyakki-preview-label">敵軍の編成</p>
         <div id="hyakki-preview-pieces" class="hyakki-preview-pieces"></div>
@@ -286,7 +286,7 @@
     <div class="modal-box piece-detail-box">
       <div class="piece-detail-head">
         <button type="button" id="btn-piece-detail-zoom" class="piece-detail-zoom-btn" aria-label="画像を拡大">
-          <img id="piece-detail-img" src="" alt="" draggable="false">
+          <img id="piece-detail-img" alt="" draggable="false">
         </button>
         <div>
           <div id="piece-detail-tags" class="piece-detail-tags"></div>
@@ -308,7 +308,7 @@
 
   <div id="modal-piece-zoom" class="modal piece-zoom-modal hidden" role="dialog" aria-modal="true" aria-label="駒画像の拡大表示">
     <button type="button" id="btn-piece-zoom-close" class="piece-zoom-close" aria-label="閉じる">×</button>
-    <img id="piece-zoom-img" class="piece-zoom-img" src="" alt="" draggable="false">
+    <img id="piece-zoom-img" class="piece-zoom-img" alt="" draggable="false">
     <p class="piece-zoom-hint">タップで閉じる</p>
   </div>
 
@@ -332,10 +332,10 @@
     <div class="battle-col">
       <div class="battle-stage">
       <div class="general-statue statue-enemy" id="statue-enemy" aria-hidden="true">
-        <img id="enemy-avatar" src="" alt="" draggable="false">
+        <img id="enemy-avatar" alt="" draggable="false">
       </div>
       <div class="general-statue statue-player" id="statue-player" aria-hidden="true">
-        <img id="player-avatar" src="" alt="" draggable="false">
+        <img id="player-avatar" alt="" draggable="false">
       </div>
 
       <div id="enemy-hud" class="hud hud-enemy">
@@ -429,7 +429,7 @@
 
     <div id="piece-info" class="hidden" role="dialog" aria-label="駒の説明">
       <button type="button" id="btn-piece-info-close" class="piece-info-close" aria-label="閉じる">×</button>
-      <img id="info-img" src="" alt="">
+      <img id="info-img" alt="">
       <div class="info-body">
         <div class="info-line1"><span id="info-type" class="type-chip"></span><span id="info-name"></span><span id="info-atk"></span></div>
         <div class="info-move"><span>動き</span><span id="info-move"></span></div>
@@ -441,7 +441,7 @@
   <!-- リザルト画面 -->
   <div id="screen-result" class="screen">
     <div class="result-inner">
-      <img id="result-boss" src="" alt="" draggable="false">
+      <img id="result-boss" alt="" draggable="false">
       <div id="result-title"></div>
       <div id="result-hyakki-streak" class="result-hyakki-streak hidden"></div>
       <div id="result-sub"></div>
@@ -462,13 +462,13 @@
   <div id="vs-intro" class="hidden">
     <div class="vs-bg"></div>
     <div class="vs-side vs-p">
-      <img id="vs-img-p" src="" alt="" draggable="false">
+      <img id="vs-img-p" alt="" draggable="false">
       <div class="vs-texts">
         <div class="vs-label" id="vs-label-p"></div>
       </div>
     </div>
     <div class="vs-side vs-e">
-      <img id="vs-img-e" src="" alt="" draggable="false">
+      <img id="vs-img-e" alt="" draggable="false">
       <div class="vs-texts">
         <div class="vs-label" id="vs-label-e"></div>
       </div>
@@ -483,7 +483,7 @@
   <div id="cutin" class="hidden">
     <div class="cutin-bg"></div>
     <div class="cutin-lines"></div>
-    <img id="cutin-img" src="" alt="" draggable="false">
+    <img id="cutin-img" alt="" draggable="false">
     <div class="cutin-texts">
       <div id="cutin-name"></div>
       <div id="cutin-sub"></div>
@@ -663,6 +663,18 @@
       <button id="btn-support-dm" class="btn btn-gold">DMで報告する</button>
       <button id="btn-support-profile" class="btn btn-dark btn-sub">プロフィールを開く</button>
       <button id="btn-support-close" class="btn btn-dark btn-sub">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ゲーム内確認(ブラウザ標準ダイアログはオリジンURLが出る) -->
+  <div id="modal-confirm" class="modal confirm-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+    <div class="modal-box confirm-box">
+      <h2 id="confirm-title">確認</h2>
+      <p id="confirm-message" class="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="btn-confirm-ok" class="btn btn-gold" type="button">はい</button>
+        <button id="btn-confirm-cancel" class="btn btn-dark btn-sub" type="button">やめる</button>
+      </div>
     </div>
   </div>
 

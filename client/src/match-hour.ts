@@ -4,13 +4,13 @@ import {
   EVENT_PARTICIPATION_TICKETS, EVENT_YOKAI_ID, PARTICIPATION_TICKETS,
   isEventDay, isMatchHour, MATCH_HOUR_LABEL, msUntilMatchHourOpen,
 } from '../../shared/match-hour';
-import { YOKAI } from '../../shared/data';
+import { yokaiOf } from './user-facing';
 import { $ } from './util';
 
 /** その日の参加メリットの短文(タイトル・オンラインモーダル共通) */
 function meritText(): string {
   if (!isEventDay()) return `1局完走でチケット🎟+${PARTICIPATION_TICKETS}(1日1回)`;
-  const yokai = EVENT_YOKAI_ID ? YOKAI[EVENT_YOKAI_ID] : null;
+  const yokai = EVENT_YOKAI_ID ? yokaiOf(EVENT_YOKAI_ID) : undefined;
   const bonus = `1局完走でチケット🎟+${EVENT_PARTICIPATION_TICKETS}`;
   return yokai ? `${bonus}＆限定「${yokai.name}」入手` : bonus;
 }

@@ -16,7 +16,7 @@ import { HYAKKI_STAGE, soloBattleStage } from './solo';
 import type { SoloStage } from './solo';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
-import { SessionExpiredError, ApiError, NetworkError } from './meta';
+import { SessionExpiredError } from './meta';
 import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
@@ -33,6 +33,10 @@ import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ClockPhase, ServerBattleMessage } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
 import { initializeLocale } from './locale';
+import { confirmDialog } from './dialog';
+import {
+  applyYokaiImage, isPlayerFacingText, userErrorMessage, yokaiDisplayName, yokaiOf,
+} from './user-facing';
 
 let G: GameState | null = null; // ゲーム状態
 let busy = false;               // 演出中・AI思考中の入力ロック
@@ -437,11 +441,12 @@ function wireButtons() {
   };
   $('btn-resign').onclick = () => {
     if (!G || G.winner || (!onlineSide && busy)) return;
-    if (confirm('投了しますか?')) {
+    void confirmDialog('投了しますか?', { title: '投了', ok: '投了する', cancel: 'やめる' }).then(ok => {
+      if (!ok || !G || G.winner) return;
       if (onlineSide) { online?.send({ t: 'resign' }); return; }
       G.winner = 'e'; G.reason = 'resign';
       showResult();
-    }
+    });
   };
   $('btn-retry').onclick = () => {
     AudioSys.play('click');
@@ -503,18 +508,16 @@ function renderHyakkiLobby() {
 
 function renderHyakkiPreview() {
   const stage = pendingSoloStage || activeSoloStage;
-  const boss = YOKAI[stage.bossId];
   $('hyakki-preview-round').textContent = `第 ${soloStreak + 1} 戦`;
-  $<HTMLImageElement>('hyakki-preview-boss').src = boss.img;
-  $<HTMLImageElement>('hyakki-preview-boss').alt = boss.name;
-  $('hyakki-preview-boss-name').textContent = boss.name;
+  applyYokaiImage($<HTMLImageElement>('hyakki-preview-boss'), stage.bossId);
+  $('hyakki-preview-boss-name').textContent = yokaiDisplayName(stage.bossId, '敵将');
   const pieces = $('hyakki-preview-pieces');
   pieces.replaceChildren();
   for (const id of stage.enemyRows.flat().filter((x): x is string => !!x)) {
-    const yokai = YOKAI[id];
+    const yokai = yokaiOf(id);
+    if (!yokai) continue;
     const img = document.createElement('img');
-    img.src = yokai.imgSm;
-    img.alt = yokai.name;
+    applyYokaiImage(img, id, 'sm');
     img.title = yokai.name;
     pieces.appendChild(img);
   }
@@ -527,16 +530,14 @@ function hyakkiRankEligible(): boolean {
 }
 
 function renderHyakkiReward() {
-  const def = YOKAI[HYAKKI_REWARD_YOKAI_ID];
-  const baseName = def.variantOf ? YOKAI[def.variantOf].name : def.name;
+  const def = yokaiOf(HYAKKI_REWARD_YOKAI_ID);
+  const baseName = def?.variantOf ? yokaiDisplayName(def.variantOf) : yokaiDisplayName(HYAKKI_REWARD_YOKAI_ID);
   const card = $('hyakki-reward');
-  const img = $<HTMLImageElement>('hyakki-reward-img');
-  img.src = def.img;
-  img.alt = def.name;
-  $('hyakki-reward-name').textContent = def.name;
+  applyYokaiImage($<HTMLImageElement>('hyakki-reward-img'), HYAKKI_REWARD_YOKAI_ID);
+  $('hyakki-reward-name').textContent = yokaiDisplayName(HYAKKI_REWARD_YOKAI_ID);
   $('hyakki-reward-desc').textContent =
     `限定異装（性能は${baseName}と同じ）。月曜リセット後、先週1位へ自動授与。タップで詳細。`;
-  if (def.summonColors) {
+  if (def?.summonColors) {
     card.style.setProperty('--reward-light', def.summonColors[0]);
     card.style.setProperty('--reward-primary', def.summonColors[1]);
   }
@@ -620,14 +621,10 @@ function renderHyakkiEntries(emptyMessage = 'ランキングを読み込み中�
 }
 
 function onlineConnectErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) return err.message;
-  if (err instanceof NetworkError) {
-    return 'サーバーに接続できません。通信状態を確認して、もう一度お試しください';
-  }
-  if (err instanceof Error && err.message && err.message !== 'online connection unavailable') {
-    return err.message;
-  }
-  return 'オンライン接続に失敗しました。通信状態を確認して、もう一度お試しください';
+  return userErrorMessage(
+    err,
+    'オンライン接続に失敗しました。通信状態を確認して、もう一度お試しください',
+  );
 }
 
 async function openOnline() {
@@ -690,7 +687,9 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     $('online-room-code').textContent = message.code;
     $('online-room-code').classList.remove('hidden');
   } else if (message.t === 'error') {
-    $('online-message').textContent = message.message;
+    $('online-message').textContent = isPlayerFacingText(message.message)
+      ? message.message
+      : '対局の通信でエラーが発生しました';
     busy = false;
   } else if (message.t === 'match_found') {
     clearOnlineQueueTimer();
@@ -901,9 +900,8 @@ async function startOnlineBattle() {
   clearSel();
   setBattleStatusOpen(false);
   showScreen('screen-battle');
-  const boss = YOKAI[Meta.bossId()];
-  const enemyBoss = YOKAI[onlineMatch?.opponentBossId || ENEMY_BOSS];
-  setBattleGenerals(boss.img, Meta.data.name, enemyBoss.img, onlineMatch?.opponentName || '対戦相手');
+  const enemyBossId = onlineMatch?.opponentBossId || ENEMY_BOSS;
+  setBattleGenerals(Meta.bossId(), Meta.data.name, enemyBossId, onlineMatch?.opponentName || '対戦相手');
   $('player-name').textContent = Meta.data.name;
   $('enemy-hud').querySelector('.hud-name')!.lastChild!.textContent = onlineMatch?.opponentName || '対戦相手';
   $('online-status').classList.remove('hidden');
@@ -966,19 +964,25 @@ function positionPiece(el: HTMLElement, x: number, y: number) {
 }
 
 function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement {
+  const def = yokaiOf(pc.id);
   const el = document.createElement('div');
   el.className = `piece owner-${pc.owner}`
-    + (YOKAI[pc.id].boss ? ' boss-piece' : '')
-    + (YOKAI[pc.id].variantOf ? ' special-piece' : '')
-    + (YOKAI[pc.id].rarity === 'SSR' && !YOKAI[pc.id].variantOf ? ' ssr-piece' : '')
-    + (YOKAI[pc.id].skill.kind === 'moon' ? ' moon-piece' : '');
-  const specialColors = YOKAI[pc.id].summonColors;
+    + (def?.boss ? ' boss-piece' : '')
+    + (def?.variantOf ? ' special-piece' : '')
+    + (def?.rarity === 'SSR' && !def.variantOf ? ' ssr-piece' : '')
+    + (def?.skill.kind === 'moon' ? ' moon-piece' : '');
+  const specialColors = def?.summonColors;
   if (specialColors) {
     el.style.setProperty('--special-light', specialColors[0]);
     el.style.setProperty('--special-primary', specialColors[1]);
   }
   el.dataset.uid = String(pc.uid);
-  el.innerHTML = `<div class="piece-base"></div><img src="${YOKAI[pc.id].img}" alt="${YOKAI[pc.id].name}" draggable="false">`;
+  const base = document.createElement('div');
+  base.className = 'piece-base';
+  const img = document.createElement('img');
+  img.draggable = false;
+  applyYokaiImage(img, pc.id);
+  el.append(base, img);
   $('board-pieces').appendChild(el);
   pieceEls.set(pc.uid, el);
   return el;
@@ -1088,15 +1092,15 @@ function updateHUD() {
   updateBattleWorld();
 }
 
-function setBattleGenerals(playerImg: string, playerAlt: string, enemyImg: string, enemyAlt: string) {
+function setBattleGenerals(playerBossId: string, playerAlt: string, enemyBossId: string, enemyAlt: string) {
   const player = $<HTMLImageElement>('player-avatar');
   const enemy = $<HTMLImageElement>('enemy-avatar');
-  player.src = playerImg;
-  player.alt = playerAlt;
-  enemy.src = enemyImg;
-  enemy.alt = enemyAlt;
-  for (const [side, img] of [['p', playerImg], ['e', enemyImg]] as const) {
-    const def = Object.values(YOKAI).find(y => y.img === img);
+  applyYokaiImage(player, playerBossId);
+  player.alt = playerAlt || yokaiDisplayName(playerBossId);
+  applyYokaiImage(enemy, enemyBossId);
+  enemy.alt = enemyAlt || yokaiDisplayName(enemyBossId, '対戦相手');
+  for (const [side, id] of [['p', playerBossId], ['e', enemyBossId]] as const) {
+    const def = yokaiOf(id);
     const color = def?.summonColors?.[1] ??
       (/tamamo|kyubi/.test(def?.id ?? '') ? '#efc96c' :
         /shuten|ibaraki/.test(def?.id ?? '') ? '#ff7459' : '#ab98ef');
@@ -1197,11 +1201,21 @@ function renderHand(side: Side) {
   for (const id in G!.hands[side]) {
     const n = G!.hands[side][id];
     if (n <= 0) continue;
+    const def = yokaiOf(id);
+    if (!def) continue;
     const chip = document.createElement('div');
     chip.className = 'hand-chip';
     if (sel && sel.kind === 'hand' && sel.id === id && side === 'p') chip.classList.add('chip-selected');
-    chip.innerHTML = `<img src="${YOKAI[id].imgSm}" alt="${YOKAI[id].name}" draggable="false">` +
-      (n > 1 ? `<span class="chip-n">×${n}</span>` : '');
+    const img = document.createElement('img');
+    img.draggable = false;
+    applyYokaiImage(img, id, 'sm');
+    chip.appendChild(img);
+    if (n > 1) {
+      const count = document.createElement('span');
+      count.className = 'chip-n';
+      count.textContent = `×${n}`;
+      chip.appendChild(count);
+    }
     if (side === 'p') chip.addEventListener('click', () => onHandClick(id));
     bindLongPress(chip, () => showInfo(id, false));
     tray.appendChild(chip);
@@ -1247,9 +1261,10 @@ const LONG_PRESS_MS = 480;
 const LONG_PRESS_MOVE_PX = 14;
 
 function showInfo(id: string, promoted: boolean) {
-  const def = YOKAI[id];
+  const def = yokaiOf(id);
+  if (!def) return;
   $('piece-info').classList.remove('hidden');
-  $<HTMLImageElement>('info-img').src = def.imgSm;
+  applyYokaiImage($<HTMLImageElement>('info-img'), id, 'sm');
   const typeEl = $('info-type');
   if (def.boss) {
     typeEl.hidden = false;
@@ -1518,7 +1533,7 @@ async function announceResonances() {
       const lead = members[0];
       AudioSys.play('summon');
       FX.flash(`color-mix(in srgb, ${rs.colors[1]} 30%, transparent)`, 240);
-      await FX.cutin(YOKAI[lead.id].img, `共鳴【${rs.name}】`, rs.desc, 'summon', [...rs.colors], 3);
+      await FX.cutin(yokaiOf(lead.id)?.img ?? '', `共鳴【${rs.name}】`, rs.desc, 'summon', [...rs.colors], 3);
       for (const pc of members) {
         const el = pieceEls.get(pc.uid);
         if (!el) continue;
@@ -1533,7 +1548,8 @@ async function summonCutin(id: string, at?: Pos) {
   const colors = specialFxColors(id);
   if (!colors || summonAnnounced.has(id)) return;
   summonAnnounced.add(id);
-  const def = YOKAI[id];
+  const def = yokaiOf(id);
+  if (!def) return;
   FX.flash(`color-mix(in srgb, ${colors[1]} 45%, transparent)`, 260);
   await FX.cutin(def.img, def.name, def.summonTitle || 'SSR妖怪 見参', 'summon', colors);
   if (at) {
@@ -1552,12 +1568,9 @@ async function summonCutin(id: string, at?: Pos) {
    タイミング(0.55s=VS着地 / 1.62s=開戦の帯)はCSSアニメの遅延と同期 */
 async function playVsIntro(enemy: { bossId: string; label: string }, stageLabel: string) {
   const root = $('vs-intro');
-  const boss = YOKAI[Meta.bossId()];
-  $<HTMLImageElement>('vs-img-p').src = boss.img;
-  $<HTMLImageElement>('vs-img-p').alt = boss.name;
+  applyYokaiImage($<HTMLImageElement>('vs-img-p'), Meta.bossId());
   $('vs-label-p').textContent = Meta.data.name;
-  $<HTMLImageElement>('vs-img-e').src = YOKAI[enemy.bossId].img;
-  $<HTMLImageElement>('vs-img-e').alt = YOKAI[enemy.bossId].name;
+  applyYokaiImage($<HTMLImageElement>('vs-img-e'), enemy.bossId);
   $('vs-label-e').textContent = enemy.label;
   $('vs-stage').textContent = stageLabel;
   root.classList.remove('hidden', 'vs-out');
@@ -1613,11 +1626,9 @@ async function startBattle() {
   setBattleStatusOpen(false);
   document.querySelectorAll('.cell').forEach(c => c.classList.remove('hl-last'));
   showScreen('screen-battle');
-  const boss = YOKAI[Meta.bossId()];
-  const enemyBoss = YOKAI[stage.bossId];
-  setBattleGenerals(boss.img, boss.name, enemyBoss.img, enemyBoss.name);
+  setBattleGenerals(Meta.bossId(), Meta.data.name, stage.bossId, yokaiDisplayName(stage.bossId, '敵将'));
   $('player-name').textContent = Meta.data.name;
-  $('enemy-name').textContent = enemyBoss.name;
+  $('enemy-name').textContent = yokaiDisplayName(stage.bossId, '敵将');
   $('hyakki-round-hud').classList.remove('hidden');
   $('hyakki-round-label').textContent = `${soloStreak + 1}戦目`;
   renderAll();
@@ -1760,7 +1771,7 @@ async function animEvent(ev: GameEvent) {
     }
     case 'capture': await animCapture(ev); break;
     case 'awaken': {
-      const def = YOKAI[ev.id];
+      const def = yokaiOf(ev.id);
       const colors = specialFxColors(ev.id) ?? [...SSR_FX_COLORS];
       const c = cellCenter(ev.to.x, ev.to.y);
       const el = pieceEls.get(ev.uid);
@@ -1770,7 +1781,7 @@ async function animEvent(ev: GameEvent) {
       el?.classList.add('awakening');
       await sleep(420);
       AudioSys.play('summon');
-      await FX.cutin(def.img, `覚醒【${ev.name}】`, `${def.name} ― 魂力解放 ATK×${AWAKEN_ATK}`, 'summon', colors, 3);
+      await FX.cutin(def?.img ?? '', `覚醒【${ev.name}】`, `${yokaiDisplayName(ev.id)} ― 魂力解放 ATK×${AWAKEN_ATK}`, 'summon', colors, 3);
       AudioSys.play('bighit');
       FX.flash(`color-mix(in srgb, ${colors[0]} 40%, transparent)`, 260);
       FX.pillar(c.x, c.y, colors);
@@ -1801,8 +1812,8 @@ async function animEvent(ev: GameEvent) {
       await sleep(360);
       /* SSR・異装は覚醒カットインを挟む */
       if (special && pc) {
-        const def = YOKAI[pc.id];
-        await FX.cutin(def.img, `${def.name}【成】`, '覚醒 ― 真の力、解放', 'summon', special, 3);
+        const def = yokaiOf(pc.id);
+        if (def) await FX.cutin(def.img, `${def.name}【成】`, '覚醒 ― 真の力、解放', 'summon', special, 3);
       }
       /* 金屏風の帯が横一閃 → 閃光とともに覚醒 */
       FX.promoteBand(c.y);
@@ -2086,8 +2097,8 @@ function showResult() {
     reason: onlineEndReason || G!.reason || null,
   });
   const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS) : activeSoloStage.bossId;
-  const enemyBossName = YOKAI[enemyBoss].name;
-  $<HTMLImageElement>('result-boss').src = YOKAI[win ? Meta.bossId() : enemyBoss].img;
+  const enemyBossName = yokaiDisplayName(enemyBoss, '敵将');
+  applyYokaiImage($<HTMLImageElement>('result-boss'), win ? Meta.bossId() : enemyBoss);
 
   const streakEl = $('result-hyakki-streak');
   const onlineActions = $('result-actions-online');
@@ -2157,7 +2168,7 @@ function showResult() {
     const lines: string[] = [];
     if (win && onlineReward > 0) lines.push(`勝利報酬: ガチャチケット 🎟 +${onlineReward}`);
     if (onlineParticipation > 0) lines.push(`参加報酬: ガチャチケット 🎟 +${onlineParticipation}`);
-    if (onlineEventYokai) lines.push(`対戦会限定「${YOKAI[onlineEventYokai]?.name ?? onlineEventYokai}」を入手!`);
+    if (onlineEventYokai) lines.push(`対戦会限定「${yokaiDisplayName(onlineEventYokai)}」を入手!`);
     if (lines.length > 0) {
       $('result-reward').textContent = lines.join(' ／ ');
       $('result-reward').classList.remove('hidden');
@@ -2186,18 +2197,16 @@ function reasonsFor(win: boolean, enemyBossName: string): string {
     hp: win ? `${enemyBossName}の魂力を打ち砕いた!` : '魂力が尽き果てた…',
     explode: win ? '鬼火が敵大将を道連れにした!' : '我が大将が鬼火の道連れに…',
     nomoves: win ? '敵軍は身動きが取れなくなった!' : '我が軍は身動きが取れなくなった…',
-    resign: '投了した…',
+    resign: win ? '相手が投了した' : '投了した…',
     timeout: win ? '相手の秒読みが切れた' : '秒読みが切れた…',
     disconnect: win ? '相手の再接続猶予が切れた' : '再接続猶予が切れた…',
-    draw: onlineEndReason === 'draw' && G!.reason === 'draw'
-      ? '飢餓の夜で双方の魂力が尽きた' : '300手に達したため引き分け',
     hunger: win ? '飢餓の夜で敵の魂力が尽きた!' : '飢餓の夜で魂力が尽きた…',
   };
   const reasonKey = onlineEndReason || G!.reason || '';
   if (reasonKey === 'draw') {
     return G!.reason === 'draw' ? '飢餓の夜で双方の魂力が尽きた' : '300手に達したため引き分け';
   }
-  return reasons[reasonKey] || '';
+  return reasons[reasonKey] || (win ? '対局に勝利した' : '対局に敗れた');
 }
 
 /* ============================== 駒一覧 ============================== */
@@ -2315,8 +2324,7 @@ function renderPieceCatalogCards() {
     const art = document.createElement('div');
     art.className = 'piece-art';
     const img = document.createElement('img');
-    img.src = def.imgSm;
-    img.alt = def.name;
+    applyYokaiImage(img, def.id, 'sm');
     img.loading = 'lazy';
     art.appendChild(img);
 
@@ -2341,11 +2349,10 @@ function renderPieceCatalogCards() {
 }
 
 function openPieceDetail(id: string) {
-  const def = YOKAI[id];
+  const def = yokaiOf(id);
+  if (!def) return;
   const ri = RARITY_INFO[def.rarity];
-  const img = $<HTMLImageElement>('piece-detail-img');
-  img.src = def.img;
-  img.alt = def.name;
+  applyYokaiImage($<HTMLImageElement>('piece-detail-img'), id);
   $('btn-piece-detail-zoom').setAttribute('aria-label', `${def.name}の画像を拡大`);
   $('piece-detail-tags').innerHTML =
     `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span>` +

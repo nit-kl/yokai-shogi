@@ -13,6 +13,8 @@ const SCREEN_LABELS: Record<string, string> = {
   'screen-loading': '起動中',
   'screen-title': 'タイトル',
   'screen-solo': 'ソロ対戦',
+  'screen-hyakki-preview': '百鬼夜行',
+  'screen-ranking': 'ランキング',
   'screen-gacha': 'ガチャ',
   'screen-formation': '編成',
   'screen-pieces': '駒一覧',
@@ -22,7 +24,7 @@ const SCREEN_LABELS: Record<string, string> = {
 
 function currentScreenLabel(): string {
   const active = document.querySelector<HTMLElement>('.screen.active');
-  return active ? (SCREEN_LABELS[active.id] ?? active.id) : '';
+  return active ? (SCREEN_LABELS[active.id] ?? 'ゲーム内') : '';
 }
 
 function buildDmText(context?: string): string {

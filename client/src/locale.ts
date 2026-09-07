@@ -133,14 +133,31 @@ const STATIC: Record<string, string> = {
   '異装': 'Alt', '大将': 'General', '成': 'Promoted', '覚': 'Awakened',
   'メンテ': 'Maintenance', 'イベント': 'Event', 'アップデート': 'Update', '現在お知らせはありません。': 'There are no announcements.',
   '対戦相手を探しています…': 'Searching for an opponent…', 'ルームへ参加しています…': 'Joining the room…',
-  '対局中': 'In Battle', '投了しますか?': 'Do you want to resign?', '対象: 百鬼夜行の連戦': 'Applies to Night Parade win streaks',
+  '対局中': 'In Battle', '投了しますか?': 'Do you want to resign?', '投了する': 'Resign', 'やめる': 'Cancel',
+  '確認': 'Confirm', 'はい': 'Yes',
+  'アカウントの切り替え': 'Switch Account', '切り替える': 'Switch', '始める': 'Start',
+  '広告の視聴': 'Watch an Ad', '視聴する': 'Watch',
+  'パスキーで別アカウントに切り替えます。現在この端末のデータは置き換わります。よろしいですか？': 'Switch to another account with a passkey? Data on this device will be replaced.',
+  '新しい進行で始めます。パスキーや引き継ぎコードがない限り、以前のデータには戻れません。よろしいですか？': 'Start a new save? You cannot return to the previous data without a passkey or transfer code.',
+  '広告を視聴すると、広告配信のため第三者(広告ネットワーク)へ端末・接続情報が送信される場合があります。': 'Watching an ad may send device and connection data to a third-party ad network.',
+  'プライバシーポリシーに同意のうえ視聴しますか？': 'Do you agree to the privacy policy and want to watch?',
+  '（視聴は任意です。見なくてもゲームは遊べます）': '(Watching is optional. You can play without ads.)',
+  '広告を表示できませんでした': 'Could not show the ad.',
+  '報酬の受け取りに失敗しました。しばらくしてから再度お試しください': 'Could not claim the reward. Please try again later.',
+  '通信エラーのため報酬を受け取れませんでした': 'Could not claim the reward due to a connection error.',
+  '対象: 百鬼夜行の連戦': 'Applies to Night Parade win streaks',
   'オンライン接続時にランキングを閲覧できます': 'Connect online to view the rankings.', 'ランキングを読み込み中…': 'Loading rankings…',
   'まだ今週の記録がありません。最初の挑戦者になろう!': 'No records this week. Be the first challenger!',
   'あなたの今週の記録はまだありません': 'You do not have a record this week yet.', 'オンラインへ接続しています…': 'Connecting online…',
   'オンライン接続に失敗しました。通信状態を確認して、もう一度お試しください': 'Could not connect online. Check your connection and try again.',
   'オンライン接続が利用できません': 'Online connection is unavailable.', '再接続中…': 'Reconnecting…',
   '接続エラーが発生しました': 'A connection error occurred.', '接続が切れました': 'Disconnected.',
+  'サーバーに接続できません。通信状態を確認して、もう一度お試しください': 'Cannot reach the server. Check your connection and try again.',
   'このコードを相手に伝えてください': 'Share this code with your opponent.',
+  '指定された機能は利用できません': 'That feature is not available.',
+  '大将を選べませんでした': 'Could not choose that general.',
+  '編成を保存できませんでした': 'Could not save the formation.',
+  '名前を変更できませんでした': 'Could not change the name.',
   'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。': 'No opponent yet. Keep waiting or battle the AI now.',
   '秒読み！': 'Final countdown!', '秒読み': 'Countdown', '相手の秒読み': "Opponent's countdown",
   '相手の秒読み！': "Opponent's countdown!", '切れたら負け': 'Timeout is a loss', '切れれば勝ち': 'Timeout is a win',
@@ -157,6 +174,9 @@ const STATIC: Record<string, string> = {
   '魂力が尽き果てた…': 'Your HP was depleted…', '鬼火が敵大将を道連れにした!': 'Onibi took the enemy general with it!',
   '我が大将が鬼火の道連れに…': 'Onibi took your general with it…', '敵軍は身動きが取れなくなった!': 'The enemy has no legal moves!',
   '我が軍は身動きが取れなくなった…': 'Your army has no legal moves…', '投了した…': 'You resigned…',
+  '相手が投了した': 'The opponent resigned.',
+  '対局に勝利した': 'You won the battle.', '対局に敗れた': 'You lost the battle.',
+  '対局の通信でエラーが発生しました': 'A battle connection error occurred.',
   '相手の秒読みが切れた': "The opponent's countdown expired.", '秒読みが切れた…': 'Your countdown expired…',
   '相手の再接続猶予が切れた': "The opponent's reconnection time expired.", '再接続猶予が切れた…': 'Your reconnection time expired…',
   '飢餓の夜で双方の魂力が尽きた': 'Both sides ran out of HP during the Night of Hunger.', '300手に達したため引き分け': 'Draw after 300 moves.',
@@ -517,9 +537,4 @@ export function initializeLocale(): void {
   observe();
   if (preferred !== SOURCE_LOCALE) setLocale(preferred);
   else { updateHead(); syncLocaleSelect(); }
-
-  const nativeAlert = window.alert.bind(window);
-  const nativeConfirm = window.confirm.bind(window);
-  window.alert = message => nativeAlert(typeof message === 'string' ? t(message) : message);
-  window.confirm = message => nativeConfirm(typeof message === 'string' ? t(message) : message);
 }

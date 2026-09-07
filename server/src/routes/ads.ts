@@ -66,7 +66,7 @@ adsRoutes.post('/ads/reward', authRequired, async c => {
   const body = await c.req.json().catch(() => null) as { provider?: unknown } | null;
   const expected = adsProvider(c.env);
   if (!body || body.provider !== expected) {
-    return apiError(c, 'VALIDATION', `provider は "${expected}" である必要があります`);
+    return apiError(c, 'VALIDATION', 'リクエストが不正です');
   }
 
   const userId = c.get('userId');

@@ -82,7 +82,7 @@ export class ApiClient {
       throw new NetworkError(`POST ${path} failed`);
     }
     const data = await res.json().catch(() => null) as any;
-    if (!res.ok) throw new ApiError(data?.error?.code ?? 'INTERNAL', data?.error?.message ?? 'error', res.status);
+    if (!res.ok) throw new ApiError(data?.error?.code ?? 'INTERNAL', data?.error?.message ?? 'サーバーエラーが発生しました', res.status);
     return data as T;
   }
 
@@ -178,7 +178,7 @@ export class ApiClient {
     try { res = await fetch(`${this.baseUrl}${path}`); }
     catch { throw new NetworkError(`GET ${path} failed`); }
     const data = await res.json().catch(() => null) as any;
-    if (!res.ok) throw new ApiError(data?.error?.code ?? 'INTERNAL', data?.error?.message ?? 'error', res.status);
+    if (!res.ok) throw new ApiError(data?.error?.code ?? 'INTERNAL', data?.error?.message ?? 'サーバーエラーが発生しました', res.status);
     return data as T;
   }
 
@@ -230,7 +230,7 @@ export class ApiClient {
       res = await doFetch();
     }
     const data = await res.json().catch(() => null) as any;
-    if (!res.ok) throw new ApiError(data?.error?.code ?? 'INTERNAL', data?.error?.message ?? 'error', res.status);
+    if (!res.ok) throw new ApiError(data?.error?.code ?? 'INTERNAL', data?.error?.message ?? 'サーバーエラーが発生しました', res.status);
     return data as T;
   }
 

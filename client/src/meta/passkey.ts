@@ -39,5 +39,5 @@ export function passkeyErrorMessage(e: unknown): string {
   if (name === 'InvalidStateError') return 'このパスキーは既に登録されています';
   if (name === 'NotSupportedError') return 'この端末ではパスキーを利用できません';
   if (name === 'SecurityError') return 'セキュリティ上の理由でパスキーを利用できません';
-  return e.message || 'パスキー操作に失敗しました';
+  return 'パスキー操作に失敗しました';
 }

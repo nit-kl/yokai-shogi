@@ -16,6 +16,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* src="" は文書URLとして解決され、壊れた画像にパスが出る */
+img:not([src]),
+img[src=""] { visibility: hidden; }
+
 html, body {
   height: 100%;
   overflow: hidden;
@@ -2061,6 +2065,22 @@ html[data-script="latn"] #turn-banner.show-byoyomi .byoyomi-banner-msg {
 .rules-scroll::-webkit-scrollbar { width: 6px; }
 .rules-scroll::-webkit-scrollbar-thumb { background: rgba(232,196,106,0.35); border-radius: 3px; }
 .modal-box .btn { align-self: center; }
+.confirm-modal { z-index: 400; }
+.confirm-box { width: min(92vw, 420px); gap: 16px; }
+.confirm-message {
+  margin: 0;
+  color: #d8d2e4;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  text-align: center;
+  white-space: pre-wrap;
+}
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
 .announcements-box { max-width: 560px; }
 .announcements-list {
   display: flex; flex-direction: column; gap: 10px;
