@@ -98,7 +98,7 @@ soloRoutes.get('/solo/hyakki/status', authRequired, async c => {
 
 soloRoutes.post('/solo/hyakki/result', authRequired, async c => {
   const body = await c.req.json().catch(() => null) as { win?: unknown } | null;
-  if (!body || typeof body.win !== 'boolean') return apiError(c, 'VALIDATION', 'win(boolean)が必要です');
+  if (!body || typeof body.win !== 'boolean') return apiError(c, 'VALIDATION', 'リクエストが不正です');
   const userId = c.get('userId');
   const db = c.env.DB;
   const p = await getProfile(db, userId);

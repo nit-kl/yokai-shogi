@@ -76,8 +76,7 @@ export async function verifySteamSessionTicket(env: SteamEnv, ticket: string): P
 
   const params = data?.response?.params;
   if (!params || params.result !== 'OK' || !params.steamid) {
-    const desc = data?.response?.error?.errordesc || 'Steam チケットの検証に失敗しました';
-    return { ok: false, reason: desc };
+    return { ok: false, reason: 'Steam チケットの検証に失敗しました' };
   }
 
   return { ok: true, steamId: params.steamid, mock: false };

@@ -12,6 +12,7 @@ import { ownedSet } from './types';
 import type { GachaResult } from './types';
 import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState, ReleaseGift } from './types';
 import { getTurnstileToken } from '../turnstile';
+import { userErrorMessage } from '../user-facing';
 import { assertPasskey, createPasskey, passkeyErrorMessage, passkeySupported } from './passkey';
 import type {
   PublicKeyCredentialCreationOptionsJSON,
@@ -118,7 +119,9 @@ export class ApiMeta implements MetaProvider {
       this.data.formation = res.rows;
       return null;
     } catch (e) {
-      if (e instanceof ApiError && e.code === 'INVALID_FORMATION') return e.message;
+      if (e instanceof ApiError && e.code === 'INVALID_FORMATION') {
+        return userErrorMessage(e, '編成を保存できませんでした');
+      }
       throw e;
     }
   }
@@ -131,7 +134,9 @@ export class ApiMeta implements MetaProvider {
       this.data.name = res.name;
       return null;
     } catch (e) {
-      if (e instanceof ApiError && e.code === 'VALIDATION') return e.message;
+      if (e instanceof ApiError && e.code === 'VALIDATION') {
+        return userErrorMessage(e, '名前を変更できませんでした');
+      }
       throw e;
     }
   }
@@ -217,7 +222,7 @@ export class ApiMeta implements MetaProvider {
       this.data.formation = res.rows;
       return null;
     } catch (e) {
-      if (e instanceof ApiError) return e.message;
+      if (e instanceof ApiError) return userErrorMessage(e, '大将を選べませんでした');
       throw e;
     }
   }

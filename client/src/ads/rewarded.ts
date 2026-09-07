@@ -3,6 +3,7 @@
    Steam ビルドでは adsAllowed()=false のため SDK をロードしない(doc 23)。 */
 
 import { adsAllowed } from '../platform';
+import { confirmDialog } from '../dialog';
 
 export type AdsProviderKind = 'mock' | 'gpt';
 
@@ -88,7 +89,7 @@ const gptProvider: RewardedAdProvider = {
     }
     const adUnitPath = config.adUnitPath?.trim();
     if (!adUnitPath) {
-      return { ok: false, reason: 'unavailable', message: '広告ユニットが未設定です' };
+      return { ok: false, reason: 'unavailable', message: 'ただいま広告を配信できません' };
     }
     try {
       await loadGptScript();
@@ -183,13 +184,14 @@ export function setAdRewardConsent(ok: boolean): void {
 }
 
 /** 初回のみ同意を取る。拒否なら false */
-export function ensureAdRewardConsent(): boolean {
+export async function ensureAdRewardConsent(): Promise<boolean> {
   if (!adsAllowed()) return false;
   if (hasAdRewardConsent()) return true;
-  const ok = window.confirm(
+  const ok = await confirmDialog(
     '広告を視聴すると、広告配信のため第三者(広告ネットワーク)へ端末・接続情報が送信される場合があります。\n\n'
     + 'プライバシーポリシーに同意のうえ視聴しますか？\n'
     + '（視聴は任意です。見なくてもゲームは遊べます）',
+    { title: '広告の視聴', ok: '視聴する', cancel: 'やめる' },
   );
   if (ok) setAdRewardConsent(true);
   return ok;

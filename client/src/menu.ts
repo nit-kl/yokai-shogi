@@ -2,7 +2,7 @@
    百鬼盤 - ガチャ・編成・ログインボーナスUI
    ============================================================ */
 
-import { COLS, YOKAI, RARITY_INFO } from '../../shared/data';
+import { COLS, RARITY_INFO } from '../../shared/data';
 import { $, sleep, showScreen } from './util';
 import { AudioSys } from './audio';
 import { FX } from './effects';
@@ -14,6 +14,8 @@ import { adsAllowed } from './platform';
 import { Onboarding } from './onboarding';
 import { SupportUI } from './support';
 import { passkeySupported } from './meta/passkey';
+import { applyYokaiImage, userErrorMessage, yokaiOf } from './user-facing';
+import { alertDialog, confirmDialog } from './dialog';
 
 const LINK_NUDGE_KEY = 'yokaiShogi.linkNudge.v1';
 const LINK_NUDGE_INTERVAL_MS = 3 * 86400e3; // 3日おきに再催促
@@ -142,7 +144,7 @@ export const MenuUI = {
       $('profile-msg').textContent = 'プレイヤーネームを変更しました';
       setTimeout(() => $('modal-profile').classList.add('hidden'), 650);
     } catch (e) {
-      $('profile-msg').textContent = e instanceof Error ? e.message : '変更に失敗しました';
+      $('profile-msg').textContent = userErrorMessage(e, '変更に失敗しました');
     } finally {
       button.disabled = false;
     }
@@ -164,7 +166,7 @@ export const MenuUI = {
         $('link-msg').textContent = 'コードを発行しました。メモして保管してください。';
         this.clearLinkNudgeSnooze();
       } catch (e) {
-        $('link-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
+        $('link-msg').textContent = userErrorMessage(e, 'コードの発行に失敗しました');
       } finally {
         btn.disabled = false;
       }
@@ -183,7 +185,7 @@ export const MenuUI = {
         $('link-code-display').classList.add('hidden');
         setTimeout(() => { $('modal-link').classList.add('hidden'); this._enterTitle(); }, 900);
       } catch (e) {
-        $('link-msg').textContent = e instanceof Error ? e.message : '引き継ぎに失敗しました';
+        $('link-msg').textContent = userErrorMessage(e, '引き継ぎに失敗しました');
       } finally {
         btn.disabled = false;
       }
@@ -198,13 +200,17 @@ export const MenuUI = {
         this.clearLinkNudgeSnooze();
         this.refreshPasskeyButtons();
       } catch (e) {
-        $('link-msg').textContent = e instanceof Error ? e.message : 'パスキー登録に失敗しました';
+        $('link-msg').textContent = userErrorMessage(e, 'パスキー登録に失敗しました');
       } finally {
         btn.disabled = false;
       }
     };
     $('btn-passkey-login').onclick = async () => {
-      if (!confirm('パスキーで別アカウントに切り替えます。現在この端末のデータは置き換わります。よろしいですか？')) return;
+      const ok = await confirmDialog(
+        'パスキーで別アカウントに切り替えます。現在この端末のデータは置き換わります。よろしいですか？',
+        { title: 'アカウントの切り替え', ok: '切り替える', cancel: 'やめる' },
+      );
+      if (!ok) return;
       const btn = $<HTMLButtonElement>('btn-passkey-login');
       btn.disabled = true;
       $('link-msg').textContent = 'パスキー認証中…';
@@ -213,7 +219,7 @@ export const MenuUI = {
         $('link-msg').textContent = '切り替えが完了しました。タイトルに戻ります。';
         setTimeout(() => { $('modal-link').classList.add('hidden'); this._enterTitle(); }, 900);
       } catch (e) {
-        $('link-msg').textContent = e instanceof Error ? e.message : 'パスキー認証に失敗しました';
+        $('link-msg').textContent = userErrorMessage(e, 'パスキー認証に失敗しました');
         btn.disabled = false;
       }
     };
@@ -234,7 +240,7 @@ export const MenuUI = {
         $<HTMLButtonElement>('btn-nudge-issue').classList.add('hidden');
         $('btn-nudge-later').textContent = '閉じる';
       } catch (e) {
-        $('nudge-msg').textContent = e instanceof Error ? e.message : 'パスキー登録に失敗しました';
+        $('nudge-msg').textContent = userErrorMessage(e, 'パスキー登録に失敗しました');
       } finally {
         btn.disabled = false;
       }
@@ -254,7 +260,7 @@ export const MenuUI = {
         $<HTMLButtonElement>('btn-nudge-passkey').classList.add('hidden');
         $('btn-nudge-later').textContent = '閉じる';
       } catch (e) {
-        $('nudge-msg').textContent = e instanceof Error ? e.message : 'コードの発行に失敗しました';
+        $('nudge-msg').textContent = userErrorMessage(e, 'コードの発行に失敗しました');
       } finally {
         btn.disabled = false;
       }
@@ -288,7 +294,7 @@ export const MenuUI = {
           this._enterTitle();
         }, 700);
       } catch (e) {
-        $('recovery-msg').textContent = e instanceof Error ? e.message : '復元に失敗しました';
+        $('recovery-msg').textContent = userErrorMessage(e, '復元に失敗しました');
         setBusy(false);
       }
     };
@@ -306,12 +312,16 @@ export const MenuUI = {
           this._enterTitle();
         }, 700);
       } catch (e) {
-        $('recovery-msg').textContent = e instanceof Error ? e.message : '復元に失敗しました';
+        $('recovery-msg').textContent = userErrorMessage(e, '復元に失敗しました');
         setBusy(false);
       }
     };
     $('btn-recovery-new').onclick = async () => {
-      if (!confirm('新しい進行で始めます。パスキーや引き継ぎコードがない限り、以前のデータには戻れません。よろしいですか？')) return;
+      const ok = await confirmDialog(
+        '新しい進行で始めます。パスキーや引き継ぎコードがない限り、以前のデータには戻れません。よろしいですか？',
+        { title: '新規に始める', ok: '始める', cancel: 'やめる' },
+      );
+      if (!ok) return;
       setBusy(true);
       $('recovery-msg').textContent = '準備中…';
       try {
@@ -319,7 +329,7 @@ export const MenuUI = {
         $('modal-session-recovery').classList.add('hidden');
         this._enterTitle();
       } catch (e) {
-        $('recovery-msg').textContent = e instanceof Error ? e.message : '開始に失敗しました';
+        $('recovery-msg').textContent = userErrorMessage(e, '開始に失敗しました');
         setBusy(false);
       }
     };
@@ -498,7 +508,7 @@ export const MenuUI = {
     if (!adsAllowed()) return;
     const st = this.adsStatus;
     if (!st?.enabled || st.remaining <= 0) return;
-    if (!ensureAdRewardConsent()) return;
+    if (!(await ensureAdRewardConsent())) return;
 
     const btn = $<HTMLButtonElement>('btn-ad-reward');
     btn.disabled = true;
@@ -510,7 +520,7 @@ export const MenuUI = {
       const outcome = await getRewardedProvider(st.provider).show(st.clientConfig);
       if (!outcome.ok) {
         if (outcome.reason !== 'cancelled') {
-          window.alert(outcome.message || '広告を表示できませんでした');
+          void alertDialog(outcome.message || '広告を表示できませんでした');
         }
         return;
       }
@@ -523,11 +533,11 @@ export const MenuUI = {
       } else if (res) {
         this.adsStatus = { ...st, claimed: res.dailyCount, remaining: res.remaining };
       } else {
-        window.alert('報酬の受け取りに失敗しました。しばらくしてから再度お試しください');
+        void alertDialog('報酬の受け取りに失敗しました。しばらくしてから再度お試しください');
         await this.refreshAdsStatus();
       }
     } catch {
-      window.alert('通信エラーのため報酬を受け取れませんでした');
+      void alertDialog('通信エラーのため報酬を受け取れませんでした');
       await this.refreshAdsStatus();
     } finally {
       this.refreshCurrency();
@@ -587,7 +597,7 @@ export const MenuUI = {
 
   finishSummon(results: GachaResult[]) {
     const summon = $('gacha-summon');
-    const specialDef = results.map(r => YOKAI[r.id]).find(def => def.variantOf);
+    const specialDef = results.map(r => yokaiOf(r.id)).find(def => def?.variantOf);
     const hasSpecial = !!specialDef;
     const specialColors = specialDef?.summonColors ? [...specialDef.summonColors] : ['#fff8df', '#e32f3f', '#d9b75c'];
     const rarity = hasSpecial ? 'special'
@@ -611,42 +621,50 @@ export const MenuUI = {
     wrap.innerHTML = '';
     wrap.classList.toggle('many', results.length > 1);
     const result = $('gacha-result');
-    const special = results.find(r => YOKAI[r.id].variantOf);
-    const specialColors = special && YOKAI[special.id].summonColors
-      ? [...YOKAI[special.id].summonColors!] : ['#fff8df', '#e32f3f', '#d9b75c'];
+    const special = results.map(r => yokaiOf(r.id)).find(def => def?.variantOf);
+    const specialColors = special?.summonColors
+      ? [...special.summonColors] : ['#fff8df', '#e32f3f', '#d9b75c'];
     result.style.setProperty('--special-light', specialColors[0]);
     result.style.setProperty('--special-primary', specialColors[1]);
     result.style.setProperty('--special-accent', specialColors[2]);
     result.className = special ? 'result-special'
       : results.some(r => r.rarity === 'SSR') ? 'result-ssr'
       : results.some(r => r.rarity === 'SR') ? 'result-sr' : 'result-normal';
-    $('gacha-result-title').textContent = special ? (YOKAI[special.id].summonTitle || '神妖 顕現')
+    $('gacha-result-title').textContent = special ? (special.summonTitle || '神妖 顕現')
       : results.some(r => r.rarity === 'SSR')
       ? '大妖怪 降臨' : results.some(r => r.rarity === 'SR') ? '希少妖怪 出現' : '召喚結果';
     results.forEach((r, i) => {
-      const def = YOKAI[r.id];
+      const def = yokaiOf(r.id);
+      const name = def?.name ?? '妖怪';
       const ri = RARITY_INFO[r.rarity];
       const card = document.createElement('div');
-      card.className = `gacha-card ${ri.cls}${def.variantOf ? ' gacha-card-special' : ''}`;
-      if (def.summonColors) {
+      card.className = `gacha-card ${ri.cls}${def?.variantOf ? ' gacha-card-special' : ''}`;
+      if (def?.summonColors) {
         card.style.setProperty('--special-light', def.summonColors[0]);
         card.style.setProperty('--special-primary', def.summonColors[1]);
         card.style.setProperty('--special-accent', def.summonColors[2]);
       }
       card.style.animationDelay = `${i * 0.13}s`;
-      card.innerHTML =
-        `<div class="gc-rarity">${ri.label}</div>` +
-        `<img src="${def.img}" alt="${def.name}" draggable="false">` +
-        `<div class="gc-name">${def.name}</div>` +
-        (r.isNew ? `<div class="gc-tag gc-new">NEW!</div>`
-                 : `<div class="gc-tag gc-dupe">妖力 +${r.yoryoku}</div>`);
+      const rarityEl = document.createElement('div');
+      rarityEl.className = 'gc-rarity';
+      rarityEl.textContent = ri.label;
+      const img = document.createElement('img');
+      img.draggable = false;
+      applyYokaiImage(img, r.id);
+      const nameEl = document.createElement('div');
+      nameEl.className = 'gc-name';
+      nameEl.textContent = name;
+      const tag = document.createElement('div');
+      tag.className = r.isNew ? 'gc-tag gc-new' : 'gc-tag gc-dupe';
+      tag.textContent = r.isNew ? 'NEW!' : `妖力 +${r.yoryoku}`;
+      card.append(rarityEl, img, nameEl, tag);
       wrap.appendChild(card);
       setTimeout(() => {
         const rect = card.getBoundingClientRect();
-        const colors = def.summonColors ? [...def.summonColors]
+        const colors = def?.summonColors ? [...def.summonColors]
           : r.rarity === 'SSR' ? ['#ffd24a', '#fff6d8', '#ff9a3c']
           : r.rarity === 'SR' ? ['#c88aff', '#e8d0ff'] : ['#58b6ff', '#9aa0b5'];
-        FX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, colors, def.variantOf ? 64 : r.rarity === 'SSR' ? 34 : 14, def.variantOf ? 5 : 3.5);
+        FX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, colors, def?.variantOf ? 64 : r.rarity === 'SSR' ? 34 : 14, def?.variantOf ? 5 : 3.5);
       }, i * 130 + 180);
     });
     result.classList.remove('hidden');
@@ -686,11 +704,11 @@ export const MenuUI = {
   },
 
   bossIds(): string[] {
-    return this.rows.flat().filter((id): id is string => !!id && !!YOKAI[id].boss);
+    return this.rows.flat().filter((id): id is string => !!id && !!yokaiOf(id)?.boss);
   },
 
   firstOwnedBoss(): string | null {
-    return Meta.ownedList().find(id => YOKAI[id].boss) || null;
+    return Meta.ownedList().find(id => yokaiOf(id)?.boss) || null;
   },
 
   ensureBossPlaced() {
@@ -723,10 +741,15 @@ export const MenuUI = {
         const cell = document.createElement('div');
         cell.className = 'form-cell';
         if (id) {
-          const def = YOKAI[id];
-          cell.classList.add(RARITY_INFO[def.rarity].cls);
-          if (def.boss) cell.classList.add('form-boss');
-          cell.innerHTML = `<img src="${def.imgSm}" alt="${def.name}" draggable="false">`;
+          const def = yokaiOf(id);
+          if (def) {
+            cell.classList.add(RARITY_INFO[def.rarity].cls);
+            if (def.boss) cell.classList.add('form-boss');
+            const img = document.createElement('img');
+            img.draggable = false;
+            applyYokaiImage(img, id, 'sm');
+            cell.appendChild(img);
+          }
         }
         cell.onclick = () => this.onCellClick(ry, x);
         grid.appendChild(cell);
@@ -738,7 +761,8 @@ export const MenuUI = {
     bench.innerHTML = '';
     const placed = this.placedIds();
     for (const id of Meta.ownedList()) {
-      const def = YOKAI[id];
+      const def = yokaiOf(id);
+      if (!def) continue;
       const chip = document.createElement('div');
       chip.className = `bench-chip ${RARITY_INFO[def.rarity].cls}`;
       if (placed.has(id)) chip.classList.add('in-form');
@@ -753,7 +777,8 @@ export const MenuUI = {
   },
 
   showFormInfo(id: string) {
-    const def = YOKAI[id];
+    const def = yokaiOf(id);
+    if (!def) { $('form-info').textContent = ''; return; }
     $('form-info').innerHTML =
       (def.boss ? `<span class="type-chip t-boss">大将</span> ` : '') +
       `<b>${def.name}</b> <span class="fi-atk">ATK ${def.atk}</span><br>` +
@@ -764,7 +789,7 @@ export const MenuUI = {
     AudioSys.play('select');
     this.showFormInfo(id);
     if (this.placedIds().has(id)) {
-      if (YOKAI[id].boss) {
+      if (yokaiOf(id)?.boss) {
         /* 大将は必須なので、控えタップでは外さず「移動対象」として扱う */
         this.benchSel = (this.benchSel === id) ? null : id;
       } else {
@@ -782,8 +807,8 @@ export const MenuUI = {
     const cur = this.rows[ry][x];
     if (this.benchSel) {
       const selected = this.benchSel;
-      const selectedIsBoss = !!YOKAI[selected].boss;
-      const replacingOnlyBoss = !!(cur && YOKAI[cur].boss && this.bossIds().length <= 1 && !selectedIsBoss);
+      const selectedIsBoss = !!yokaiOf(selected)?.boss;
+      const replacingOnlyBoss = !!(cur && yokaiOf(cur)?.boss && this.bossIds().length <= 1 && !selectedIsBoss);
       if (replacingOnlyBoss) {
         $('form-error').textContent = '⚠ 大将は必須です。大将以外は別のマスに配置してください';
         return;
@@ -799,7 +824,7 @@ export const MenuUI = {
       AudioSys.play('drop');
     } else if (cur) {
       this.showFormInfo(cur);
-      if (YOKAI[cur].boss) {
+      if (yokaiOf(cur)?.boss) {
         /* うっかり大将を外して詰まらないよう、盤上タップでは移動選択にする */
         this.benchSel = cur;
       } else {

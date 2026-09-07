@@ -69,7 +69,7 @@ v1.route('/', adsRoutes);
 v1.route('/', steamRoutes);
 app.route('/v1', v1);
 
-app.notFound(c => apiError(c, 'VALIDATION', '不明なエンドポイントです'));
+app.notFound(c => apiError(c, 'NOT_FOUND', '指定された機能は利用できません'));
 app.onError((err, c) => {
   console.error('[unhandled]', err instanceof Error ? err.stack || err.message : String(err));
   return apiError(c, 'INTERNAL', 'サーバーエラーが発生しました');

@@ -482,7 +482,14 @@ export const FX = {
         root.style.removeProperty('--cutin-primary');
         root.style.removeProperty('--cutin-accent');
       }
-      (document.getElementById('cutin-img') as HTMLImageElement).src = imgSrc;
+      const cutinImg = document.getElementById('cutin-img') as HTMLImageElement;
+      if (imgSrc) {
+        cutinImg.src = imgSrc;
+        cutinImg.alt = name;
+      } else {
+        cutinImg.removeAttribute('src');
+        cutinImg.alt = name;
+      }
       document.getElementById('cutin-name')!.textContent = name;
       document.getElementById('cutin-sub')!.textContent = sub || '';
       // フラッシュ
