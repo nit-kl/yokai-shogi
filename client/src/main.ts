@@ -126,10 +126,12 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
   recall: ['#ffdbc2', '#ff4d4d', '#8d47d6'],  // 羅生門
   hydra: ['#ffe2b8', '#ff8a3c', '#8d1f1f'],   // 八岐
   famine: ['#e8d8c8', '#8a6a4a', '#3a2010'],  // 餓鬼
+  bones: ['#e8d8c8', '#8a6a4a', '#3a2010'],   // 骨の山
   dual: ['#ffe0e8', '#e05070', '#8a1030'],    // 双面
+  cellar: ['#ffe6c8', '#d4a017', '#8a1020'],  // 酒蔵
 };
 /* 会心系(発動="当たり")として扱うスキル */
-const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads', 'famine']);
+const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads', 'famine', 'bones']);
 
 /* レアリティ段階(演出の格): N=0, R=1, SR=2, SSR・異装=3 */
 function rarityTier(id: string): 0 | 1 | 2 | 3 {
@@ -1148,12 +1150,16 @@ function updateHungerHUD() {
   const hud = $('hunger-hud');
   if (!G) { hud.classList.add('hidden'); updateBattleStatusBadge(); return; }
   hud.classList.remove('hidden');
-  const active = Game.hungerActive(G);
-  hud.classList.toggle('hunger-active', active);
-  if (active) {
+  const draining = Game.hungerDraining(G, 'p');
+  const world = Game.hungerActive(G);
+  hud.classList.toggle('hunger-active', draining);
+  if (draining) {
     $('hunger-label').textContent = `飢餓の夜 -${HUNGER_DRAIN}`;
+  } else if (world && Game.hasSkill(G, 'p', 'cellar')) {
+    const left = Game.hungerTurnsLeft(G, 'p');
+    $('hunger-label').textContent = `酒蔵の猶予 あと${left}`;
   } else {
-    const left = Game.hungerTurnsLeft(G);
+    const left = Game.hungerTurnsLeft(G, 'p');
     $('hunger-label').textContent = left === 0 ? '飢餓まであと0' : `飢餓まであと${left}`;
   }
   updateBattleStatusBadge();
@@ -1171,7 +1177,7 @@ function updateMoonHUD() {
     const phase = Game.moonPhase(G!);
     $('moon-icon').textContent = MOON_ICONS[phase] ?? MOON_ICONS[0];
     const nights = Game.nightsUntilFullMoon(G!);
-    $('moon-label').textContent = full ? '満月 ― 会心確定!' : `${MOON_PHASES[phase]}(満月まで${nights}夜)`;
+    $('moon-label').textContent = full ? '満月 ― 味方の取りが会心!' : `${MOON_PHASES[phase]}(満月まで${nights}夜)`;
   }
   hud.classList.toggle('full-moon', full);
   updateBattleStatusBadge();
@@ -1842,6 +1848,15 @@ async function animEvent(ev: GameEvent) {
       await sleep(280);
       break;
     }
+    case 'cellar': {
+      const c = G!.lastMove ? cellCenter(G!.lastMove.to.x, G!.lastMove.to.y) : { x: 0, y: 0 };
+      FX.pillar(c.x, c.y, SKILL_KIND_FX.cellar);
+      FX.damageNumber(c.x, c.y - 48, `+${ev.heal}`, 'heal');
+      if (ev.side === 'p') Records.bump(ev.name);
+      updateHUD();
+      await sleep(280);
+      break;
+    }
     case 'gameover': break; // doAction側で処理
   }
 }
@@ -1859,9 +1874,11 @@ async function animCapture(ev: CaptureEvent) {
   const vTier = rarityTier(ev.victim.id);
   const vScale = TIER_SCALE[vTier];
   const passiveEffects = ev.effects ?? [];
-  /* 会心系(crit/rush/moon/heads)の発動 = "当たり"。攻撃駒のスキルに加え、覚醒・共鳴のprocが並ぶことがある */
-  const jackpot = ev.procs.some(p => p.name === aSkill.name) && JACKPOT_KINDS.has(aSkill.kind);
-  const multSub = !ev.procs.some(p => p.name === aSkill.name) ? undefined
+  /* 会心系(crit/rush/moon/heads)の発動 = "当たり"。月の主は攻撃駒以外の大将オーラでも乗る */
+  const moonHit = ev.procs.some(p => p.name === '月の主');
+  const jackpot = (ev.procs.some(p => p.name === aSkill.name) && JACKPOT_KINDS.has(aSkill.kind)) || moonHit;
+  const multSub = moonHit ? '×2'
+    : !ev.procs.some(p => p.name === aSkill.name) ? undefined
     : (aSkill.kind === 'crit' || aSkill.kind === 'rush' || aSkill.kind === 'moon') ? `×${aSkill.mult}`
     : aSkill.kind === 'zone' ? `+${aSkill.bonus}` : undefined;
 
@@ -1934,20 +1951,21 @@ async function animCapture(ev: CaptureEvent) {
   if (special) FX.ring(c.x, c.y, special[2], 18, big ? 100 : 70);
   FX.shockwave(c.x, c.y, colors[0], big ? 16 : 9);
   /* 系統ごとの署名エフェクト(撃破に重ねる。量はレアリティでスケール) */
-  if (ev.procs.some(p => p.name === aSkill.name)) {
+  if (ev.procs.some(p => p.name === aSkill.name) || moonHit || ev.procs.some(p => p.name === '百鬼夜行の総帥')) {
     if (aSkill.kind === 'crit') {
       /* 炎: 立ち昇る火柱+火の粉 */
       FX.pillar(c.x, c.y, kindFx);
       if (tier >= 2) setTimeout(() => FX.pillar(c.x, c.y, kindFx), 140);
       FX.ring(c.x, c.y, kindFx[2], Math.round(18 * scale), 110);
       setTimeout(() => FX.burst(c.x, c.y, [...kindFx], Math.round(26 * scale), 9), 120);
-    } else if (aSkill.kind === 'moon') {
+    } else if (aSkill.kind === 'moon' || moonHit) {
       /* 月光: 天から降る光柱+藍紫の月輪 */
-      FX.pillar(c.x, c.y, kindFx);
-      setTimeout(() => FX.pillar(c.x, c.y, kindFx), 140);
-      FX.ring(c.x, c.y, kindFx[0], 22, 130);
-      FX.converge(c.x, c.y, kindFx[1], Math.round(18 * scale), 120);
-      setTimeout(() => FX.burst(c.x, c.y, [...kindFx], Math.round(28 * scale), 8.5), 120);
+      const moonFx = SKILL_KIND_FX.moon;
+      FX.pillar(c.x, c.y, moonFx);
+      setTimeout(() => FX.pillar(c.x, c.y, moonFx), 140);
+      FX.ring(c.x, c.y, moonFx[0], 22, 130);
+      FX.converge(c.x, c.y, moonFx[1], Math.round(18 * scale), 120);
+      setTimeout(() => FX.burst(c.x, c.y, [...moonFx], Math.round(28 * scale), 8.5), 120);
     } else if (aSkill.kind === 'heads') {
       /* 八岐の首: 多段斬撃の連打 */
       FX.slash(c.x, c.y, true);
@@ -2229,34 +2247,14 @@ function bossChip(): HTMLSpanElement {
   return type;
 }
 
-function ssrIntroLines(id: string): string[] {
+/* スキル本文と重ならない追加情報だけ。異装・覚醒・因縁 */
+function catalogExtraLines(id: string): string[] {
   const def = YOKAI[id];
-  if (def.rarity !== 'SSR') return [];
   const lines: string[] = [];
-  if (def.variantOf) lines.push('異装: 通常版と同じ性能。専用演出と覚醒技名を持つ');
-  if (def.skill.kind === 'moon') {
-    lines.push(`月齢: 満月に駒を取ると確定会心 ×${def.skill.mult}`);
-  } else if (def.skill.kind === 'heads') {
-    lines.push(`成長: 駒を取るごとに与ダメ+${Math.round(def.skill.step * 100)}%(最大+${Math.round(def.skill.step * def.skill.max * 100)}%)`);
-  } else if (def.skill.kind === 'legion') {
-    lines.push(`布陣: 盤上の味方1体ごとに与ダメ+${Math.round(def.skill.per * 100)}%(最大+${Math.round(def.skill.cap * 100)}%)`);
-  } else if (def.skill.kind === 'crit') {
-    lines.push(`会心: 駒を取った時${Math.round(def.skill.chance * 100)}%でダメージ×${def.skill.mult}`);
-  } else if (def.skill.kind === 'charm') {
-    lines.push('傾国: 取った駒をその場で味方にし、自身は元マスへ戻る');
-  } else if (def.skill.kind === 'recall') {
-    lines.push('回帰: 取られても自分の持ち駒に戻る');
-  } else if (def.skill.kind === 'hydra') {
-    lines.push(`八岐: 取られても隣接へ逃げる(${def.skill.extra}回まで)。大将は取れない`);
-  } else if (def.skill.kind === 'famine') {
-    lines.push(`飢餓: 飢餓の夜の取りが×${def.skill.mult}かつ魂力${def.skill.heal}回復`);
-  } else if (def.skill.kind === 'dual') {
-    lines.push('双面: 取ったあと隣接の別敵(大将以外)を追撃(2体目はダメージ半分)');
-  }
-  /* veil のスキル本文が十分なため、SSR特性での重複要約は出さない */
-  if (def.awakenName) lines.push(`覚醒: ${def.awakenName} / 自分の手番3回のあいだATK×${AWAKEN_ATK}`);
+  if (def.variantOf) lines.push('異装: 性能は通常版と同じ');
+  if (def.awakenName) lines.push(`覚醒: ${def.awakenName}（自ターン3回 ATK×${AWAKEN_ATK}）`);
   const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(id)));
-  if (rs) lines.push(`因縁: ${rs.name}`);
+  if (rs) lines.push(`因縁【${rs.name}】${rs.desc}`);
   return lines;
 }
 
@@ -2284,7 +2282,7 @@ function renderPieceCatalogCards() {
     .filter(def => rarityFilter === 'all' || def.rarity === rarityFilter)
     .filter(def => {
       if (!q) return true;
-      return `${def.name} ${def.moveText} ${def.skill.name} ${def.skill.desc} ${ssrIntroLines(def.id).join(' ')}`.toLowerCase().includes(q);
+      return `${def.name} ${def.moveText} ${def.skill.name} ${def.skill.desc} ${catalogExtraLines(def.id).join(' ')}`.toLowerCase().includes(q);
     })
     .sort((a, b) =>
       Number(!a.boss) - Number(!b.boss)
@@ -2362,14 +2360,11 @@ function openPieceDetail(id: string) {
   $('piece-detail-move').textContent = def.moveText;
   $('piece-detail-skill-name').textContent = def.skill.name;
   const records = Records.get(def.skill.name);
-  let skillDesc = def.skill.desc;
-  const introLines = ssrIntroLines(def.id);
-  if (introLines.length > 0) skillDesc += `\n【SSR特性】${introLines.join('\n')}`;
-  if (def.awakenName && introLines.length === 0) skillDesc += `\n【覚醒技】${def.awakenName} ― 覚醒ゲージ満タンで発動、自分の手番3回のあいだATK×${AWAKEN_ATK}`;
-  const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(def.id)));
-  if (rs) skillDesc += `\n【因縁効果】${rs.desc}`;
-  if (records > 0) skillDesc += `\n通算発動 ${records}回`;
-  $('piece-detail-skill-desc').textContent = skillDesc;
+  const extras = catalogExtraLines(def.id);
+  if (records > 0) extras.push(`通算発動 ${records}回`);
+  $('piece-detail-skill-desc').textContent = extras.length
+    ? `${def.skill.desc}\n${extras.join('\n')}`
+    : def.skill.desc;
   $('modal-piece-detail').classList.remove('hidden');
 }
 

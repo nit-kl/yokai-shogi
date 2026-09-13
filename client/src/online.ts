@@ -61,6 +61,7 @@ export function eventsForView(events: GameEvent[], side: Side): GameEvent[] {
       case 'promote': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
       case 'awaken': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
       case 'hunger': return { ...event, hp: { p: event.hp.e, e: event.hp.p } };
+      case 'cellar': return { ...event, side: flipSide(event.side), hp: { p: event.hp.e, e: event.hp.p } };
       case 'gameover': return { ...event, winner: event.winner ? flipSide(event.winner) : null };
       case 'capture':
         return {
