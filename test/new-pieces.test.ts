@@ -162,18 +162,15 @@ test('ストック駒(tenome): 手の目は取られたとき280の反撃ダメ�
   expect(s.hp.e).toBe(3000 - 280);
 });
 
-test('ストック駒(gashadokuro): 飢餓の夜の取りが1.8倍かつ250回復', () => {
+test('ストック駒(gashadokuro): 味方の討伐で骨が積まれる', () => {
   const s = blank();
-  s.turn = 'p';
-  s.hp.p = 2000;
-  s.plies = 10;
-  s.lastCapturePly = 0;
-  put(s, 2, 3, 'gashadokuro', 'p');
-  put(s, 2, 2, 'ittan', 'e');
+  s.turn = 'e';
+  put(s, 2, 5, 'gashadokuro', 'p');
+  put(s, 2, 3, 'kooni', 'p');
+  put(s, 2, 2, 'kooni', 'e');
   put(s, 0, 0, 'ittan', 'e');
-  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-  expect(ev.damage).toBe(Math.round(410 * 1.8));
-  expect(s.hp.p).toBe(2250);
+  cap(s, 2, 2, 2, 3, { rng: false });
+  expect(s.board[5][2]?.bones).toBe(1);
 });
 
 test('ストック駒(sunekosuri): すねこすりは敵の会心スキルを封じること', () => {

@@ -409,29 +409,70 @@ test('charm より recall が優先され、茨木は寝返りしない', () => 
   expect(s.board.flat().some(pc => pc?.id === 'ibaraki')).toBe(false);
 });
 
-test('famine: 飢餓の夜のみ与ダメ1.8倍かつ250回復', () => {
-  const atk = () => {
-    const s = blank();
-    s.turn = 'p';
-    s.hp.p = 2000;
-    put(s, 2, 3, 'gashadokuro', 'p');
-    put(s, 2, 2, 'ittan', 'e');
-    put(s, 0, 0, 'shuten', 'e');
-    put(s, 0, 5, 'ittan', 'p');
-    return s;
-  };
-  const normal = atk();
-  const ev0 = capEv(cap(normal, 2, 3, 2, 2, { rng: false }));
-  expect(ev0.damage).toBe(410);
-  expect(normal.hp.p).toBe(2000);
+test('bones: 味方の討伐で骨が積み、がしゃどくろの与ダメが増える', () => {
+  const s = blank();
+  s.turn = 'e';
+  put(s, 2, 5, 'gashadokuro', 'p');
+  put(s, 2, 3, 'kooni', 'p');
+  put(s, 2, 2, 'kooni', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  cap(s, 2, 2, 2, 3, { rng: false });
+  expect(s.board[5][2]?.bones).toBe(1);
 
-  const hungry = atk();
-  hungry.plies = 10;
-  hungry.lastCapturePly = 0;
-  const ev1 = capEv(cap(hungry, 2, 3, 2, 2, { rng: false }));
-  expect(ev1.damage).toBe(Math.round(410 * 1.8));
-  expect(hungry.hp.p).toBe(2250);
-  expect(ev1.heal).toBe(250);
+  s.turn = 'p';
+  put(s, 2, 4, 'ittan', 'e');
+  const ev = capEv(cap(s, 2, 5, 2, 4, { rng: false }));
+  expect(ev.damage).toBe(Math.round(410 * 1.08));
+});
+
+test('bones: 化け・八岐の逃げ・傾国では骨が積まれない', () => {
+  const decoy = blank();
+  decoy.turn = 'e';
+  put(decoy, 0, 5, 'gashadokuro', 'p');
+  put(decoy, 2, 3, 'tanuki', 'p');
+  put(decoy, 2, 2, 'kooni', 'e');
+  put(decoy, 0, 0, 'shuten', 'e');
+  cap(decoy, 2, 2, 2, 3, { rng: false });
+  expect(decoy.board[5][0]?.bones, '化け').toBeUndefined();
+
+  const hydra = blank();
+  hydra.turn = 'e';
+  put(hydra, 0, 5, 'gashadokuro', 'p');
+  put(hydra, 2, 2, 'yamata', 'p');
+  put(hydra, 2, 1, 'kappa', 'e');
+  put(hydra, 0, 0, 'shuten', 'e');
+  cap(hydra, 2, 1, 2, 2, { rng: false });
+  expect(hydra.board[5][0]?.bones, '八岐の逃げ').toBeUndefined();
+
+  const charm = blank();
+  charm.turn = 'e';
+  put(charm, 0, 5, 'gashadokuro', 'p');
+  put(charm, 2, 3, 'kooni', 'p');
+  put(charm, 2, 2, 'tamamo', 'e');
+  put(charm, 0, 0, 'shuten', 'e');
+  cap(charm, 2, 2, 2, 3, { rng: false });
+  expect(charm.board[5][0]?.bones, '傾国').toBeUndefined();
+});
+
+test('bones: 敵の討伐では骨が積まれない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'gashadokuro', 'p');
+  put(s, 2, 2, 'ittan', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  cap(s, 2, 3, 2, 2, { rng: false });
+  expect(s.board[2][2]?.bones).toBeUndefined();
+});
+
+test('bones: 上限は+40%', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'gashadokuro', 'p');
+  s.board[3][2]!.bones = 8;
+  put(s, 2, 2, 'ittan', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
+  expect(ev.damage).toBe(Math.round(410 * 1.4));
 });
 
 test('dual: 隣接の別敵を追撃でき、2体目はダメージ半分', () => {

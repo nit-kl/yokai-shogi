@@ -42,6 +42,7 @@ export type Skill =
   | { kind: 'recall'; name: string; desc: string }                            // 取られても自軍の持ち駒に戻る
   | { kind: 'hydra'; name: string; desc: string; extra: number }              // 取られても隣接へ逃げる(extra回)
   | { kind: 'famine'; name: string; desc: string; mult: number; heal: number } // 飢餓の夜に与ダメ倍率+回復
+  | { kind: 'bones'; name: string; desc: string; per: number; cap: number }   // 味方の討伐で与ダメ成長
   | { kind: 'dual'; name: string; desc: string; mult: number };               // 取ったあと隣接の別敵を追撃
 
 export interface YokaiDef {
@@ -472,7 +473,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'gashadokuro', name: 'がしゃどくろ', atk: 410, rarity: 'SSR', gachaOnly: true,
     img: img('gashadokuro'), imgSm: imgSm('gashadokuro'),
     moveText: '前3方向と横2方向、後ろに1マス',
-    skill: { kind: 'famine', name: '餓鬼の骨', desc: '飢餓の夜のあいだ、駒を取るとダメージ1.8倍かつ自軍の魂力を250回復する', mult: 1.8, heal: 250 },
+    skill: {
+      kind: 'bones', name: '骨の山',
+      desc: '味方が討たれるたび骨が1つ。与ダメージが骨1つにつき+8%(最大+40%)',
+      per: 0.08, cap: 0.4,
+    },
     moves: { steps: [[0,-1], [1,-1], [-1,-1], [1,0], [-1,0], [0,1]] },
     awakenName: '餓鬼髑髏',
   },

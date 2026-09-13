@@ -126,11 +126,12 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
   recall: ['#ffdbc2', '#ff4d4d', '#8d47d6'],  // 羅生門
   hydra: ['#ffe2b8', '#ff8a3c', '#8d1f1f'],   // 八岐
   famine: ['#e8d8c8', '#8a6a4a', '#3a2010'],  // 餓鬼
+  bones: ['#e8d8c8', '#8a6a4a', '#3a2010'],   // 骨の山
   dual: ['#ffe0e8', '#e05070', '#8a1030'],    // 双面
   cellar: ['#ffe6c8', '#d4a017', '#8a1020'],  // 酒蔵
 };
 /* 会心系(発動="当たり")として扱うスキル */
-const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads', 'famine']);
+const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads', 'famine', 'bones']);
 
 /* レアリティ段階(演出の格): N=0, R=1, SR=2, SSR・異装=3 */
 function rarityTier(id: string): 0 | 1 | 2 | 3 {

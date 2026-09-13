@@ -18,6 +18,7 @@ export interface Piece {
   owner: Side;
   promoted: boolean;
   kills?: number;       // heads(撃破成長): この駒の撃破数。取られて打ち直されるとリセット
+  bones?: number;       // bones: 味方の討伐数。盤を離れると消える
   hydra?: number;       // hydra: 残りの逃げ回数。未設定ならスキルの extra として扱う
   awakenUntil?: number; // 覚醒の有効期限(この手数まで。plies基準)
   enraged?: boolean;    // foxBond(妖狐相伝): 次の攻撃が確定会心
@@ -515,6 +516,28 @@ export const Game = {
     return n;
   },
 
+  addBonesForFallenAlly(
+    s: GameState, fallenSide: Side, fallen: Piece, rng: boolean, procs: SkillProc[],
+  ): void {
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const pc = s.board[y][x];
+        if (!pc || pc.owner !== fallenSide || pc === fallen) continue;
+        const def = YOKAI[pc.id];
+        const sk = def.skill;
+        if (sk.kind !== 'bones') continue;
+        const max = sk.per > 0 ? Math.round(sk.cap / sk.per) : 0;
+        pc.bones = Math.min(max, (pc.bones ?? 0) + 1);
+        if (rng) {
+          procs.push({
+            name: sk.name, owner: fallenSide, img: def.img,
+            text: `骨が積まれた(${pc.bones})`,
+          });
+        }
+      }
+    }
+  },
+
   applyCellar(s: GameState, side: Side, events: GameEvent[]): void {
     const found = this.findSkillOnBoard(s, side, 'cellar');
     if (!found || found.sk.kind !== 'cellar') return;
@@ -781,6 +804,13 @@ export const Game = {
     } else if (sk.kind === 'famine' && this.hungerActive(s)) {
       mult *= sk.mult;
       if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `飢餓の巨骨 ×${sk.mult}! 魂力${sk.heal}回復` });
+    } else if (sk.kind === 'bones') {
+      const n = attacker.bones ?? 0;
+      const bonesMult = Math.min(sk.cap, sk.per * n);
+      if (bonesMult > 0) {
+        mult *= 1 + bonesMult;
+        if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `骨の山 +${Math.round(bonesMult * 100)}%!` });
+      }
     }
 
     /* 大将オーラ: 取った駒ではなく盤上の九尾/ぬらりひょんが効く */
@@ -911,6 +941,9 @@ export const Game = {
       charm = { name: sk.name, img: aDef.img };
       if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `${vDef.name}を味方にした!` });
     }
+
+    const trulyFallen = !hydraTo && !charmOk && vDef.skill.kind !== 'decoy';
+    if (trulyFallen && !vDef.boss) this.addBonesForFallenAlly(s, foe, victim, rng, procs);
 
     let explode: CaptureEvent['explode'] = null;
     if (vDef.skill.kind === 'explode') {

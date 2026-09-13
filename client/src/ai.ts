@@ -53,6 +53,7 @@ export const AI = {
     if (def.skill.kind === 'ember') v += 55;
     if (def.skill.kind === 'spawn') v += 90;
     if (def.skill.kind === 'famine') v += 85;
+    if (def.skill.kind === 'bones') v += 80 + (pc.bones ?? 0) * 40;
     if (def.skill.kind === 'dual') v += 95;
     if (def.skill.kind === 'legion') v += 70;
     if (def.skill.kind === 'moon') v += 80;
