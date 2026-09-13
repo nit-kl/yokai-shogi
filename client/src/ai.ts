@@ -5,7 +5,7 @@
    ============================================================ */
 
 import { YOKAI, COLS, ROWS } from '../../shared/data';
-import { Game, HUNGER_GRACE, AWAKEN_MAX } from '../../shared/game';
+import { Game, AWAKEN_MAX } from '../../shared/game';
 import type { Action, GameState, Piece, Side } from '../../shared/game';
 
 export type AIDifficulty = 'easy' | 'normal' | 'hard';
@@ -56,6 +56,7 @@ export const AI = {
     if (def.skill.kind === 'dual') v += 95;
     if (def.skill.kind === 'legion') v += 70;
     if (def.skill.kind === 'moon') v += 80;
+    if (def.skill.kind === 'cellar') v += 85;
     if (def.rarity === 'SSR') v += 40;
     else if (def.rarity === 'SR') v += 20;
     return v;
@@ -360,8 +361,9 @@ export const AI = {
 
   hungerScore(s: GameState): number {
     const idle = Game.hungerIdle(s);
-    if (idle <= HUNGER_GRACE) {
-      if (idle >= HUNGER_GRACE - 2) {
+    const grace = Game.hungerGraceOf(s, 'e');
+    if (idle <= grace) {
+      if (idle >= grace - 2) {
         const hpLead = s.hp.e - s.hp.p;
         return hpLead > 200 ? -15 : 25;
       }

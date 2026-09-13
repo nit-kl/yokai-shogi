@@ -31,5 +31,10 @@ describe('オンライン対戦の後手視点変換', () => {
     });
     expect(eventsForView([{ t: 'move', uid: 1, from: { x: 3, y: 1 }, to: { x: 3, y: 2 } }], 'e'))
       .toEqual([{ t: 'move', uid: 1, from: { x: 1, y: 4 }, to: { x: 1, y: 3 } }]);
+    expect(eventsForView([{
+      t: 'cellar', side: 'e', heal: 50, name: '酒蔵', img: 'x', hp: { p: 3000, e: 2050 },
+    }], 'e')).toEqual([{
+      t: 'cellar', side: 'p', heal: 50, name: '酒蔵', img: 'x', hp: { p: 2050, e: 3000 },
+    }]);
   });
 });

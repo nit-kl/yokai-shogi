@@ -51,7 +51,7 @@ test('moon: 満月の手番は会心が確定発動する(乱数不要)', () => 
   put(s, 0, 5, 'ittan', 'p');
   const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 })); // 乱数は最悪値でも確定
   expect(ev.damage, '満月: 400×2').toBe(800);
-  expect(ev.procs.some(p => p.name === '妖狐の業火')).toBe(true);
+  expect(ev.procs.some(p => p.name === '月の主')).toBe(true);
 });
 
 test('moon: 期待値計算(AI読み)でも満月は決定的に評価される', () => {
@@ -79,6 +79,32 @@ test('moon: 砂かけ婆(jam)は満月会心も封じる', () => {
   put(s, 0, 5, 'ittan', 'p');
   const ev = capEv(cap(s, 2, 3, 2, 2));
   expect(ev.damage, '封じ: 素のATK').toBe(400);
+});
+
+test('moon: 九尾が盤上なら味方の取りにも満月会心が乗る', () => {
+  const s = blank();
+  s.turn = 'p';
+  setMoon(s, true);
+  put(s, 2, 5, 'kyubi', 'p');
+  put(s, 2, 3, 'kooni', 'p');
+  put(s, 2, 2, 'ittan', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 }));
+  expect(ev.damage, '小鬼150×2').toBe(300);
+  expect(ev.procs.some(p => p.name === '月の主')).toBe(true);
+});
+
+test('moon: 九尾が盤上にいないと味方取りは満月でも素', () => {
+  const s = blank();
+  s.turn = 'p';
+  setMoon(s, true);
+  put(s, 2, 3, 'kooni', 'p');
+  put(s, 2, 2, 'ittan', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 }));
+  expect(ev.damage).toBe(150);
+  expect(ev.procs.some(p => p.name === '月の主')).toBe(false);
 });
 
 test('moon: 月齢は両者共通で1夜=2手で進む', () => {
@@ -165,6 +191,62 @@ test('legion: 盤上の味方1体につき+5%、上限+40%', () => {
   expect(mk(10), '10体でも上限+40%').toBe(Math.round(430 * 1.4));
 });
 
+test('legion: ぬらりひょんが盤上なら味方の取りにも総帥が乗る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 0, 5, 'nurarihyon', 'p');
+  put(s, 2, 3, 'kooni', 'p');
+  put(s, 1, 5, 'ittan', 'p');
+  put(s, 2, 2, 'nue', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 }));
+  expect(ev.damage, '他味方2体+10%').toBe(Math.round(150 * 1.1));
+  expect(ev.procs.some(p => p.name === '百鬼夜行の総帥')).toBe(true);
+});
+
+test('cellar: 無取りの手番終了でも魂力が回復する', () => {
+  const s = blank();
+  s.turn = 'p';
+  s.hp.p = 1800;
+  put(s, 2, 4, 'shuten', 'p');
+  put(s, 0, 0, 'nurarihyon', 'e');
+  const evs = Game.applyAction(s, { kind: 'move', from: { x: 2, y: 4 }, to: { x: 3, y: 4 } }, { rng: false });
+  const cellar = evs.find(e => e.t === 'cellar');
+  expect(cellar && cellar.t === 'cellar' ? cellar.heal : 0).toBe(50);
+  expect(s.hp.p).toBe(1850);
+});
+
+test('cellar: 満魂では回復イベントを出さない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'shuten', 'p');
+  put(s, 0, 0, 'nurarihyon', 'e');
+  const evs = Game.applyAction(s, { kind: 'move', from: { x: 2, y: 4 }, to: { x: 3, y: 4 } }, { rng: false });
+  expect(evs.some(e => e.t === 'cellar')).toBe(false);
+  expect(s.hp.p).toBe(3000);
+});
+
+test('cellar: 飢餓の猶予が自軍だけ+4手', () => {
+  const s = blank();
+  s.turn = 'p';
+  s.lastCapturePly = 0;
+  put(s, 2, 4, 'shuten', 'p');
+  put(s, 2, 1, 'kappa', 'e');
+  put(s, 0, 0, 'nurarihyon', 'e');
+  s.plies = 8;
+  expect(Game.hungerActive(s)).toBe(false);
+  expect(Game.hungerGraceOf(s, 'p')).toBe(12);
+  expect(Game.hungerGraceOf(s, 'e')).toBe(8);
+  s.plies = 9;
+  expect(Game.hungerActive(s)).toBe(true);
+  expect(Game.hungerDraining(s, 'p')).toBe(false);
+  expect(Game.hungerDraining(s, 'e')).toBe(true);
+  s.turn = 'e';
+  Game.applyAction(s, { kind: 'move', from: { x: 2, y: 1 }, to: { x: 3, y: 1 } }, { rng: false });
+  expect(s.hp.e).toBe(3000 - 50);
+  expect(s.hp.p).toBe(3000);
+});
+
 /* ---------- 覚醒(awaken) ---------- */
 
 test('awaken: 取り合いで両陣営のゲージが+1ずつ溜まる', () => {
@@ -229,32 +311,36 @@ test('awaken: 発動でATK1.5倍が自分の3手番続き、その後切れる�
 
 /* ---------- 因縁共鳴 ---------- */
 
-test('oniFeast(鬼の宴): 茨木が盤上にいると酒呑の会心率+15%(期待値で検証)', () => {
+test('oniFeast(鬼の宴): 茨木が盤上にいると酒蔵の回復が+25', () => {
   const mk = (withPartner: boolean) => {
     const s = blank();
     s.turn = 'p';
-    put(s, 2, 3, 'shuten', 'p'); // ATK400 20%×2
+    s.hp.p = 2000;
+    put(s, 2, 4, 'shuten', 'p');
     if (withPartner) put(s, 4, 5, 'ibaraki', 'p');
     else put(s, 4, 5, 'kyubi', 'p');
-    put(s, 2, 2, 'ittan', 'e');
     put(s, 0, 0, 'nurarihyon', 'e');
-    put(s, 0, 5, 'ittan', 'p');
-    return capEv(cap(s, 2, 3, 2, 2, { rng: false })).damage;
+    const evs = Game.applyAction(s, { kind: 'move', from: { x: 2, y: 4 }, to: { x: 3, y: 4 } }, { rng: false });
+    return { heal: evs.find(e => e.t === 'cellar'), hp: s.hp.p };
   };
-  expect(mk(false)).toBe(Math.round(400 * (1 + 0.2 * 1)));   // 期待倍率1.20
-  expect(mk(true)).toBe(Math.round(400 * (1 + 0.35 * 1)));   // 会心率35% → 期待倍率1.35
+  const alone = mk(false);
+  expect(alone.heal && alone.heal.t === 'cellar' ? alone.heal.heal : 0).toBe(50);
+  expect(alone.hp).toBe(2050);
+  const paired = mk(true);
+  expect(paired.heal && paired.heal.t === 'cellar' ? paired.heal.heal : 0).toBe(75);
+  expect(paired.hp).toBe(2075);
 });
 
-test('oniFeast: 異装(鬼神・酒呑童子)でも共鳴する', () => {
+test('oniFeast: 異装(鬼神・酒呑童子)でも酒蔵が共鳴する', () => {
   const s = blank();
   s.turn = 'p';
-  put(s, 2, 3, 'shuten_kishin', 'p');
+  s.hp.p = 2000;
+  put(s, 2, 4, 'shuten_kishin', 'p');
   put(s, 4, 5, 'ibaraki_rashomon', 'p');
-  put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'nurarihyon', 'e');
-  put(s, 0, 5, 'ittan', 'p');
-  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-  expect(ev.damage).toBe(Math.round(400 * 1.35));
+  const evs = Game.applyAction(s, { kind: 'move', from: { x: 2, y: 4 }, to: { x: 3, y: 4 } }, { rng: false });
+  const cellar = evs.find(e => e.t === 'cellar');
+  expect(cellar && cellar.t === 'cellar' ? cellar.heal : 0).toBe(75);
 });
 
 test('foxBond(妖狐相伝): 玉藻前を取られると九尾が激怒し、次の攻撃が確定会心', () => {

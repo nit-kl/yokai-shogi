@@ -28,9 +28,10 @@ export type Skill =
   | { kind: 'decoy'; name: string; desc: string }
   | { kind: 'explode'; name: string; desc: string }
   /* SSR専用スキル(会心の「運任せ」を「狙って出す」に置き換える: doc 08) */
-  | { kind: 'moon'; name: string; desc: string; mult: number }                // 満月の手番は会心確定(それ以外は不発)
+  | { kind: 'moon'; name: string; desc: string; mult: number }                // 盤上にいる間、満月の味方取りが会心確定
   | { kind: 'heads'; name: string; desc: string; step: number; max: number }  // この駒の撃破数だけ与ダメ成長
-  | { kind: 'legion'; name: string; desc: string; per: number; cap: number } // 盤上の味方数で与ダメ加算
+  | { kind: 'legion'; name: string; desc: string; per: number; cap: number } // 盤上にいる間、味方の取りが軍勢で増幅
+  | { kind: 'cellar'; name: string; desc: string; heal: number; hungerExtra: number; feastHeal: number } // 毎自ターン回復+飢餓猶予
   /* 食い逃げ・残火 */
   | { kind: 'retreat'; name: string; desc: string }                           // 取ったあと自動で元マスへ戻る
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
@@ -91,7 +92,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'kyubi', name: '九尾の狐', boss: true, atk: 400, rarity: 'SSR',
     img: img('kyubi'), imgSm: imgSm('kyubi'),
     moveText: '全方向に1マス',
-    skill: { kind: 'moon', name: '妖狐の業火', desc: '満月の夜に駒を取ると、狐火が燃え上がり、必ずダメージ2倍(月齢は対局ステータスで確認)', mult: 2 },
+    skill: {
+      kind: 'moon', name: '月の主',
+      desc: '満月の夜、味方の取りがダメージ2倍',
+      mult: 2,
+    },
     moves: { steps: STEPS_ALL8 },
     awakenName: '九尾開眼',
   },
@@ -99,7 +104,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'shuten', name: '酒呑童子', boss: true, atk: 400, rarity: 'SSR',
     img: img('shuten'), imgSm: imgSm('shuten'),
     moveText: '全方向に1マス',
-    skill: { kind: 'crit', name: '鬼神の剛腕', desc: '駒を取った時、20%で剛腕が唸りダメージ2倍', chance: 0.2, mult: 2 },
+    skill: {
+      kind: 'cellar', name: '酒蔵',
+      desc: '自ターン終了時に魂力+50。自軍の飢餓猶予+4手',
+      heal: 50, hungerExtra: 4, feastHeal: 25,
+    },
     moves: { steps: STEPS_ALL8 },
     awakenName: '鬼神羅刹',
   },
@@ -324,7 +333,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'nurarihyon', name: 'ぬらりひょん', boss: true, atk: 430, rarity: 'SSR', gachaOnly: true,
     img: img('nurarihyon'), imgSm: imgSm('nurarihyon'),
     moveText: '全方向に1マス',
-    skill: { kind: 'legion', name: '百鬼夜行の総帥', desc: '盤上の味方1体につき与えるダメージ+5%(最大+40%)。軍勢を率いるほど強くなる', per: 0.05, cap: 0.4 },
+    skill: {
+      kind: 'legion', name: '百鬼夜行の総帥',
+      desc: '味方の取りが、他の味方1体につき+5%(最大+40%)',
+      per: 0.05, cap: 0.4,
+    },
     moves: { steps: STEPS_ALL8 },
     awakenName: '百鬼夜行・真',
   },
@@ -624,12 +637,12 @@ export interface Resonance {
 export const RESONANCES: readonly Resonance[] = [
   {
     pair: ['shuten', 'ibaraki'], name: '鬼の宴', effect: 'oniFeast',
-    desc: '酒呑童子と茨木童子が共に盤上にいる間、酒呑童子の会心率+15%',
+    desc: '両者が盤上にいると、酒蔵の回復+25',
     colors: ['#ffdbc2', '#ff4d4d', '#8d47d6'],
   },
   {
     pair: ['kyubi', 'tamamo'], name: '妖狐相伝', effect: 'foxBond',
-    desc: '九尾の狐と玉藻前が盤上にいるとき、片方が取られると残った方が激怒し、次の攻撃が確定会心になる',
+    desc: '片方が取られると、残った方の次の取りが確定会心',
     colors: ['#fff8df', '#ff9d3c', '#b21f32'],
   },
 ];

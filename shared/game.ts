@@ -6,7 +6,7 @@
    ============================================================ */
 
 import { COLS, ROWS, MAX_HP, ZONE_DEPTH, SETUP, YOKAI, RESONANCES, baseIdOf } from './data';
-import type { Side, Resonance } from './data';
+import type { Side, Resonance, Skill, YokaiDef } from './data';
 
 export type { Side };
 
@@ -115,6 +115,7 @@ export type GameEvent =
   | { t: 'awaken'; uid: number; id: string; owner: Side; to: Pos; name: string; until: number }
   | CaptureEvent
   | { t: 'hunger'; drain: number; hp: Record<Side, number> }
+  | { t: 'cellar'; side: Side; heal: number; name: string; img: string; hp: Record<Side, number> }
   | { t: 'gameover'; winner: Side | null; reason: GameOverReason };
 
 export interface ApplyOptions {
@@ -210,8 +211,16 @@ export const Game = {
   hungerActive(s: GameState): boolean {
     return this.hungerIdle(s) > HUNGER_GRACE;
   },
-  hungerTurnsLeft(s: GameState): number {
-    return Math.max(0, HUNGER_GRACE - this.hungerIdle(s));
+  hungerGraceOf(s: GameState, side: Side): number {
+    const found = this.findSkillOnBoard(s, side, 'cellar');
+    const extra = found && found.sk.kind === 'cellar' ? found.sk.hungerExtra : 0;
+    return HUNGER_GRACE + extra;
+  },
+  hungerDraining(s: GameState, side: Side): boolean {
+    return this.hungerIdle(s) > this.hungerGraceOf(s, side);
+  },
+  hungerTurnsLeft(s: GameState, side: Side = 'p'): number {
+    return Math.max(0, this.hungerGraceOf(s, side) - this.hungerIdle(s));
   },
 
   /* ---------- 覚醒(SSR必殺技) ---------- */
@@ -480,13 +489,43 @@ export const Game = {
   },
 
   hasSkill(s: GameState, side: Side, kind: string): boolean {
+    return this.findSkillOnBoard(s, side, kind) !== null;
+  },
+
+  findSkillOnBoard(s: GameState, side: Side, kind: string): { pc: Piece; def: YokaiDef; sk: Skill } | null {
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
         const pc = s.board[y][x];
-        if (pc && pc.owner === side && YOKAI[pc.id].skill.kind === kind) return true;
+        if (!pc || pc.owner !== side) continue;
+        const def = YOKAI[pc.id];
+        if (def.skill.kind === kind) return { pc, def, sk: def.skill };
       }
     }
-    return false;
+    return null;
+  },
+
+  countAllies(s: GameState, side: Side, except?: Piece): number {
+    let n = 0;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const pc = s.board[y][x];
+        if (pc && pc.owner === side && pc !== except) n++;
+      }
+    }
+    return n;
+  },
+
+  applyCellar(s: GameState, side: Side, events: GameEvent[]): void {
+    const found = this.findSkillOnBoard(s, side, 'cellar');
+    if (!found || found.sk.kind !== 'cellar') return;
+    let amount = found.sk.heal;
+    if (this.activeResonance(s, side, found.pc.id)?.effect === 'oniFeast') amount += found.sk.feastHeal;
+    const heal = Math.min(MAX_HP - s.hp[side], amount);
+    if (heal <= 0) return;
+    s.hp[side] += heal;
+    events.push({
+      t: 'cellar', side, heal, name: found.sk.name, img: found.def.img, hp: { ...s.hp },
+    });
   },
 
   comboMult(n: number): number { return Math.min(2, 1 + 0.25 * (n - 1)); },
@@ -638,12 +677,17 @@ export const Game = {
     }
 
     if (!s.winner) {
-      /* 飢餓の夜 */
+      /* 飢餓の夜。酒蔵持ちは自軍だけ猶予が伸びる */
       const idle = s.plies - s.lastCapturePly;
       if (idle > HUNGER_GRACE) {
-        s.hp.p = Math.max(0, s.hp.p - HUNGER_DRAIN);
-        s.hp.e = Math.max(0, s.hp.e - HUNGER_DRAIN);
-        events.push({ t: 'hunger', drain: HUNGER_DRAIN, hp: { ...s.hp } });
+        let drained = false;
+        for (const sd of ['p', 'e'] as const) {
+          if (idle > this.hungerGraceOf(s, sd)) {
+            s.hp[sd] = Math.max(0, s.hp[sd] - HUNGER_DRAIN);
+            drained = true;
+          }
+        }
+        if (drained) events.push({ t: 'hunger', drain: HUNGER_DRAIN, hp: { ...s.hp } });
         const pDead = s.hp.p <= 0;
         const eDead = s.hp.e <= 0;
         if (pDead && eDead) {
@@ -658,6 +702,8 @@ export const Game = {
         }
       }
     }
+
+    if (!s.winner && s.reason !== 'draw') this.applyCellar(s, side, events);
 
     if (!s.winner && s.reason !== 'draw') {
       s.turn = foe;
@@ -694,36 +740,23 @@ export const Game = {
     let mult = 1, bonus = 0;
     const sk = aDef.skill;
     const jammed = this.hasSkill(s, foe, 'jam');
-    if (jammed && (sk.kind === 'crit' || sk.kind === 'moon' || sk.kind === 'heads')) {
+    const moonLord = this.findSkillOnBoard(s, side, 'moon');
+    const commander = this.findSkillOnBoard(s, side, 'legion');
+    if (jammed && (sk.kind === 'crit' || sk.kind === 'heads' || !!moonLord)) {
       effects.push(...this.activeSkillEffects(s, foe, ['jam']));
     }
     const enraged = attacker.enraged === true;
     if (attacker.enraged) delete attacker.enraged;
 
     if (sk.kind === 'crit' && !jammed) {
-      let chance = sk.chance;
-      const feast = this.activeResonance(s, side, attacker.id);
-      if (feast?.effect === 'oniFeast') chance = Math.min(1, chance + 0.15);
+      const chance = sk.chance;
       if (rng) {
         if (enraged || rand() < chance) {
           mult *= sk.mult;
           procs.push({ name: sk.name, owner: side, img: aDef.img, text: `ダメージ${sk.mult}倍!` });
-          if (feast?.effect === 'oniFeast') {
-            procs.push({ name: `共鳴【${feast.name}】`, owner: side, img: aDef.img, text: '鬼の血が滾る! 会心率上昇中' });
-          }
         }
       } else {
         mult *= enraged ? sk.mult : 1 + chance * (sk.mult - 1);
-      }
-    } else if (sk.kind === 'moon' && !jammed) {
-      if (this.isFullMoonPly(ply) || enraged) {
-        mult *= sk.mult;
-        if (rng) {
-          procs.push({
-            name: sk.name, owner: side, img: aDef.img,
-            text: enraged && !this.isFullMoonPly(ply) ? `相伝の怒り 確定会心 ×${sk.mult}!` : `満月の妖気 ×${sk.mult}!`,
-          });
-        }
       }
     } else if (sk.kind === 'heads') {
       const lvl = Math.min(attacker.kills ?? 0, sk.max);
@@ -736,20 +769,6 @@ export const Game = {
         }
       }
       attacker.kills = (attacker.kills ?? 0) + 1;
-    } else if (sk.kind === 'legion') {
-      let allies = -1;
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          if (s.board[y][x]?.owner === side) allies++;
-        }
-      }
-      const legionMult = Math.min(sk.cap, sk.per * Math.max(0, allies));
-      if (legionMult > 0) {
-        mult *= 1 + legionMult;
-        if (rng) {
-          procs.push({ name: sk.name, owner: side, img: aDef.img, text: `百鬼の陣 +${Math.round(legionMult * 100)}%!` });
-        }
-      }
     } else if (sk.kind === 'zone' && this.inZone(side, to.y)) {
       bonus += sk.bonus;
       if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `敵陣強襲 +${sk.bonus}!` });
@@ -762,6 +781,33 @@ export const Game = {
     } else if (sk.kind === 'famine' && this.hungerActive(s)) {
       mult *= sk.mult;
       if (rng) procs.push({ name: sk.name, owner: side, img: aDef.img, text: `飢餓の巨骨 ×${sk.mult}! 魂力${sk.heal}回復` });
+    }
+
+    /* 大将オーラ: 取った駒ではなく盤上の九尾/ぬらりひょんが効く */
+    if (moonLord && moonLord.sk.kind === 'moon' && !jammed) {
+      const moonOn = this.isFullMoonPly(ply) || enraged;
+      if (moonOn) {
+        mult *= moonLord.sk.mult;
+        if (rng) {
+          procs.push({
+            name: moonLord.sk.name, owner: side, img: moonLord.def.img,
+            text: enraged && !this.isFullMoonPly(ply) ? `相伝の怒り 確定会心 ×${moonLord.sk.mult}!` : `月の主 満月の妖気 ×${moonLord.sk.mult}!`,
+          });
+        }
+      }
+    }
+    if (commander && commander.sk.kind === 'legion') {
+      const allies = this.countAllies(s, side, attacker);
+      const legionMult = Math.min(commander.sk.cap, commander.sk.per * Math.max(0, allies));
+      if (legionMult > 0) {
+        mult *= 1 + legionMult;
+        if (rng) {
+          procs.push({
+            name: commander.sk.name, owner: side, img: commander.def.img,
+            text: `百鬼の陣 +${Math.round(legionMult * 100)}%!`,
+          });
+        }
+      }
     }
 
     s.combo[side]++;
