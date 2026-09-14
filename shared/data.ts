@@ -225,10 +225,11 @@ export const YOKAI: Record<string, YokaiDef> = {
   suiko: {
     id: 'suiko', name: '水虎', atk: 180, rarity: 'SR', gachaOnly: true,
     img: img('suiko'), imgSm: imgSm('suiko'),
-    moveText: '縦横に1マス(成:全方向1マス)',
-    skill: { kind: 'aura', name: '大水の帳', desc: '盤上にいる間、滔々たる水壁で自軍の受けるダメージ-22%', reduce: 0.22 },
-    moves: { steps: STEPS_ORTHO4 },
-    promoted: { steps: STEPS_ALL8 },
+    moveText: '前3方向と横に1マス(成:金の動き)',
+    skill: { kind: 'heal', name: '潮を飲む', desc: '駒を取った時、引きずり込んだ潮で自軍の魂力を200回復する', amount: 200 },
+    moves: { steps: [[0,-1],[1,-1],[-1,-1],[1,0],[-1,0]] },
+    promoted: { steps: STEPS_GOLD },
+    dropLimit: 1,
   },
   oonyudo: {
     id: 'oonyudo', name: '大入道', atk: 140, rarity: 'SR', gachaOnly: true,

@@ -215,7 +215,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   kasha: ['Kasha', '1 square diagonally (promoted: diagonal + forward/back)', 'Hellfire Wheel', 'Captures in enemy territory deal +150 damage'],
   kamaitachi: ['Kamaitachi', 'Any distance forward (promoted: +1 sideways/back)', 'Vacuum Slash', 'A capture after moving at least 2 squares deals 1.8× damage'],
   hitouban: ['Hitoban', 'Any distance sideways +1 forward (promoted: +back/forward diagonals)', 'Flying Grudge', 'When captured, deals 300 counter damage to the captor'],
-  suiko: ['Suiko', '1 square orthogonally (promoted: 1 in any direction)', 'Great Water Veil', 'While on the board, your army takes 22% less damage'],
+  suiko: ['Suiko', '1 forward, forward-diagonal, or sideways (promoted: Gold General movement)', 'Drink the Tide', 'Capturing restores 200 HP to your army'],
   oonyudo: ['O-nyudo', '1 forward or sideways (promoted: orthogonal + forward diagonals)', 'Void Pressure', 'While on the board, your army takes 25% less damage'],
   daitengu: ['Great Tengu', 'Leaps 1–2 squares diagonally (promoted: +1 forward/back)', 'Tengu Gale', 'When captured, deals 400 counter damage to the captor'],
   raiju: ['Raiju', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Lingering Lightning', 'Leaves permanent lightning on the captured square. Allied captures there deal +120. Enemy captures there take 120 HP'],
