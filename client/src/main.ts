@@ -9,7 +9,7 @@ import {
 } from '../../shared/data';
 import type { Rarity, Side } from '../../shared/data';
 import { AWAKEN_ATK, AWAKEN_MAX, Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
-import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
+import type { Action, Ember, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
 import { AI } from './ai';
 import { HYAKKI_STAGE, soloBattleStage } from './solo';
@@ -30,9 +30,10 @@ import { SupportUI } from './support';
 import { MatchHourUI } from './match-hour';
 import { AnnouncementsUI } from './announcements';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
-import type { ClockPhase, ServerBattleMessage } from '../../shared/battle';
-import { OnlineConnection, actionToServer, eventsForView, stateForView } from './online';
-import { initializeLocale } from './locale';
+import type { ClockPhase, ServerBattleMessage, SkipStreak } from '../../shared/battle';
+import { SKIP_LIMIT } from '../../shared/battle';
+import { OnlineConnection, actionToServer, eventsForView, skipStreakForView, stateForView } from './online';
+import { initializeLocale, t } from './locale';
 import { confirmDialog } from './dialog';
 import {
   applyYokaiImage, isPlayerFacingText, userErrorMessage, yokaiDisplayName, yokaiOf,
@@ -68,6 +69,8 @@ let onlineTurnDeadline = 0;
 let onlineClockPhase: ClockPhase = 'main';
 let onlineTimerTickSec = -1;
 let onlineDisconnectDeadline = 0;
+let onlineSkipStreak: SkipStreak = { p: 0, e: 0 };
+let onlineSkipLimit = SKIP_LIMIT;
 let onlineTimerId: ReturnType<typeof setInterval> | null = null;
 let onlineQueueTimerId: ReturnType<typeof setTimeout> | null = null;
 let activeSoloStage: SoloStage = HYAKKI_STAGE;
@@ -441,7 +444,7 @@ function wireButtons() {
     AudioSys.play('select');
     for (const t of targets) cellEl(t.x, t.y).classList.add('hl-awaken');
   };
-  $('btn-resign').onclick = () => {
+    $('btn-resign').onclick = () => {
     if (!G || G.winner || (!onlineSide && busy)) return;
     void confirmDialog('投了しますか?', { title: '投了', ok: '投了する', cancel: 'やめる' }).then(ok => {
       if (!ok || !G || G.winner) return;
@@ -449,6 +452,10 @@ function wireButtons() {
       G.winner = 'e'; G.reason = 'resign';
       showResult();
     });
+  };
+  $('btn-skip-warning-ok').onclick = () => {
+    AudioSys.play('click');
+    hideSkipWarning();
   };
   $('btn-retry').onclick = () => {
     AudioSys.play('click');
@@ -719,6 +726,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     onlineSeq = message.seq;
     busy = G.turn !== 'p';
     setOnlineConnection('接続済み');
+    applyOnlineSkipStreak(message.skipStreak, message.skipLimit);
     setOnlineTurnTimer(message.remainMs, message.phase);
   } else if (message.t === 'events') {
     if (!onlineSide) return;
@@ -731,15 +739,21 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     if (G && !G.winner && G.reason !== 'draw') busy = G.turn !== 'p';
     renderOnlineTimers();
   } else if (message.t === 'your_turn') {
+    applyOnlineSkipStreak(message.skipStreak, message.skipLimit);
     setOnlineTurnTimer(message.remainMs, message.phase);
     if (G?.turn === 'p') { busy = false; showBanner('p'); }
   } else if (message.t === 'clock') {
     const enteredByoyomi = onlineClockPhase !== 'byoyomi' && message.phase === 'byoyomi';
+    applyOnlineSkipStreak(message.skipStreak, message.skipLimit);
     setOnlineTurnTimer(message.remainMs, message.phase);
     if (enteredByoyomi) {
       showByoyomiBanner();
       if (G?.turn === 'p') AudioSys.play('byoyomi');
     }
+  } else if (message.t === 'turn_skipped') {
+    applyOnlineSkipStreak(message.skipStreak, message.skipLimit);
+    setOnlineTurnTimer(message.remainMs, message.phase);
+    showTurnSkipped(message.side === onlineSide);
   } else if (message.t === 'opponent_disconnected') {
     setOpponentDisconnectTimer(message.graceMs);
   } else if (message.t === 'opponent_reconnected') {
@@ -755,6 +769,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     if (onlineEventYokai) Meta.addYokai(onlineEventYokai);
     clearOnlineMatch();
     stopOnlineTimer();
+    hideSkipWarning();
     await sleep(750); // 最終手のスキル演出後、ソロと同様に間を置いてからリザルトへ
     showResult();
   }
@@ -801,10 +816,14 @@ function stopOnlineTimer(): void {
   onlineTurnDeadline = 0;
   onlineClockPhase = 'main';
   onlineTimerTickSec = -1;
-  $('online-status').classList.remove('timer-warn', 'timer-low', 'timer-byoyomi', 'opponent-turn');
+  $('online-status').classList.remove('timer-warn', 'timer-low', 'timer-byoyomi', 'opponent-turn', 'skip-warned');
   $('screen-battle').classList.remove('timer-urgent');
   $('online-turn-hint').classList.add('hidden');
   $('online-turn-hint').textContent = '';
+  $('online-skip-warn').classList.add('hidden');
+  $('online-skip-warn').textContent = '';
+  onlineSkipStreak = { p: 0, e: 0 };
+  onlineSkipLimit = SKIP_LIMIT;
   clearOpponentDisconnectTimer();
 }
 
@@ -818,6 +837,7 @@ function setOnlineTurnTimer(remainMs: number, phase: ClockPhase = 'main'): void 
 function showByoyomiBanner(): void {
   const b = $('turn-banner');
   const own = G?.turn === 'p';
+  const final = clockPlayerSkipStreak() >= onlineSkipLimit - 1;
   b.className = '';
   b.replaceChildren();
   const label = document.createElement('span');
@@ -825,10 +845,59 @@ function showByoyomiBanner(): void {
   label.textContent = own ? '秒読み！' : '相手の秒読み！';
   const msg = document.createElement('span');
   msg.className = 'byoyomi-banner-msg';
-  msg.textContent = own ? '切れたら負け' : '切れれば勝ち';
+  msg.textContent = own
+    ? (final ? '次に切れたら負け' : '切れたら手番スキップ')
+    : (final ? '次に切れれば勝ち' : '切れれば手番スキップ');
   b.append(label, msg);
   void b.offsetWidth;
   b.classList.add('show-byoyomi');
+}
+
+function applyOnlineSkipStreak(streak: SkipStreak | undefined, limit?: number): void {
+  if (!onlineSide) return;
+  onlineSkipStreak = skipStreakForView(streak, onlineSide);
+  if (limit && limit > 0) onlineSkipLimit = limit;
+}
+
+function clockPlayerSkipStreak(): number {
+  return G?.turn === 'p' ? onlineSkipStreak.p : onlineSkipStreak.e;
+}
+
+function clockHintText(ownTurn: boolean, byoyomi: boolean): string {
+  const final = clockPlayerSkipStreak() >= onlineSkipLimit - 1;
+  if (byoyomi) {
+    if (ownTurn) return final ? '次に切れたら負け' : '切れたら手番スキップ';
+    return final ? '次に切れれば勝ち' : '切れれば手番スキップ';
+  }
+  if (ownTurn && final && onlineSkipStreak.p >= 1) return '次に切れたら負け';
+  return '';
+}
+
+function showTurnSkipped(own: boolean): void {
+  const b = $('turn-banner');
+  b.className = '';
+  b.replaceChildren();
+  const label = document.createElement('span');
+  label.className = 'byoyomi-banner-label';
+  label.textContent = own ? '時間切れ！' : '相手が時間切れ';
+  const msg = document.createElement('span');
+  msg.className = 'byoyomi-banner-msg';
+  msg.textContent = own ? '次に切れたら負け' : '手番を飛ばした';
+  b.append(label, msg);
+  void b.offsetWidth;
+  b.classList.add('show-skip');
+  AudioSys.play(own ? 'skip' : 'turn');
+  if (own) showSkipWarning();
+}
+
+function showSkipWarning(): void {
+  const modal = $('modal-skip-warning');
+  modal.classList.remove('hidden');
+  $('btn-skip-warning-ok').focus();
+}
+
+function hideSkipWarning(): void {
+  $('modal-skip-warning').classList.add('hidden');
 }
 
 function setOpponentDisconnectTimer(graceMs: number): void {
@@ -863,14 +932,21 @@ function renderOnlineTimers(): void {
   $('online-turn-time').textContent = formatCountdown(turnRemain, compact);
   $('online-turn-fill').style.width = `${Math.min(100, (turnRemain / spanMs) * 100)}%`;
   const hint = $('online-turn-hint');
-  hint.textContent = byoyomi ? (ownTurn ? '切れたら負け' : '切れれば勝ち') : '';
-  hint.classList.toggle('hidden', !byoyomi);
+  const hintText = clockHintText(ownTurn, byoyomi);
+  hint.textContent = hintText;
+  hint.classList.toggle('hidden', !hintText);
+
+  const skipWarn = $('online-skip-warn');
+  const warned = onlineSkipStreak.p >= 1;
+  skipWarn.textContent = warned ? '警告: 次の時間切れで負けです' : '';
+  skipWarn.classList.toggle('hidden', !warned);
 
   const status = $('online-status');
   status.classList.toggle('opponent-turn', !ownTurn);
   status.classList.toggle('timer-warn', warn);
   status.classList.toggle('timer-low', low);
   status.classList.toggle('timer-byoyomi', byoyomi);
+  status.classList.toggle('skip-warned', warned);
   $('screen-battle').classList.toggle('timer-urgent', ownTurn && low);
 
   if (ownTurn && low) {
@@ -936,9 +1012,7 @@ function buildBoardCells() {
       c.appendChild(Object.assign(document.createElement('div'), { className: 'hl' }));
       c.addEventListener('click', () => onCellClick(x, y));
       bindLongPress(c, () => {
-        const pc = G?.board[y][x];
-        if (!pc) return;
-        showInfo(pc.id, pc.promoted);
+        inspectCell(x, y);
       });
       wrap.appendChild(c);
     }
@@ -1063,14 +1137,35 @@ function renderAll() {
   renderEmbers();
 }
 
+function emberLabel(e: Ember): string {
+  if (e.mode === 'bolt') return `残雷 味方+${e.value} / 敵-${e.value}（永久）`;
+  if (e.mode === 'atk') return e.until < 0 ? `陽光 +${e.value}（永久）` : `陽光 +${e.value}`;
+  if (e.mode === 'heal') return `燐火 +${e.value}`;
+  if (e.src === 'umibozu') return e.until < 0 ? `渦潮 ${e.value}（永久）` : `渦潮 ${e.value}`;
+  return e.until < 0 ? `落とし穴 ${e.value}（永久）` : `落とし穴 ${e.value}`;
+}
+
+function liveEmberAt(x: number, y: number): Ember | undefined {
+  if (!G) return undefined;
+  const plies = G.plies ?? 0;
+  return (G.embers ?? []).find(e => e.x === x && e.y === y && Game.emberLive(e, plies));
+}
+
 function renderEmbers() {
   document.querySelectorAll('.ember-mark').forEach(el => el.remove());
   if (!G?.embers) return;
+  const plies = G.plies ?? 0;
   for (const e of G.embers) {
-    if (e.until < (G.plies ?? 0)) continue;
-    const mark = document.createElement('div');
-    mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`;
-    mark.title = e.mode === 'atk' ? `残火 +${e.value}` : e.mode === 'heal' ? `燐火 +${e.value}` : `落とし穴 ${e.value}`;
+    if (!Game.emberLive(e, plies)) continue;
+    const mark = document.createElement('button');
+    mark.type = 'button';
+    mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`
+      + (e.src === 'umibozu' ? ' ember-whirl' : '')
+      + (e.src === 'yatagarasu' ? ' ember-sun' : '');
+    mark.title = emberLabel(e);
+    mark.setAttribute('aria-label', emberLabel(e));
+    mark.addEventListener('click', ev => { ev.stopPropagation(); });
+    mark.addEventListener('focus', () => { showEmberInfo(e); });
     cellEl(e.x, e.y).appendChild(mark);
   }
 }
@@ -1266,7 +1361,49 @@ function updateComboHeat() {
 const LONG_PRESS_MS = 480;
 const LONG_PRESS_MOVE_PX = 14;
 
-function showInfo(id: string, promoted: boolean) {
+function inspectCell(x: number, y: number) {
+  if (!G) return;
+  const pc = G.board[y][x];
+  const em = liveEmberAt(x, y);
+  if (pc) {
+    showInfo(pc.id, pc.promoted, em);
+    return;
+  }
+  if (em) showEmberInfo(em);
+}
+
+function setEmberNote(em: Ember | undefined) {
+  const note = $('info-ember');
+  if (!em) {
+    note.classList.add('hidden');
+    note.textContent = '';
+    return;
+  }
+  note.classList.remove('hidden');
+  note.textContent = t(emberLabel(em));
+}
+
+function showEmberInfo(e: Ember) {
+  const fl = Game.emberFlavor(e.mode, e.src);
+  const srcId = e.src
+    || (e.mode === 'bolt' ? 'raiju' : e.mode === 'heal' ? 'rinka' : e.mode === 'trap' ? 'tsurube' : e.mode === 'atk' ? 'yatagarasu' : 'shiranui');
+  $('piece-info').classList.remove('hidden');
+  applyYokaiImage($<HTMLImageElement>('info-img'), srcId, 'sm');
+  const typeEl = $('info-type');
+  typeEl.hidden = false;
+  typeEl.textContent = t('マス効果');
+  typeEl.className = 'type-chip t-ember';
+  $('info-name').textContent = t(fl.name);
+  const left = e.until < 0 ? '永久' : `残り${Math.max(0, e.until - (G?.plies ?? 0) + 1)}手`;
+  $('info-atk').textContent = t(left);
+  $('info-move').textContent = t(e.side === 'p' ? '自軍の刻印' : '敵軍の刻印');
+  $('info-skill-name').textContent = `【${t(fl.name)}】`;
+  $('info-skill-desc').textContent = t(emberLabel(e));
+  setEmberNote(undefined);
+  AudioSys.play('select');
+}
+
+function showInfo(id: string, promoted: boolean, em?: Ember) {
   const def = yokaiOf(id);
   if (!def) return;
   $('piece-info').classList.remove('hidden');
@@ -1274,18 +1411,19 @@ function showInfo(id: string, promoted: boolean) {
   const typeEl = $('info-type');
   if (def.boss) {
     typeEl.hidden = false;
-    typeEl.textContent = '大将';
+    typeEl.textContent = t('大将');
     typeEl.className = 'type-chip t-boss';
   } else {
     typeEl.hidden = true;
     typeEl.textContent = '';
     typeEl.className = 'type-chip';
   }
-  $('info-name').textContent = def.name + (promoted ? '【成】' : '');
+  $('info-name').textContent = t(def.name + (promoted ? '【成】' : ''));
   $('info-atk').textContent = `ATK ${promoted ? Math.round(def.atk * 1.5) : def.atk}`;
-  $('info-move').textContent = def.moveText;
-  $('info-skill-name').textContent = `【${def.skill.name}】`;
-  $('info-skill-desc').textContent = def.skill.desc;
+  $('info-move').textContent = t(def.moveText);
+  $('info-skill-name').textContent = `【${t(def.skill.name)}】`;
+  $('info-skill-desc').textContent = t(def.skill.desc);
+  setEmberNote(em);
   AudioSys.play('select');
 }
 function hideInfo() { $('piece-info').classList.add('hidden'); }
@@ -1670,7 +1808,7 @@ async function doAction(action: Action) {
   renderAll();
   updateHUD();
   await announceResonances(); // 打ち込みで因縁ペアが揃った場合
-  cellEl(action.to.x, action.to.y).classList.add('hl-last');
+  if (action.kind !== 'pass') cellEl(action.to.x, action.to.y).classList.add('hl-last');
 
   if (G!.winner || G!.reason === 'draw') { await sleep(750); showResult(); return; }
 
@@ -1857,6 +1995,11 @@ async function animEvent(ev: GameEvent) {
       await sleep(280);
       break;
     }
+    case 'pass': {
+      FX.flash('rgba(255, 70, 50, 0.22)', 180);
+      await sleep(220);
+      break;
+    }
     case 'gameover': break; // doAction側で処理
   }
 }
@@ -1868,7 +2011,11 @@ async function animCapture(ev: CaptureEvent) {
   const colors = special ? [...special] : isPlayer ? COLORS_P : COLORS_E;
   const aDef = YOKAI[ev.attacker.id];
   const aSkill = aDef.skill;
-  const kindFx = SKILL_KIND_FX[aSkill.kind] ?? SSR_FX_COLORS;
+  const kindFx = (aSkill.kind === 'ember' && aSkill.mode === 'bolt')
+    ? ['#f4fbff', '#7ec8ff', '#3d6cff'] as const
+    : (aSkill.kind === 'ember' && aSkill.mode === 'atk')
+      ? ['#fff8e0', '#ffd24a', '#ff9a18'] as const
+    : SKILL_KIND_FX[aSkill.kind] ?? SSR_FX_COLORS;
   const tier = rarityTier(ev.attacker.id);
   const scale = TIER_SCALE[tier];
   const vTier = rarityTier(ev.victim.id);
@@ -2216,7 +2363,7 @@ function reasonsFor(win: boolean, enemyBossName: string): string {
     explode: win ? '鬼火が敵大将を道連れにした!' : '我が大将が鬼火の道連れに…',
     nomoves: win ? '敵軍は身動きが取れなくなった!' : '我が軍は身動きが取れなくなった…',
     resign: win ? '相手が投了した' : '投了した…',
-    timeout: win ? '相手の秒読みが切れた' : '秒読みが切れた…',
+    timeout: win ? '相手が2回連続で時間切れになった' : '2回連続で時間切れになった…',
     disconnect: win ? '相手の再接続猶予が切れた' : '再接続猶予が切れた…',
     hunger: win ? '飢餓の夜で敵の魂力が尽きた!' : '飢餓の夜で魂力が尽きた…',
   };
@@ -2359,9 +2506,7 @@ function openPieceDetail(id: string) {
   $('piece-detail-atk').textContent = `ATK ${def.atk}`;
   $('piece-detail-move').textContent = def.moveText;
   $('piece-detail-skill-name').textContent = def.skill.name;
-  const records = Records.get(def.skill.name);
   const extras = catalogExtraLines(def.id);
-  if (records > 0) extras.push(`通算発動 ${records}回`);
   $('piece-detail-skill-desc').textContent = extras.length
     ? `${def.skill.desc}\n${extras.join('\n')}`
     : def.skill.desc;

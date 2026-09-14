@@ -19,6 +19,7 @@ export default defineConfig(async () => {
             ALLOWED_ORIGINS: 'http://localhost:5173,http://localhost:4173,http://example.com',
             MATCH_HOUR_ENFORCE: '0',
             PARTICIPATION_MIN_ACTIONS: '1',
+            ALLOW_TEST_CLOCK: '1',
             ADS_REWARD_ENABLED: '1',
             ADS_REWARD_PROVIDER: 'mock',
           },

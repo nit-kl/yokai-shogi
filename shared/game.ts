@@ -35,8 +35,9 @@ export interface Ember {
   x: number;
   y: number;
   until: number; // plies 期限
-  mode: 'atk' | 'heal' | 'trap';
+  mode: 'atk' | 'heal' | 'trap' | 'bolt';
   value: number;
+  src?: string; // 置いた駒id(渦潮と落とし穴の区別など)
 }
 
 export interface GameState {
@@ -70,7 +71,8 @@ export const HUNGER_DRAIN = 50;
 export type Action =
   | { kind: 'move'; from: Pos; to: Pos; phaseTo?: Pos; spawnTo?: Pos; dualTo?: Pos }
   | { kind: 'drop'; id: string; to: Pos }
-  | { kind: 'awaken'; to: Pos }; // 自軍SSR駒(to)を覚醒させる(手番を消費)
+  | { kind: 'awaken'; to: Pos } // 自軍SSR駒(to)を覚醒させる(手番を消費)
+  | { kind: 'pass' }; // オンライン時間切れの手番スキップ。合法手には出さない
 
 export interface MoveTarget { x: number; y: number; capture: boolean; }
 
@@ -105,8 +107,8 @@ export interface CaptureEvent {
   hp: Record<Side, number>;
   /* foxBond(妖狐相伝): この捕獲で相方が激怒した(uid=激怒した駒) */
   enrage?: { uid: number; id: string; owner: Side; name: string } | null;
-  emberBonus?: number; // 残火(atk)による最終ダメ加算
-  trapDmg?: number;    // 残火(trap)を踏んだダメージ
+  emberBonus?: number; // 残火(atk/bolt)による最終ダメ加算
+  trapDmg?: number;    // 残火(trap)を踏んだダメージ / 残雷の雷撃
 }
 
 export type GameEvent =
@@ -117,6 +119,7 @@ export type GameEvent =
   | CaptureEvent
   | { t: 'hunger'; drain: number; hp: Record<Side, number> }
   | { t: 'cellar'; side: Side; heal: number; name: string; img: string; hp: Record<Side, number> }
+  | { t: 'pass'; side: Side }
   | { t: 'gameover'; winner: Side | null; reason: GameOverReason };
 
 export interface ApplyOptions {
@@ -553,23 +556,41 @@ export const Game = {
 
   comboMult(n: number): number { return Math.min(2, 1 + 0.25 * (n - 1)); },
 
+  /* until < 0 は期限なし(残雷) */
+  emberLive(e: Ember, plies: number): boolean {
+    return e.until < 0 || e.until >= plies;
+  },
+
   pruneEmbers(s: GameState): void {
     this.ensureMeta(s);
-    s.embers = s.embers.filter(e => e.until >= s.plies);
+    s.embers = s.embers.filter(e => this.emberLive(e, s.plies));
   },
 
-  findEmberAt(s: GameState, x: number, y: number, side?: Side): Ember | undefined {
+  findEmberAt(s: GameState, x: number, y: number, side?: Side, mode?: Ember['mode']): Ember | undefined {
     this.ensureMeta(s);
-    return s.embers.find(e => e.x === x && e.y === y && e.until >= s.plies && (side === undefined || e.side === side));
+    return s.embers.find(e =>
+      e.x === x && e.y === y
+      && this.emberLive(e, s.plies)
+      && (side === undefined || e.side === side)
+      && (mode === undefined || e.mode === mode));
   },
 
-  placeEmber(s: GameState, side: Side, at: Pos, mode: Ember['mode'], value: number, span: number): void {
+  placeEmber(s: GameState, side: Side, at: Pos, mode: Ember['mode'], value: number, span: number, src?: string): void {
     this.ensureMeta(s);
-    s.embers = s.embers.filter(e => !(e.side === side));
-    s.embers.push({ side, x: at.x, y: at.y, until: s.plies + span - 1, mode, value });
+    s.embers = s.embers.filter(e => !(e.side === side && e.mode === mode && (e.src ?? '') === (src ?? '')));
+    const until = span <= 0 ? -1 : s.plies + span - 1;
+    s.embers.push({ side, x: at.x, y: at.y, until, mode, value, ...(src ? { src } : {}) });
   },
 
-  /* マス進入時の残火(trap/heal)。trapは進入側が被ダメして消滅 */
+  emberFlavor(mode: Ember['mode'], src?: string): { name: string; img: string } {
+    if (src && YOKAI[src]) return { name: YOKAI[src].skill.name, img: YOKAI[src].img };
+    if (mode === 'heal') return { name: YOKAI.rinka.skill.name, img: YOKAI.rinka.img };
+    if (mode === 'trap') return { name: YOKAI.tsurube.skill.name, img: YOKAI.tsurube.img };
+    if (mode === 'bolt') return { name: YOKAI.raiju.skill.name, img: YOKAI.raiju.img };
+    return { name: '残火', img: YOKAI.shiranui.img };
+  },
+
+  /* マス進入時の残火(trap/heal)。trapは進入側が被ダメして消滅。残雷は取りでのみ発動 */
   resolveEmberEnter(
     s: GameState, side: Side, at: Pos, events: GameEvent[],
     procs?: SkillProc[],
@@ -577,29 +598,31 @@ export const Game = {
     this.pruneEmbers(s);
     let trapDmg = 0;
     let heal = 0;
-    const mine = this.findEmberAt(s, at.x, at.y, side);
+    const mine = this.findEmberAt(s, at.x, at.y, side, 'heal');
     if (mine?.mode === 'heal') {
       heal = Math.min(MAX_HP - s.hp[side], mine.value);
       if (heal > 0) {
         s.hp[side] += heal;
         if (procs) {
+          const fl = this.emberFlavor(mine.mode, mine.src);
           procs.push({
-            name: '燐の残り火', owner: side, img: YOKAI.rinka.img,
+            name: fl.name, owner: side, img: fl.img,
             text: `残火の癒やし +${heal}!`,
           });
         }
       }
     }
     const foe: Side = side === 'p' ? 'e' : 'p';
-    const enemyTrap = this.findEmberAt(s, at.x, at.y, foe);
+    const enemyTrap = this.findEmberAt(s, at.x, at.y, foe, 'trap');
     if (enemyTrap?.mode === 'trap') {
       trapDmg = enemyTrap.value;
       s.hp[side] = Math.max(0, s.hp[side] - trapDmg);
-      s.embers = s.embers.filter(e => !(e.x === at.x && e.y === at.y && e.side === foe));
+      s.embers = s.embers.filter(e => !(e.x === at.x && e.y === at.y && e.side === foe && e.mode === 'trap'));
       if (procs) {
+        const fl = this.emberFlavor(enemyTrap.mode, enemyTrap.src);
         procs.push({
-          name: '闇への落とし口', owner: foe, img: YOKAI.tsurube.img,
-          text: `落とし穴 ${trapDmg}ダメージ!`,
+          name: fl.name, owner: foe, img: fl.img,
+          text: enemyTrap.src === 'umibozu' ? `渦潮 ${trapDmg}ダメージ!` : `落とし穴 ${trapDmg}ダメージ!`,
         });
       }
     }
@@ -647,6 +670,9 @@ export const Game = {
         events.push({ t: 'gameover', winner: foe, reason: 'hp' });
         return events;
       }
+    } else if (action.kind === 'pass') {
+      s.combo[side] = 0;
+      events.push({ t: 'pass', side });
     } else {
       const { from, to } = action;
       const pc = s.board[from.y][from.x]!;
@@ -730,7 +756,7 @@ export const Game = {
 
     if (!s.winner && s.reason !== 'draw') {
       s.turn = foe;
-      s.lastMove = { to: { ...action.to } };
+      if (action.kind !== 'pass') s.lastMove = { to: { ...action.to } };
       if (!this.hasAnyAction(s, foe)) {
         s.winner = side;
         s.reason = 'nomoves';
@@ -851,16 +877,21 @@ export const Game = {
     let damage = Math.max(1, Math.round((base * mult + bonus) * cMult * defMult));
     if (dmgMult !== 1) damage = Math.max(1, Math.round(damage * dmgMult));
 
-    /* 残火(atk): 最終ダメへ平坦加算 */
+    /* 残火(atk) / 残雷: 味方の取りで最終ダメへ平坦加算 */
     let emberBonus = 0;
-    const atkEmber = occupy ? this.findEmberAt(s, to.x, to.y, side) : undefined;
-    if (atkEmber?.mode === 'atk') {
+    const atkEmber = occupy
+      ? (this.findEmberAt(s, to.x, to.y, side, 'atk') ?? this.findEmberAt(s, to.x, to.y, side, 'bolt'))
+      : undefined;
+    if (atkEmber && (atkEmber.mode === 'atk' || atkEmber.mode === 'bolt')) {
       emberBonus = atkEmber.value;
       damage += emberBonus;
       if (rng) {
+        const fl = this.emberFlavor(atkEmber.mode, atkEmber.src);
         procs.push({
-          name: '不知火の残火', owner: side, img: YOKAI.shiranui.img,
-          text: `残火の追撃 +${emberBonus}!`,
+          name: fl.name, owner: side, img: fl.img,
+          text: atkEmber.mode === 'bolt' ? `残雷の追撃 +${emberBonus}!`
+            : atkEmber.src === 'yatagarasu' ? `陽光の追撃 +${emberBonus}!`
+            : `残火の追撃 +${emberBonus}!`,
         });
       }
     }
@@ -885,12 +916,28 @@ export const Game = {
         heal += extra;
       }
     }
-    /* 残火(heal) on capture square */
+    /* 残火(heal/trap) on capture square */
     let trapDmg = 0;
     if (occupy) {
       const healEnter = this.resolveEmberEnter(s, side, to, events, procs);
       heal += healEnter.heal;
       trapDmg = healEnter.trapDmg;
+    }
+    /* 敵の残雷: ここで取ると雷撃。消えない */
+    if (occupy) {
+      const enemyBolt = this.findEmberAt(s, to.x, to.y, foe, 'bolt');
+      if (enemyBolt?.mode === 'bolt') {
+        const zap = enemyBolt.value;
+        s.hp[side] = Math.max(0, s.hp[side] - zap);
+        trapDmg += zap;
+        if (rng) {
+          const fl = this.emberFlavor('bolt');
+          procs.push({
+            name: fl.name, owner: foe, img: fl.img,
+            text: `残雷 ${zap}ダメージ!`,
+          });
+        }
+      }
     }
     const hpAfterAttack = { ...s.hp };
 
@@ -972,9 +1019,13 @@ export const Game = {
 
     /* 残火設置(捕獲マス。帰影してもマスに残る) */
     if (occupy && !explode && sk.kind === 'ember') {
-      this.placeEmber(s, side, to, sk.mode, sk.value, sk.span);
+      this.placeEmber(s, side, to, sk.mode, sk.value, sk.span, aDef.id);
       if (rng) {
-        const label = sk.mode === 'atk' ? '残火を灯した' : sk.mode === 'heal' ? '燐火を残した' : '落とし穴を開いた';
+        const label = sk.mode === 'atk' ? (aDef.id === 'yatagarasu' ? '陽光を残した' : '残火を灯した')
+          : sk.mode === 'heal' ? '燐火を残した'
+          : sk.mode === 'bolt' ? '残雷を刻んだ'
+          : sk.name === '渦潮' ? '渦を開いた'
+          : '落とし穴を開いた';
         procs.push({ name: sk.name, owner: side, img: aDef.img, text: label });
       }
     }

@@ -164,6 +164,10 @@ test('釣瓶落とし: 相手が落とし穴マスに入るとダメージ', () 
   put(s, 2, 2, 'kooni', 'e');
   put(s, 0, 0, 'ittan', 'e');
   move(s, 2, 4, 2, 2, { rng: false });
+  const pit = s.embers.find(e => e.mode === 'trap' && e.x === 2 && e.y === 2);
+  expect(pit?.until).toBe(-1);
+  s.plies = 40;
+  Game.pruneEmbers(s);
   expect(s.embers.some(e => e.mode === 'trap' && e.x === 2 && e.y === 2)).toBe(true);
 
   s.turn = 'e';
@@ -172,6 +176,146 @@ test('釣瓶落とし: 相手が落とし穴マスに入るとダメージ', () 
   move(s, 2, 1, 2, 2, { rng: false });
   expect(s.hp.e).toBe(hpBefore - 80);
   expect(s.embers.some(e => e.mode === 'trap' && e.x === 2 && e.y === 2)).toBe(false);
+});
+
+test('雷獣: 取ったマスに永久の残雷を刻む', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'raiju', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  const bolt = s.embers.find(e => e.mode === 'bolt');
+  expect(bolt).toMatchObject({ x: 3, y: 2, side: 'p', value: 120, until: -1 });
+  s.plies = 40;
+  expect(Game.emberLive(bolt!, s.plies)).toBe(true);
+  Game.pruneEmbers(s);
+  expect(s.embers.some(e => e.mode === 'bolt' && e.x === 3 && e.y === 2)).toBe(true);
+});
+
+test('残雷: 味方がそこで取るとダメージ+120', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'raiju', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  s.turn = 'p';
+  move(s, 3, 2, 4, 0, { rng: false }); // 雷獣が離れる。残雷は残る
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 3, 3, 'kappa', 'p');
+  s.turn = 'p';
+  const hp = s.hp.e;
+  move(s, 3, 3, 3, 2, { rng: false });
+  expect(s.hp.e).toBe(hp - (YOKAI.kappa.atk + 120));
+  expect(s.embers.some(e => e.mode === 'bolt' && e.x === 3 && e.y === 2)).toBe(true);
+});
+
+test('残雷: 敵がそこで取ると雷撃を受け、残雷は消えない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'raiju', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  s.turn = 'e';
+  put(s, 3, 1, 'kappa', 'e');
+  const hp = s.hp.e;
+  move(s, 3, 1, 3, 2, { rng: false });
+  expect(s.hp.e).toBe(hp - 120);
+  expect(s.embers.some(e => e.mode === 'bolt' && e.x === 3 && e.y === 2 && e.until === -1)).toBe(true);
+});
+
+test('残雷: 次の取りで別マスへ移る。燐火とは共存する', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'rinka', 'p');
+  put(s, 2, 3, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 2, 3, { rng: false });
+  expect(s.embers.some(e => e.mode === 'heal' && e.x === 2 && e.y === 3)).toBe(true);
+
+  put(s, 1, 4, 'raiju', 'p');
+  put(s, 2, 2, 'nekomata', 'e');
+  s.turn = 'p';
+  move(s, 1, 4, 2, 2, { rng: false });
+  expect(s.embers.some(e => e.mode === 'heal' && e.x === 2 && e.y === 3)).toBe(true);
+  expect(s.embers.some(e => e.mode === 'bolt' && e.x === 2 && e.y === 2)).toBe(true);
+
+  put(s, 3, 0, 'kooni', 'e');
+  s.turn = 'p';
+  move(s, 2, 2, 3, 0, { rng: false });
+  expect(s.embers.some(e => e.mode === 'bolt' && e.x === 3 && e.y === 0)).toBe(true);
+  expect(s.embers.some(e => e.mode === 'bolt' && e.x === 2 && e.y === 2)).toBe(false);
+});
+
+test('八咫烏: 取ったマスに永久の陽光を残す', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  const sun = s.embers.find(e => e.mode === 'atk');
+  expect(sun).toMatchObject({ x: 3, y: 2, side: 'p', value: 120, until: -1, src: 'yatagarasu' });
+  s.plies = 40;
+  Game.pruneEmbers(s);
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2)).toBe(true);
+});
+
+test('陽光: 味方がそこで取るとダメージ+120。陽光は消えない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  s.turn = 'p';
+  move(s, 3, 2, 4, 0, { rng: false });
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 3, 3, 'kappa', 'p');
+  s.turn = 'p';
+  const hp = s.hp.e;
+  move(s, 3, 3, 3, 2, { rng: false });
+  expect(s.hp.e).toBe(hp - (YOKAI.kappa.atk + 120));
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2 && e.until === -1)).toBe(true);
+});
+
+test('陽光: 敵がそこで取ってもダメージは増えない。陽光は残る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  s.turn = 'e';
+  put(s, 3, 1, 'kappa', 'e');
+  const hp = s.hp.p;
+  move(s, 3, 1, 3, 2, { rng: false });
+  expect(s.hp.p).toBe(hp - YOKAI.kappa.atk);
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2 && e.until === -1)).toBe(true);
+});
+
+test('陽光: 次の取りで別マスへ移る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  put(s, 4, 0, 'kooni', 'e');
+  s.turn = 'p';
+  move(s, 3, 2, 4, 0, { rng: false });
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 4 && e.y === 0)).toBe(true);
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2)).toBe(false);
 });
 
 test('COLS定数が壊れていないこと', () => {

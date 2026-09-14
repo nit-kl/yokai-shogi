@@ -35,7 +35,7 @@ export type Skill =
   /* 食い逃げ・残火 */
   | { kind: 'retreat'; name: string; desc: string }                           // 取ったあと自動で元マスへ戻る
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
-  | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap'; value: number; span: number }
+  | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap' | 'bolt'; value: number; span: number } // span<=0 は永久
   | { kind: 'spawn'; name: string; desc: string; piece: string }              // 取ったあと周囲の空きへ駒を1体置く
   | { kind: 'veil'; name: string; desc: string }                              // SSR: 残留/帰影/影遁を選択
   | { kind: 'charm'; name: string; desc: string }                             // 取った駒を味方にして元マスへ戻る
@@ -225,10 +225,11 @@ export const YOKAI: Record<string, YokaiDef> = {
   suiko: {
     id: 'suiko', name: '水虎', atk: 180, rarity: 'SR', gachaOnly: true,
     img: img('suiko'), imgSm: imgSm('suiko'),
-    moveText: '縦横に1マス(成:全方向1マス)',
-    skill: { kind: 'aura', name: '大水の帳', desc: '盤上にいる間、滔々たる水壁で自軍の受けるダメージ-22%', reduce: 0.22 },
-    moves: { steps: STEPS_ORTHO4 },
-    promoted: { steps: STEPS_ALL8 },
+    moveText: '前3方向と横に1マス(成:金の動き)',
+    skill: { kind: 'heal', name: '潮を飲む', desc: '駒を取った時、引きずり込んだ潮で自軍の魂力を200回復する', amount: 200 },
+    moves: { steps: [[0,-1],[1,-1],[-1,-1],[1,0],[-1,0]] },
+    promoted: { steps: STEPS_GOLD },
+    dropLimit: 1,
   },
   oonyudo: {
     id: 'oonyudo', name: '大入道', atk: 140, rarity: 'SR', gachaOnly: true,
@@ -242,7 +243,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'daitengu', name: '大天狗', atk: 260, rarity: 'SR', gachaOnly: true,
     img: img('daitengu'), imgSm: imgSm('daitengu'),
     moveText: '斜めに1〜2マス飛行・駒を飛び越す(成:+前後1マス)',
-    skill: { kind: 'counter', name: '天狗颪', desc: '取られた時、羽団扇の烈風が吹き荒れ、取った相手に400の反撃ダメージ!', dmg: 400 },
+    skill: { kind: 'rush', name: '天狗颪', desc: '斜めに2マス飛んで駒を取ると、羽団扇の烈風でダメージ2倍', minDist: 2, mult: 2 },
     moves: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]] },
     promoted: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]], steps: [[0,-1],[0,1]] },
   },
@@ -250,7 +251,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'raiju', name: '雷獣', atk: 330, rarity: 'SR', gachaOnly: true,
     img: img('raiju'), imgSm: imgSm('raiju'),
     moveText: '前へ変則跳び・駒を飛び越す(成:+斜め1マス)',
-    skill: { kind: 'crit', name: '迅雷の牙', desc: '駒を取った時、30%で雷光が走りダメージ1.8倍', chance: 0.3, mult: 1.8 },
+    skill: {
+      kind: 'ember', name: '残雷',
+      desc: '取ったマスに残雷を永久に刻む。味方がそこで取るとダメージ+120。敵がそこで取ると魂力120の雷撃を受ける',
+      mode: 'bolt', value: 120, span: 0,
+    },
     moves: { jumps: [[1,-2],[-1,-2]] },
     promoted: { jumps: [[1,-2],[-1,-2]], steps: STEPS_DIAG4 },
     dropLimit: 2,
@@ -439,7 +444,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'umibozu', name: '海坊主', atk: 155, rarity: 'SR', gachaOnly: true,
     img: img('umibozu'), imgSm: imgSm('umibozu'),
     moveText: '縦横に1マス(成:全方向1マス)',
-    skill: { kind: 'aura', name: '墨海の帳', desc: '盤上にいる間、墨のような海で自軍の受けるダメージ-23%', reduce: 0.23 },
+    skill: {
+      kind: 'ember', name: '渦潮',
+      desc: '取ったマスに渦を置く。相手がそのマスに入ると魂力100ダメージ(渦は消える)',
+      mode: 'trap', value: 100, span: 0,
+    },
     moves: { steps: STEPS_ORTHO4 },
     promoted: { steps: STEPS_ALL8 },
   },
@@ -456,7 +465,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'yatagarasu', name: '八咫烏', atk: 305, rarity: 'SR', gachaOnly: true,
     img: img('yatagarasu'), imgSm: imgSm('yatagarasu'),
     moveText: '前へ変則跳び・駒を飛び越す(成:+斜め1マス)',
-    skill: { kind: 'crit', name: '三本足の導き', desc: '駒を取った時、28%で神鳥の導きが宿りダメージ1.9倍', chance: 0.28, mult: 1.9 },
+    skill: {
+      kind: 'ember', name: '陽光',
+      desc: '取ったマスに陽光を永久に残す。味方がそこで取るとダメージ+120。次の取りで陽光は移る',
+      mode: 'atk', value: 120, span: 0,
+    },
     moves: { jumps: [[1,-2],[-1,-2]] },
     promoted: { jumps: [[1,-2],[-1,-2]], steps: STEPS_DIAG4 },
     dropLimit: 2,
@@ -518,8 +531,8 @@ export const YOKAI: Record<string, YokaiDef> = {
     moveText: '前にどこまでも(成:+横・後ろ1マス)',
     skill: {
       kind: 'ember', name: '闇への落とし口',
-      desc: '取ったマスに4手残る落とし穴を置く。相手がそのマスに入ると魂力80ダメージ(穴は消える)',
-      mode: 'trap', value: 80, span: 4,
+      desc: '取ったマスに落とし穴を置く。相手がそのマスに入ると魂力80ダメージ(穴は消える)',
+      mode: 'trap', value: 80, span: 0,
     },
     moves: { slides: [[0,-1]] },
     promoted: { slides: [[0,-1]], steps: [[1,0],[-1,0],[0,1]] },

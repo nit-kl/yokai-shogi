@@ -18,18 +18,18 @@ class Inbox {
     });
   }
 
-  next(): Promise<ServerBattleMessage> {
+  next(timeoutMs = 3000): Promise<ServerBattleMessage> {
     const queued = this.queued.shift();
     if (queued) return Promise.resolve(queued);
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('WebSocket message timeout')), 3000);
+      const timer = setTimeout(() => reject(new Error('WebSocket message timeout')), timeoutMs);
       this.waiting.push(message => { clearTimeout(timer); resolve(message); });
     });
   }
 
-  async nextType<T extends ServerBattleMessage['t']>(type: T): Promise<Extract<ServerBattleMessage, { t: T }>> {
+  async nextType<T extends ServerBattleMessage['t']>(type: T, timeoutMs = 3000): Promise<Extract<ServerBattleMessage, { t: T }>> {
     for (;;) {
-      const message = await this.next();
+      const message = await this.next(timeoutMs);
       if (message.t === type) return message as Extract<ServerBattleMessage, { t: T }>;
     }
   }
@@ -133,6 +133,42 @@ describe('BattleRoom DO', () => {
 
     await connect(stub, e, matchId);
     expect(await pws.nextType('opponent_reconnected')).toEqual({ t: 'opponent_reconnected' });
+  });
+
+  it('秒読み切れは手番スキップし、連続2回で時間切れ負け', async () => {
+    const p = await createPlayer('先手');
+    const e = await createPlayer('後手');
+    const matchId = crypto.randomUUID();
+    const stub = env.BATTLE.get(env.BATTLE.idFromName(matchId));
+    await stub.fetch('https://battle/init', {
+      method: 'POST',
+      body: JSON.stringify({
+        matchId, mode: 'friend', players: { p, e }, turnMs: 200, byoyomiMs: 200,
+      }),
+    });
+
+    const pws = await connect(stub, p, matchId);
+    const ews = await connect(stub, e, matchId);
+    await pws.nextType('snapshot');
+    await ews.nextType('snapshot');
+    await pws.nextType('your_turn');
+
+    await new Promise(resolve => setTimeout(resolve, 700));
+    pws.ws.send(JSON.stringify({ t: 'action', action: { kind: 'pass' } }));
+    const skipped = await pws.nextType('turn_skipped', 8000);
+    expect(skipped).toMatchObject({ t: 'turn_skipped', side: 'p', skips: 1, skipLimit: 2 });
+
+    const eSnap = await ews.nextType('snapshot', 8000);
+    await ews.nextType('your_turn', 8000);
+    const action = Game.getAllActions(eSnap.state, 'e')[0];
+    ews.ws.send(JSON.stringify({ t: 'action', action }));
+    await ews.nextType('events', 8000);
+    await pws.nextType('your_turn', 8000);
+
+    await new Promise(resolve => setTimeout(resolve, 700));
+    pws.ws.send(JSON.stringify({ t: 'action', action: { kind: 'pass' } }));
+    const end = await pws.nextType('game_end', 8000);
+    expect(end).toMatchObject({ t: 'game_end', winner: 'e', reason: 'timeout' });
   });
 });
 

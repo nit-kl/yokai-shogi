@@ -10,7 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import sharp from 'sharp';
-import { removeBgBuffer } from './remove-bg.mjs';
+import { removeBgBuffer, cleanBlackCutout } from './remove-bg.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url)) + '/..';
 const STOCK = path.join(root, 'client', 'public', 'assets', 'pieces', 'stock');
@@ -89,7 +89,7 @@ async function prepareCutout(input, workDir) {
   console.log(`  bg: painted → rembg(${REMBG_MODEL})`);
   const cut = path.join(workDir, `${path.basename(input)}.cut.png`);
   rembgCutout(input, cut);
-  return sharp(cut).ensureAlpha();
+  return cleanBlackCutout(cut);
 }
 
 async function fitPiece(rgbaSharp) {

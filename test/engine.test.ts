@@ -108,3 +108,15 @@ test('uid採番が状態側(nextUid)で独立している', () => {
   const c = Game.clone(a);
   expect(c.nextUid).toBe(a.nextUid);
 });
+
+test('パスは手番を渡し、合法手には含まれない', () => {
+  const s = Game.newState();
+  const turn = s.turn;
+  const plies = s.plies;
+  const events = Game.applyAction(s, { kind: 'pass' }, { rng: false });
+  expect(events.some(e => e.t === 'pass' && e.side === turn)).toBe(true);
+  expect(s.turn).not.toBe(turn);
+  expect(s.plies).toBe(plies + 1);
+  expect(Game.getAllActions(s, 'p').some(a => a.kind === 'pass')).toBe(false);
+  expect(Game.getAllActions(s, 'e').some(a => a.kind === 'pass')).toBe(false);
+});

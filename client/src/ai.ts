@@ -348,7 +348,9 @@ export const AI = {
     if (Game.hasSkill(s, side, 'chill')) score += 40;
     if (Game.hasSkill(s, side, 'heal')) score += 30;
     for (const em of s.embers ?? []) {
-      if (em.side === side && em.until >= s.plies) score += 18;
+      if (em.side === side && Game.emberLive(em, s.plies ?? 0)) {
+        score += em.mode === 'bolt' ? 28 : em.mode === 'atk' ? 22 : 18;
+      }
     }
     return score;
   },
@@ -403,6 +405,7 @@ export const AI = {
   },
 
   moveOrderKey(s: GameState, act: Action): number {
+    if (act.kind === 'pass') return -100;
     if (act.kind === 'awaken') return 500;
     if (act.kind === 'drop') {
       const def = YOKAI[act.id];
@@ -436,7 +439,7 @@ export const AI = {
   },
 
   positionBonus(before: GameState, _after: GameState, act: Action): number {
-    if (act.kind === 'awaken') return 0;
+    if (act.kind === 'awaken' || act.kind === 'pass') return 0;
     let b = 0;
     const def = YOKAI[act.kind === 'drop' ? act.id : before.board[act.from.y][act.from.x]!.id];
     if (act.kind === 'move') {

@@ -3,10 +3,12 @@ import type { Action, GameEvent, GameState } from '../../../shared/game';
 import type { Side } from '../../../shared/data';
 import type {
   BattleEndReason, BattlePlayer, ClientBattleMessage, ClockPhase, MatchMode, ServerBattleMessage,
+  SkipStreak,
 } from '../../../shared/battle';
+import { SKIP_LIMIT } from '../../../shared/battle';
 import type { Env } from '../env';
 import {
-  BYOYOMI_MS, DISCONNECT_GRACE_MS, RULE_VERSION, TURN_MS, isLegalAction, newOnlineState, other, send,
+  BYOYOMI_MS, DISCONNECT_GRACE_MS, RULE_VERSION, TURN_MS, envClockMs, isLegalAction, newOnlineState, other, send,
 } from './common';
 import {
   EVENT_YOKAI_ID, PARTICIPATION_MIN_ACTIONS, isEventDay, jstDateString, participationTicketsFor,
@@ -23,6 +25,9 @@ interface Timers {
   turnDeadline: number;
   phase: ClockPhase;
   disconnected: Partial<Record<Side, number>>;
+  skipStreak: SkipStreak;
+  turnMs: number;
+  byoyomiMs: number;
 }
 interface Attachment { side: Side; userId: string }
 interface ActionLog { side: Side; action: Action; events: GameEvent[] }
@@ -73,6 +78,7 @@ export class BattleRoom {
     }
     send(server, {
       t: 'snapshot', state: this.game!, remainMs: this.remainMs(), phase: this.clockPhase(), seq: this.seq,
+      ...this.clockSkipFields(),
     });
     this.sendTurn();
     return new Response(null, { status: 101, webSocket: client });
@@ -102,12 +108,14 @@ export class BattleRoom {
     const events = Game.applyAction(this.game, msg.action, { rand: () => this.nextRandom() });
     this.seq++;
     this.actions.push({ side, action: msg.action, events });
-    this.timers.turnDeadline = Date.now() + TURN_MS;
+    this.timers.skipStreak[side] = 0;
+    this.timers.turnDeadline = Date.now() + this.turnMs();
     this.timers.phase = 'main';
     await this.persistRuntime();
     await this.scheduleAlarm();
     this.broadcast({
       t: 'snapshot', state: this.game, remainMs: this.remainMs(), phase: this.clockPhase(), seq: this.seq,
+      ...this.clockSkipFields(),
     });
     this.broadcast({ t: 'events', seq: this.seq, events });
     if (this.game.reason === 'draw' || (this.game.reason === 'hunger' && !this.game.winner)) {
@@ -145,14 +153,22 @@ export class BattleRoom {
 
   private async init(request: Request): Promise<Response> {
     if (await this.state.storage.get('meta')) return new Response(null, { status: 204 });
-    const input = await request.json<{ matchId: string; mode: MatchMode; players: Record<Side, BattlePlayer> }>();
+    const input = await request.json<{
+      matchId: string; mode: MatchMode; players: Record<Side, BattlePlayer>;
+      turnMs?: number; byoyomiMs?: number;
+    }>();
     this.meta = {
       matchId: input.matchId, mode: input.mode, players: input.players,
       rngSeed: crypto.randomUUID(), startedAt: new Date().toISOString(),
     };
     this.rngState = this.seedNumber(this.meta.rngSeed);
     this.game = newOnlineState(input.players.p.formation, input.players.e.formation);
-    this.timers = { turnDeadline: Date.now() + TURN_MS, phase: 'main', disconnected: {} };
+    const turnMs = this.resolveTurnMs(input.turnMs);
+    const byoyomiMs = this.resolveByoyomiMs(input.byoyomiMs);
+    this.timers = {
+      turnDeadline: Date.now() + turnMs, phase: 'main', disconnected: {},
+      skipStreak: { p: 0, e: 0 }, turnMs, byoyomiMs,
+    };
     await this.state.storage.put({
       meta: this.meta,
       runtime: this.runtime(),
@@ -169,6 +185,13 @@ export class BattleRoom {
     this.game = runtime?.game ?? null;
     this.timers = runtime?.timers ?? null;
     if (this.timers && this.timers.phase !== 'byoyomi') this.timers.phase = 'main';
+    if (this.timers && (!this.timers.skipStreak || typeof this.timers.skipStreak.p !== 'number')) {
+      this.timers.skipStreak = { p: 0, e: 0 };
+    }
+    if (this.timers) {
+      if (typeof this.timers.turnMs !== 'number') this.timers.turnMs = TURN_MS;
+      if (typeof this.timers.byoyomiMs !== 'number') this.timers.byoyomiMs = BYOYOMI_MS;
+    }
     this.seq = runtime?.seq ?? 0;
     this.rngState = runtime?.rngState ?? 1;
     this.actions = runtime?.actions ?? [];
@@ -202,31 +225,85 @@ export class BattleRoom {
   private sendTurn(): void {
     if (!this.game || this.game.winner) return;
     for (const ws of this.state.getWebSockets(this.game.turn)) {
-      send(ws, { t: 'your_turn', remainMs: this.remainMs(), phase: this.clockPhase() });
+      send(ws, {
+        t: 'your_turn', remainMs: this.remainMs(), phase: this.clockPhase(), ...this.clockSkipFields(),
+      });
     }
   }
   private remainMs(): number { return Math.max(0, (this.timers?.turnDeadline ?? Date.now()) - Date.now()); }
   private clockPhase(): ClockPhase { return this.timers?.phase === 'byoyomi' ? 'byoyomi' : 'main'; }
+  private turnMs(): number { return this.timers?.turnMs ?? envClockMs(this.env.CLOCK_TURN_MS, TURN_MS); }
+  private byoyomiMs(): number { return this.timers?.byoyomiMs ?? envClockMs(this.env.CLOCK_BYOYOMI_MS, BYOYOMI_MS); }
+  private resolveTurnMs(requested?: number): number {
+    const fallback = envClockMs(this.env.CLOCK_TURN_MS, TURN_MS);
+    if (this.env.ALLOW_TEST_CLOCK !== '1' || requested == null) return fallback;
+    return envClockMs(String(requested), fallback);
+  }
+  private resolveByoyomiMs(requested?: number): number {
+    const fallback = envClockMs(this.env.CLOCK_BYOYOMI_MS, BYOYOMI_MS);
+    if (this.env.ALLOW_TEST_CLOCK !== '1' || requested == null) return fallback;
+    return envClockMs(String(requested), fallback);
+  }
+  private clockSkipFields(): { skipStreak: SkipStreak; skipLimit: number } {
+    return { skipStreak: this.timers?.skipStreak ?? { p: 0, e: 0 }, skipLimit: SKIP_LIMIT };
+  }
 
-  /** 時計を進め、終局なら true。本時間切れは秒読みへ遷移し false(対局継続) */
+  /** 時計を進め、終局または手番スキップなら true(呼び出し元は着手を処理しない)。本時間切れは秒読みへ遷移し false */
   private async enforceClock(): Promise<boolean> {
     if (!this.game || this.game.winner || !this.timers) return true;
     const now = Date.now();
     if (now < this.timers.turnDeadline) return false;
     if (this.timers.phase === 'main') {
       this.timers.phase = 'byoyomi';
-      this.timers.turnDeadline += BYOYOMI_MS;
-      if (now >= this.timers.turnDeadline) {
-        await this.finish(other(this.game.turn), 'timeout');
-        return true;
-      }
+      this.timers.turnDeadline += this.byoyomiMs();
+      if (now >= this.timers.turnDeadline) return this.applyTimeoutSkip();
       await this.persistRuntime();
       await this.scheduleAlarm();
-      this.broadcast({ t: 'clock', remainMs: this.remainMs(), phase: 'byoyomi' });
+      this.broadcast({ t: 'clock', remainMs: this.remainMs(), phase: 'byoyomi', ...this.clockSkipFields() });
       this.sendTurn();
       return false;
     }
-    await this.finish(other(this.game.turn), 'timeout');
+    return this.applyTimeoutSkip();
+  }
+
+  /** 秒読み切れ: 1回目はパス、同一対局の連続2回目で時間切れ負け */
+  private async applyTimeoutSkip(): Promise<boolean> {
+    if (!this.game || this.game.winner || !this.timers) return true;
+    const side = this.game.turn;
+    const skips = (this.timers.skipStreak[side] ?? 0) + 1;
+    this.timers.skipStreak[side] = skips;
+    if (skips >= SKIP_LIMIT) {
+      await this.finish(other(side), 'timeout');
+      return true;
+    }
+
+    const events = Game.applyAction(this.game, { kind: 'pass' }, { rand: () => this.nextRandom() });
+    this.seq++;
+    this.actions.push({ side, action: { kind: 'pass' }, events });
+    this.timers.turnDeadline = Date.now() + this.turnMs();
+    this.timers.phase = 'main';
+    await this.persistRuntime();
+    await this.scheduleAlarm();
+    this.broadcast({
+      t: 'snapshot', state: this.game, remainMs: this.remainMs(), phase: this.clockPhase(), seq: this.seq,
+      ...this.clockSkipFields(),
+    });
+    this.broadcast({ t: 'events', seq: this.seq, events });
+    this.broadcast({
+      t: 'turn_skipped', side, skips, skipLimit: SKIP_LIMIT,
+      remainMs: this.remainMs(), phase: this.clockPhase(), skipStreak: this.timers.skipStreak,
+    });
+    if (this.game.reason === 'draw' || (this.game.reason === 'hunger' && !this.game.winner)) {
+      await this.finish('draw', 'draw');
+      return true;
+    }
+    if (this.game.winner) {
+      const reason = this.game.reason === 'hunger' ? 'hp' : this.game.reason!;
+      await this.finish(this.game.winner, reason);
+      return true;
+    }
+    if (this.seq >= 300) { await this.finish('draw', 'draw'); return true; }
+    this.sendTurn();
     return true;
   }
 

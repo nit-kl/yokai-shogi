@@ -161,6 +161,13 @@ const STATIC: Record<string, string> = {
   'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。': 'No opponent yet. Keep waiting or battle the AI now.',
   '秒読み！': 'Final countdown!', '秒読み': 'Countdown', '相手の秒読み': "Opponent's countdown",
   '相手の秒読み！': "Opponent's countdown!", '切れたら負け': 'Timeout is a loss', '切れれば勝ち': 'Timeout is a win',
+  '切れたら手番スキップ': 'Timeout skips your turn', '切れれば手番スキップ': 'Timeout skips their turn',
+  '次に切れたら負け': 'Next timeout is a loss', '次に切れれば勝ち': 'Next timeout wins',
+  '時間切れ！': 'Time out!', '相手が時間切れ': "Opponent timed out", '手番を飛ばした': 'Turn skipped',
+  '手番を飛ばしました': 'Your turn was skipped', '時間切れ': 'Time out',
+  '次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓や月齢も1手分進みます。':
+    'The next timeout will lose the game. Your opponent plays twice, and Hunger and the moon phase also advance one move.',
+  'わかった': 'Got it', '警告: 次の時間切れで負けです': 'Warning: the next timeout is a loss',
   'あなたの手番': 'Your turn', '相手の手番': "Opponent's turn", '敵の手番': 'Enemy turn', '対戦相手': 'Opponent',
   '満月 ― 会心確定!': 'Full Moon — Critical guaranteed!',
   '満月 ― 味方の取りが会心!': 'Full Moon — Allied captures are critical!',
@@ -180,12 +187,15 @@ const STATIC: Record<string, string> = {
   '対局に勝利した': 'You won the battle.', '対局に敗れた': 'You lost the battle.',
   '対局の通信でエラーが発生しました': 'A battle connection error occurred.',
   '相手の秒読みが切れた': "The opponent's countdown expired.", '秒読みが切れた…': 'Your countdown expired…',
+  '相手が2回連続で時間切れになった': 'The opponent timed out twice in a row.',
+  '2回連続で時間切れになった…': 'You timed out twice in a row…',
   '相手の再接続猶予が切れた': "The opponent's reconnection time expired.", '再接続猶予が切れた…': 'Your reconnection time expired…',
   '飢餓の夜で双方の魂力が尽きた': 'Both sides ran out of HP during the Night of Hunger.', '300手に達したため引き分け': 'Draw after 300 moves.',
   '飢餓の夜で敵の魂力が尽きた!': 'The enemy ran out of HP during the Night of Hunger!', '飢餓の夜で魂力が尽きた…': 'You ran out of HP during the Night of Hunger…',
   '百鬼夜行ランキング1位限定': 'Night Parade #1 reward', '土曜対戦会限定': 'Saturday Battle exclusive',
   '初期選択またはガチャ': 'Starter choice or summon', 'ガチャ': 'Summon',
   '神妖 顕現': 'Divine Yokai Manifested', '大妖怪 降臨': 'Great Yokai Descends', '希少妖怪 出現': 'Rare Yokai Appears',
+  'マス効果': 'Square effect', '永久': 'Permanent', '自軍の刻印': 'Your mark', '敵軍の刻印': 'Enemy mark',
 };
 Object.entries(STATIC).forEach(([ja, en]) => add(ja, en));
 
@@ -205,10 +215,10 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   kasha: ['Kasha', '1 square diagonally (promoted: diagonal + forward/back)', 'Hellfire Wheel', 'Captures in enemy territory deal +150 damage'],
   kamaitachi: ['Kamaitachi', 'Any distance forward (promoted: +1 sideways/back)', 'Vacuum Slash', 'A capture after moving at least 2 squares deals 1.8× damage'],
   hitouban: ['Hitoban', 'Any distance sideways +1 forward (promoted: +back/forward diagonals)', 'Flying Grudge', 'When captured, deals 300 counter damage to the captor'],
-  suiko: ['Suiko', '1 square orthogonally (promoted: 1 in any direction)', 'Great Water Veil', 'While on the board, your army takes 22% less damage'],
+  suiko: ['Suiko', '1 forward, forward-diagonal, or sideways (promoted: Gold General movement)', 'Drink the Tide', 'Capturing restores 200 HP to your army'],
   oonyudo: ['O-nyudo', '1 forward or sideways (promoted: orthogonal + forward diagonals)', 'Void Pressure', 'While on the board, your army takes 25% less damage'],
-  daitengu: ['Great Tengu', 'Leaps 1–2 squares diagonally (promoted: +1 forward/back)', 'Tengu Gale', 'When captured, deals 400 counter damage to the captor'],
-  raiju: ['Raiju', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Lightning Fang', '30% chance for a capture to deal 1.8× damage'],
+  daitengu: ['Great Tengu', 'Leaps 1–2 squares diagonally (promoted: +1 forward/back)', 'Tengu Gale', 'A capture after leaping 2 squares diagonally deals 2× damage'],
+  raiju: ['Raiju', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Lingering Lightning', 'Leaves permanent lightning on the captured square. Allied captures there deal +120. Enemy captures there take 120 HP'],
   ibaraki: ['Ibaraki-doji', 'Gold General movement (promoted: 1 in any direction)', "Arm's Return", 'When captured, returns to your hand instead of the enemy hand', 'Rashomon Severance'],
   tamamo: ['Tamamo-no-Mae', '1 square in any direction', 'Calamitous Invitation', 'After a capture, returns to its original square and the captured yokai joins you on that square', 'Ninefold Calamity'],
   sunakake: ['Sunakake-baba', '1 forward or forward-diagonal (promoted: Gold General movement)', 'Blinding Sand', 'While on the board, seals enemy critical skills'],
@@ -229,15 +239,15 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   tenome: ['Tenome', 'Any distance sideways +1 forward (promoted: +back/forward diagonals)', "Tenome's Glare", 'When captured, deals 280 counter damage to the captor'],
   inugami: ['Inugami', '1 square diagonally (promoted: diagonal + forward/back)', "Possessed Hound's Curse", 'Captures in enemy territory deal +140 damage'],
   aoandon: ['Aoandon', '1 square orthogonally (promoted: 1 in any direction)', 'Blue Flame', 'Capturing restores 280 HP to your army'],
-  umibozu: ['Umibozu', '1 square orthogonally (promoted: 1 in any direction)', 'Inky Sea Veil', 'While on the board, your army takes 23% less damage'],
+  umibozu: ['Umibozu', '1 square orthogonally (promoted: 1 in any direction)', 'Whirlpool', 'Leaves a whirlpool on the captured square. An enemy entering it takes 100 HP damage'],
   wanyudo: ['Wanyudo', 'Any distance forward (promoted: +1 sideways/back)', 'Karmic Fire Wheel', 'A capture after moving at least 2 squares deals 2× damage'],
-  yatagarasu: ['Yatagarasu', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Three-Legged Guidance', '28% chance for a capture to deal 1.9× damage'],
+  yatagarasu: ['Yatagarasu', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Sunlight', 'Leaves permanent sunlight on the captured square. Allied captures there deal +120'],
   oomyukade: ['Giant Centipede', '1 diagonal + leap 2 forward (promoted: +1 orthogonally)', "Centipede's Venom", 'While on the board, reduces enemy damage by 14%'],
   gashadokuro: ['Gashadokuro', '1 in three forward, two sideways, and back', 'Mountain of Bones', 'Each fallen ally adds a bone. Captures deal +8% damage per bone (up to +40%)', 'Starving Skeleton King'],
   sukuna: ['Sukuna', 'Gold General movement (promoted: 1 in any direction)', 'Two Faces', 'After a capture, may strike one more adjacent enemy other than the general (the second hit deals half damage)', 'Two-Faced Sukuna'],
   makuragaeshi: ['Makuragaeshi', '1 in the three forward directions and back (promoted: Gold General movement)', 'Pillow Shadow-Return', 'After a capture, automatically returns to its original square'],
   rinka: ['Rinka', '1 square orthogonally (promoted: 1 in any direction)', 'Lingering Phosphor', 'Leaves a flame for 4 moves. An ally entering, capturing, or dropping there restores 150 HP'],
-  tsurube: ['Tsurube-otoshi', 'Any distance forward (promoted: +1 sideways/back)', 'Pit to Darkness', 'Leaves a pit for 4 moves. An enemy entering it takes 80 HP damage'],
+  tsurube: ['Tsurube-otoshi', 'Any distance forward (promoted: +1 sideways/back)', 'Pit to Darkness', 'Leaves a pit on the captured square. An enemy entering it takes 80 HP damage'],
   shiranui: ['Shiranui', '1 square diagonally (promoted: diagonal + forward/back)', 'Sending Fire', 'After a capture, place an allied Onibi on an adjacent empty square'],
   enenra: ['Enenra', '1 square diagonally (promoted: +1 forward/back)', 'Smoke Shadow-Step', 'After a capture, may escape to an adjacent empty square or stay put'],
   ingyo: ['Inugami Gyobu', '1 diagonally and a forward knight leap (promoted: 1 in any direction + knight leap)', 'Art of Concealment', 'After a capture, choose to stay, return to the original square, or escape to an adjacent empty square', 'True Concealment'],
@@ -287,7 +297,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     </ul>
     <h3>How to Move</h3>
     <ul>
-      <li>A short tap selects and moves. <b>Press and hold</b> for details</li>
+      <li>A short tap selects and moves. <b>Press and hold</b> for details. Focus a lightning mark to see lingering lightning</li>
       <li>Capturing deals damage equal to your yokai's <b>attack</b></li>
       <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture, summon, or awakening resets it)</li>
     </ul>
@@ -304,7 +314,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <h3>Modes</h3>
     <ul>
       <li><b>Night Parade:</b> Solo win streaks. Weekly rankings; last week's #1 gets the exclusive “Champion · Nine-Tails” alt (first time only)</li>
-      <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Friend rooms use a 6-digit code</li>
+      <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code</li>
       <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
     </ul>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',
@@ -336,7 +346,15 @@ function translatePatterns(value: string): string {
     [/飢餓まであと(\d+)/g, '$1 moves until Hunger'], [/飢餓の夜\s*-(\d+)/g, 'Night of Hunger −$1'],
     [/酒蔵の猶予 あと(\d+)/g, 'Cellar grace: $1 left'],
     [/満月まで(\d+)夜/g, '$1 nights until Full Moon'], [/残火 \+(\d+)/g, 'Ember +$1'],
-    [/燐火 \+(\d+)/g, 'Spirit Flame +$1'], [/落とし穴 (\d+)/g, 'Pit $1'],
+    [/陽光 \+(\d+)（永久）/g, 'Sunlight +$1 (permanent)'], [/陽光 \+(\d+)/g, 'Sunlight +$1'],
+    [/陽光の追撃 \+(\d+)!/g, 'Sunlight strike +$1!'], [/陽光を残した/g, 'Left sunlight'],
+    [/燐火 \+(\d+)/g, 'Spirit Flame +$1'],
+    [/落とし穴 (\d+)（永久）/g, 'Pit $1 (permanent)'], [/落とし穴 (\d+)/g, 'Pit $1'],
+    [/渦潮 (\d+)（永久）/g, 'Whirlpool $1 (permanent)'], [/渦潮 (\d+)/g, 'Whirlpool $1'], [/渦を開いた/g, 'Opened a whirlpool'],
+    [/残雷 味方\+(\d+) \/ 敵-(\d+)（永久）/g, 'Lightning: allies +$1 / enemies −$2 (permanent)'],
+    [/残雷の追撃 \+(\d+)!/g, 'Lingering Lightning strike +$1!'],
+    [/残雷 (\d+)ダメージ!/g, 'Lingering Lightning $1 damage!'],
+    [/残雷を刻んだ/g, 'Carved lingering lightning'],
     [/勝利報酬:\s*ガチャチケット\s*🎟\s*\+(\d+)/g, 'Victory reward: Ticket 🎟 +$1'],
     [/参加報酬:\s*ガチャチケット\s*🎟\s*\+(\d+)/g, 'Participation reward: Ticket 🎟 +$1'],
     [/通算発動\s*(\d+)回/g, 'Lifetime activations: $1'], [/(\d+)\s*\/\s*(\d+)\s*体/g, '$1 / $2 yokai'],

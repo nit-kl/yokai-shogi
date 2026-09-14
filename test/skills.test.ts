@@ -46,6 +46,21 @@ test('援(heal): 回復は上限3000で頭打ち', () => {
   expect(ev.heal).toBe(100);
 });
 
+test('水虎: 潮を飲むで取ると200回復。後ろには進めない', () => {
+  const s = blank();
+  s.turn = 'p'; s.hp.p = 2000;
+  put(s, 2, 3, 'suiko', 'p');
+  put(s, 2, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  const dests = Game.getMoves(s, 2, 3).map(m => `${m.x},${m.y}`);
+  expect(dests).toContain('2,2');
+  expect(dests).not.toContain('2,4');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
+  expect(s.hp.e).toBe(3000 - 180);
+  expect(s.hp.p).toBe(2200);
+  expect(ev.heal).toBe(200);
+});
+
 test('化(decoy): 化け狸はダメージ半減&持ち駒にならない', () => {
   const s = blank();
   s.turn = 'e';
@@ -137,4 +152,22 @@ test('道連れで消えた駒は成れない', () => {
   put(s, 0, 0, 'ittan', 'e');
   const events = cap(s, 1, 3, 2, 4);
   expect(events.some(e => e.t === 'promote'), '消滅した駒の成りイベントが出ない').toBe(false);
+});
+
+test('大天狗: 斜め2マスの取りは2倍、1マスでは倍化しない', () => {
+  const far = blank();
+  far.turn = 'p';
+  put(far, 1, 4, 'daitengu', 'p');
+  put(far, 3, 2, 'kooni', 'e');
+  put(far, 0, 0, 'ittan', 'e');
+  const farEv = capEv(cap(far, 1, 4, 3, 2, { rng: false }));
+  expect(farEv.damage).toBe(520);
+
+  const near = blank();
+  near.turn = 'p';
+  put(near, 2, 3, 'daitengu', 'p');
+  put(near, 3, 2, 'kooni', 'e');
+  put(near, 0, 0, 'ittan', 'e');
+  const nearEv = capEv(cap(near, 2, 3, 3, 2, { rng: false }));
+  expect(nearEv.damage).toBe(260);
 });

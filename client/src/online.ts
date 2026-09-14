@@ -1,7 +1,7 @@
 import { COLS, ROWS } from '../../shared/data';
 import type { Side } from '../../shared/data';
 import type { Action, Ember, GameEvent, GameState, Pos } from '../../shared/game';
-import type { ServerBattleMessage } from '../../shared/battle';
+import type { ServerBattleMessage, SkipStreak } from '../../shared/battle';
 
 const flipSide = (side: Side): Side => side === 'p' ? 'e' : 'p';
 const flipPos = (pos: Pos): Pos => ({ x: COLS - 1 - pos.x, y: ROWS - 1 - pos.y });
@@ -20,6 +20,7 @@ export function actionToServer(action: Action, side: Side): Action {
       };
     case 'drop': return { kind: 'drop', id: action.id, to: flipPos(action.to) };
     case 'awaken': return { kind: 'awaken', to: flipPos(action.to) };
+    case 'pass': return action;
   }
 }
 
@@ -52,6 +53,12 @@ export function stateForView(state: GameState, side: Side): GameState {
   };
 }
 
+export function skipStreakForView(streak: SkipStreak | undefined, side: Side): SkipStreak {
+  const s = streak ?? { p: 0, e: 0 };
+  if (side === 'p') return { p: s.p, e: s.e };
+  return { p: s.e, e: s.p };
+}
+
 export function eventsForView(events: GameEvent[], side: Side): GameEvent[] {
   if (side === 'p') return structuredClone(events);
   return events.map(event => {
@@ -62,6 +69,7 @@ export function eventsForView(events: GameEvent[], side: Side): GameEvent[] {
       case 'awaken': return { ...event, owner: flipSide(event.owner), to: flipPos(event.to) };
       case 'hunger': return { ...event, hp: { p: event.hp.e, e: event.hp.p } };
       case 'cellar': return { ...event, side: flipSide(event.side), hp: { p: event.hp.e, e: event.hp.p } };
+      case 'pass': return { ...event, side: flipSide(event.side) };
       case 'gameover': return { ...event, winner: event.winner ? flipSide(event.winner) : null };
       case 'capture':
         return {

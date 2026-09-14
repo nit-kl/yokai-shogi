@@ -114,16 +114,21 @@ test('ストック駒(aoandon): 青行燈が駒を取ったとき魂力が280回
   expect(ev.heal).toBe(280);
 });
 
-test('ストック駒(umibozu): 海坊主のオーラで自軍の被ダメージが23%軽減されること', () => {
+test('ストック駒(umibozu): 海坊主が取ったマスに渦を置き、相手が入ると100ダメージ', () => {
   const s = blank();
-  s.turn = 'e';
-  put(s, 2, 3, 'kooni', 'p');
-  put(s, 1, 2, 'nekomata', 'e');
-  put(s, 4, 5, 'umibozu', 'p');
-  put(s, 0, 5, 'ittan', 'p');
+  s.turn = 'p';
+  put(s, 2, 4, 'umibozu', 'p');
+  put(s, 2, 3, 'kooni', 'e');
   put(s, 0, 0, 'ittan', 'e');
-  const ev = capEv(cap(s, 1, 2, 2, 3));
-  expect(ev.damage).toBe(Math.round(200 * 0.77));
+  cap(s, 2, 4, 2, 3, { rng: false });
+  expect(s.embers.some(e => e.mode === 'trap' && e.src === 'umibozu' && e.x === 2 && e.y === 3 && e.value === 100 && e.until === -1)).toBe(true);
+
+  s.turn = 'e';
+  const hp = s.hp.e;
+  put(s, 2, 2, 'kappa', 'e');
+  cap(s, 2, 2, 2, 3, { rng: false });
+  expect(s.hp.e).toBe(hp - 100);
+  expect(s.embers.some(e => e.src === 'umibozu')).toBe(false);
 });
 
 test('ストック駒(oomyukade): 大百足が盤上にいるとき敵軍の与ダメージが14%軽減されること', () => {
