@@ -566,10 +566,13 @@ export const Game = {
     s.embers = s.embers.filter(e => this.emberLive(e, s.plies));
   },
 
-  findEmberAt(s: GameState, x: number, y: number, side?: Side): Ember | undefined {
+  findEmberAt(s: GameState, x: number, y: number, side?: Side, mode?: Ember['mode']): Ember | undefined {
     this.ensureMeta(s);
     return s.embers.find(e =>
-      e.x === x && e.y === y && this.emberLive(e, s.plies) && (side === undefined || e.side === side));
+      e.x === x && e.y === y
+      && this.emberLive(e, s.plies)
+      && (side === undefined || e.side === side)
+      && (mode === undefined || e.mode === mode));
   },
 
   placeEmber(s: GameState, side: Side, at: Pos, mode: Ember['mode'], value: number, span: number, src?: string): void {
@@ -595,7 +598,7 @@ export const Game = {
     this.pruneEmbers(s);
     let trapDmg = 0;
     let heal = 0;
-    const mine = this.findEmberAt(s, at.x, at.y, side);
+    const mine = this.findEmberAt(s, at.x, at.y, side, 'heal');
     if (mine?.mode === 'heal') {
       heal = Math.min(MAX_HP - s.hp[side], mine.value);
       if (heal > 0) {
@@ -610,7 +613,7 @@ export const Game = {
       }
     }
     const foe: Side = side === 'p' ? 'e' : 'p';
-    const enemyTrap = this.findEmberAt(s, at.x, at.y, foe);
+    const enemyTrap = this.findEmberAt(s, at.x, at.y, foe, 'trap');
     if (enemyTrap?.mode === 'trap') {
       trapDmg = enemyTrap.value;
       s.hp[side] = Math.max(0, s.hp[side] - trapDmg);
@@ -876,7 +879,9 @@ export const Game = {
 
     /* 残火(atk) / 残雷: 味方の取りで最終ダメへ平坦加算 */
     let emberBonus = 0;
-    const atkEmber = occupy ? this.findEmberAt(s, to.x, to.y, side) : undefined;
+    const atkEmber = occupy
+      ? (this.findEmberAt(s, to.x, to.y, side, 'atk') ?? this.findEmberAt(s, to.x, to.y, side, 'bolt'))
+      : undefined;
     if (atkEmber && (atkEmber.mode === 'atk' || atkEmber.mode === 'bolt')) {
       emberBonus = atkEmber.value;
       damage += emberBonus;
@@ -884,7 +889,9 @@ export const Game = {
         const fl = this.emberFlavor(atkEmber.mode, atkEmber.src);
         procs.push({
           name: fl.name, owner: side, img: fl.img,
-          text: atkEmber.mode === 'bolt' ? `残雷の追撃 +${emberBonus}!` : `残火の追撃 +${emberBonus}!`,
+          text: atkEmber.mode === 'bolt' ? `残雷の追撃 +${emberBonus}!`
+            : atkEmber.src === 'yatagarasu' ? `陽光の追撃 +${emberBonus}!`
+            : `残火の追撃 +${emberBonus}!`,
         });
       }
     }
@@ -918,7 +925,7 @@ export const Game = {
     }
     /* 敵の残雷: ここで取ると雷撃。消えない */
     if (occupy) {
-      const enemyBolt = this.findEmberAt(s, to.x, to.y, foe);
+      const enemyBolt = this.findEmberAt(s, to.x, to.y, foe, 'bolt');
       if (enemyBolt?.mode === 'bolt') {
         const zap = enemyBolt.value;
         s.hp[side] = Math.max(0, s.hp[side] - zap);
@@ -1014,7 +1021,7 @@ export const Game = {
     if (occupy && !explode && sk.kind === 'ember') {
       this.placeEmber(s, side, to, sk.mode, sk.value, sk.span, aDef.id);
       if (rng) {
-        const label = sk.mode === 'atk' ? '残火を灯した'
+        const label = sk.mode === 'atk' ? (aDef.id === 'yatagarasu' ? '陽光を残した' : '残火を灯した')
           : sk.mode === 'heal' ? '燐火を残した'
           : sk.mode === 'bolt' ? '残雷を刻んだ'
           : sk.name === '渦潮' ? '渦を開いた'

@@ -1139,7 +1139,7 @@ function renderAll() {
 
 function emberLabel(e: Ember): string {
   if (e.mode === 'bolt') return `残雷 味方+${e.value} / 敵-${e.value}（永久）`;
-  if (e.mode === 'atk') return `残火 +${e.value}`;
+  if (e.mode === 'atk') return e.until < 0 ? `陽光 +${e.value}（永久）` : `陽光 +${e.value}`;
   if (e.mode === 'heal') return `燐火 +${e.value}`;
   if (e.src === 'umibozu') return e.until < 0 ? `渦潮 ${e.value}（永久）` : `渦潮 ${e.value}`;
   return e.until < 0 ? `落とし穴 ${e.value}（永久）` : `落とし穴 ${e.value}`;
@@ -1160,7 +1160,8 @@ function renderEmbers() {
     const mark = document.createElement('button');
     mark.type = 'button';
     mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`
-      + (e.src === 'umibozu' ? ' ember-whirl' : '');
+      + (e.src === 'umibozu' ? ' ember-whirl' : '')
+      + (e.src === 'yatagarasu' ? ' ember-sun' : '');
     mark.title = emberLabel(e);
     mark.setAttribute('aria-label', emberLabel(e));
     mark.addEventListener('click', ev => { ev.stopPropagation(); });
@@ -1385,7 +1386,7 @@ function setEmberNote(em: Ember | undefined) {
 function showEmberInfo(e: Ember) {
   const fl = Game.emberFlavor(e.mode, e.src);
   const srcId = e.src
-    || (e.mode === 'bolt' ? 'raiju' : e.mode === 'heal' ? 'rinka' : e.mode === 'trap' ? 'tsurube' : 'shiranui');
+    || (e.mode === 'bolt' ? 'raiju' : e.mode === 'heal' ? 'rinka' : e.mode === 'trap' ? 'tsurube' : e.mode === 'atk' ? 'yatagarasu' : 'shiranui');
   $('piece-info').classList.remove('hidden');
   applyYokaiImage($<HTMLImageElement>('info-img'), srcId, 'sm');
   const typeEl = $('info-type');
@@ -2012,6 +2013,8 @@ async function animCapture(ev: CaptureEvent) {
   const aSkill = aDef.skill;
   const kindFx = (aSkill.kind === 'ember' && aSkill.mode === 'bolt')
     ? ['#f4fbff', '#7ec8ff', '#3d6cff'] as const
+    : (aSkill.kind === 'ember' && aSkill.mode === 'atk')
+      ? ['#fff8e0', '#ffd24a', '#ff9a18'] as const
     : SKILL_KIND_FX[aSkill.kind] ?? SSR_FX_COLORS;
   const tier = rarityTier(ev.attacker.id);
   const scale = TIER_SCALE[tier];

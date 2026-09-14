@@ -253,6 +253,71 @@ test('残雷: 次の取りで別マスへ移る。燐火とは共存する', () 
   expect(s.embers.some(e => e.mode === 'bolt' && e.x === 2 && e.y === 2)).toBe(false);
 });
 
+test('八咫烏: 取ったマスに永久の陽光を残す', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  const sun = s.embers.find(e => e.mode === 'atk');
+  expect(sun).toMatchObject({ x: 3, y: 2, side: 'p', value: 120, until: -1, src: 'yatagarasu' });
+  s.plies = 40;
+  Game.pruneEmbers(s);
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2)).toBe(true);
+});
+
+test('陽光: 味方がそこで取るとダメージ+120。陽光は消えない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  s.turn = 'p';
+  move(s, 3, 2, 4, 0, { rng: false });
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 3, 3, 'kappa', 'p');
+  s.turn = 'p';
+  const hp = s.hp.e;
+  move(s, 3, 3, 3, 2, { rng: false });
+  expect(s.hp.e).toBe(hp - (YOKAI.kappa.atk + 120));
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2 && e.until === -1)).toBe(true);
+});
+
+test('陽光: 敵がそこで取ってもダメージは増えない。陽光は残る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  s.turn = 'e';
+  put(s, 3, 1, 'kappa', 'e');
+  const hp = s.hp.p;
+  move(s, 3, 1, 3, 2, { rng: false });
+  expect(s.hp.p).toBe(hp - YOKAI.kappa.atk);
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2 && e.until === -1)).toBe(true);
+});
+
+test('陽光: 次の取りで別マスへ移る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'yatagarasu', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  move(s, 2, 4, 3, 2, { rng: false });
+  put(s, 4, 0, 'kooni', 'e');
+  s.turn = 'p';
+  move(s, 3, 2, 4, 0, { rng: false });
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 4 && e.y === 0)).toBe(true);
+  expect(s.embers.some(e => e.mode === 'atk' && e.x === 3 && e.y === 2)).toBe(false);
+});
+
 test('COLS定数が壊れていないこと', () => {
   expect(COLS).toBe(5);
 });

@@ -516,6 +516,9 @@ html[data-script="latn"] .title-sub-top {
   .ember-bolt {
     animation: none !important;
   }
+  .ember-sun {
+    animation: none !important;
+  }
   .general-statue { transition: none !important; }
   .title-orbs { display: none; }
   .title-rays, .title-mandala { opacity: 0.28; }
@@ -3736,6 +3739,15 @@ html[data-script="latn"] .battle-tools #btn-battle-status {
   outline-offset: 2px;
 }
 .ember-atk { background: radial-gradient(circle, #ffb060 0%, #ff6020 55%, transparent 75%); box-shadow: 0 0 8px #ff8040; }
+.ember-sun {
+  width: 40%;
+  height: 32%;
+  top: 70%;
+  opacity: 0.95;
+  background: radial-gradient(circle, #fff8e0 0%, #ffd24a 36%, #ff9a18 62%, transparent 78%);
+  box-shadow: 0 0 14px #ffd24a, 0 0 4px #fff;
+  animation: boltPulse 1.35s ease-in-out infinite;
+}
 .ember-heal { background: radial-gradient(circle, #a8ffc8 0%, #40c878 55%, transparent 75%); box-shadow: 0 0 8px #60e090; }
 .ember-trap { background: radial-gradient(circle, #2a1830 0%, #100818 60%, transparent 80%); box-shadow: inset 0 0 6px #000, 0 0 4px #604080; }
 .ember-whirl {

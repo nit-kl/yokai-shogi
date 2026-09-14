@@ -465,7 +465,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'yatagarasu', name: '八咫烏', atk: 305, rarity: 'SR', gachaOnly: true,
     img: img('yatagarasu'), imgSm: imgSm('yatagarasu'),
     moveText: '前へ変則跳び・駒を飛び越す(成:+斜め1マス)',
-    skill: { kind: 'crit', name: '三本足の導き', desc: '駒を取った時、28%で神鳥の導きが宿りダメージ1.9倍', chance: 0.28, mult: 1.9 },
+    skill: {
+      kind: 'ember', name: '陽光',
+      desc: '取ったマスに陽光を永久に残す。味方がそこで取るとダメージ+120。次の取りで陽光は移る',
+      mode: 'atk', value: 120, span: 0,
+    },
     moves: { jumps: [[1,-2],[-1,-2]] },
     promoted: { jumps: [[1,-2],[-1,-2]], steps: STEPS_DIAG4 },
     dropLimit: 2,
