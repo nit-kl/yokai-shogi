@@ -2506,9 +2506,7 @@ function openPieceDetail(id: string) {
   $('piece-detail-atk').textContent = `ATK ${def.atk}`;
   $('piece-detail-move').textContent = def.moveText;
   $('piece-detail-skill-name').textContent = def.skill.name;
-  const records = Records.get(def.skill.name);
   const extras = catalogExtraLines(def.id);
-  if (records > 0) extras.push(`通算発動 ${records}回`);
   $('piece-detail-skill-desc').textContent = extras.length
     ? `${def.skill.desc}\n${extras.join('\n')}`
     : def.skill.desc;
