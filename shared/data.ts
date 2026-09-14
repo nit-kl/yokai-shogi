@@ -444,7 +444,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'umibozu', name: '海坊主', atk: 155, rarity: 'SR', gachaOnly: true,
     img: img('umibozu'), imgSm: imgSm('umibozu'),
     moveText: '縦横に1マス(成:全方向1マス)',
-    skill: { kind: 'aura', name: '墨海の帳', desc: '盤上にいる間、墨のような海で自軍の受けるダメージ-23%', reduce: 0.23 },
+    skill: {
+      kind: 'ember', name: '渦潮',
+      desc: '取ったマスに渦を置く。相手がそのマスに入ると魂力100ダメージ(渦は消える)',
+      mode: 'trap', value: 100, span: 0,
+    },
     moves: { steps: STEPS_ORTHO4 },
     promoted: { steps: STEPS_ALL8 },
   },
@@ -523,8 +527,8 @@ export const YOKAI: Record<string, YokaiDef> = {
     moveText: '前にどこまでも(成:+横・後ろ1マス)',
     skill: {
       kind: 'ember', name: '闇への落とし口',
-      desc: '取ったマスに4手残る落とし穴を置く。相手がそのマスに入ると魂力80ダメージ(穴は消える)',
-      mode: 'trap', value: 80, span: 4,
+      desc: '取ったマスに落とし穴を置く。相手がそのマスに入ると魂力80ダメージ(穴は消える)',
+      mode: 'trap', value: 80, span: 0,
     },
     moves: { slides: [[0,-1]] },
     promoted: { slides: [[0,-1]], steps: [[1,0],[-1,0],[0,1]] },

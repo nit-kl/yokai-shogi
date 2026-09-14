@@ -1141,7 +1141,8 @@ function emberLabel(e: Ember): string {
   if (e.mode === 'bolt') return `残雷 味方+${e.value} / 敵-${e.value}（永久）`;
   if (e.mode === 'atk') return `残火 +${e.value}`;
   if (e.mode === 'heal') return `燐火 +${e.value}`;
-  return `落とし穴 ${e.value}`;
+  if (e.src === 'umibozu') return e.until < 0 ? `渦潮 ${e.value}（永久）` : `渦潮 ${e.value}`;
+  return e.until < 0 ? `落とし穴 ${e.value}（永久）` : `落とし穴 ${e.value}`;
 }
 
 function liveEmberAt(x: number, y: number): Ember | undefined {
@@ -1158,7 +1159,8 @@ function renderEmbers() {
     if (!Game.emberLive(e, plies)) continue;
     const mark = document.createElement('button');
     mark.type = 'button';
-    mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`;
+    mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`
+      + (e.src === 'umibozu' ? ' ember-whirl' : '');
     mark.title = emberLabel(e);
     mark.setAttribute('aria-label', emberLabel(e));
     mark.addEventListener('click', ev => { ev.stopPropagation(); });
@@ -1381,8 +1383,9 @@ function setEmberNote(em: Ember | undefined) {
 }
 
 function showEmberInfo(e: Ember) {
-  const fl = Game.emberFlavor(e.mode);
-  const srcId = e.mode === 'bolt' ? 'raiju' : e.mode === 'heal' ? 'rinka' : e.mode === 'trap' ? 'tsurube' : 'shiranui';
+  const fl = Game.emberFlavor(e.mode, e.src);
+  const srcId = e.src
+    || (e.mode === 'bolt' ? 'raiju' : e.mode === 'heal' ? 'rinka' : e.mode === 'trap' ? 'tsurube' : 'shiranui');
   $('piece-info').classList.remove('hidden');
   applyYokaiImage($<HTMLImageElement>('info-img'), srcId, 'sm');
   const typeEl = $('info-type');

@@ -3738,6 +3738,10 @@ html[data-script="latn"] .battle-tools #btn-battle-status {
 .ember-atk { background: radial-gradient(circle, #ffb060 0%, #ff6020 55%, transparent 75%); box-shadow: 0 0 8px #ff8040; }
 .ember-heal { background: radial-gradient(circle, #a8ffc8 0%, #40c878 55%, transparent 75%); box-shadow: 0 0 8px #60e090; }
 .ember-trap { background: radial-gradient(circle, #2a1830 0%, #100818 60%, transparent 80%); box-shadow: inset 0 0 6px #000, 0 0 4px #604080; }
+.ember-whirl {
+  background: radial-gradient(circle, #9ee7ff 0%, #2a7ad4 45%, #0a2048 70%, transparent 80%);
+  box-shadow: 0 0 10px #3aa0ff, inset 0 0 6px #063060;
+}
 .ember-bolt {
   width: 40%;
   height: 32%;

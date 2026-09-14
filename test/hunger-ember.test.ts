@@ -164,6 +164,10 @@ test('釣瓶落とし: 相手が落とし穴マスに入るとダメージ', () 
   put(s, 2, 2, 'kooni', 'e');
   put(s, 0, 0, 'ittan', 'e');
   move(s, 2, 4, 2, 2, { rng: false });
+  const pit = s.embers.find(e => e.mode === 'trap' && e.x === 2 && e.y === 2);
+  expect(pit?.until).toBe(-1);
+  s.plies = 40;
+  Game.pruneEmbers(s);
   expect(s.embers.some(e => e.mode === 'trap' && e.x === 2 && e.y === 2)).toBe(true);
 
   s.turn = 'e';
