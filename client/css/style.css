@@ -512,7 +512,8 @@ html[data-script="latn"] .title-sub-top {
   .title-bg, .fog, .title-rays, .title-embers, .title-orbs i,
   .title-logo, .title-center, .title-frame-glow,
   .title-mandala, .title-grain,
-  .battle-moon::after, .battle-embers, #board-wrap::before, #board-frame, #board-frame::after {
+  .battle-moon::after, .battle-embers, #board-wrap::before, #board-frame, #board-frame::after,
+  .ember-bolt {
     animation: none !important;
   }
   .general-statue { transition: none !important; }
@@ -3720,13 +3721,43 @@ html[data-script="latn"] .battle-tools #btn-battle-status {
   width: 28%; height: 22%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  pointer-events: none;
-  z-index: 2;
+  border: none;
+  padding: 0;
+  pointer-events: auto;
+  z-index: 3;
   opacity: 0.85;
+  cursor: help;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+.ember-mark:focus-visible {
+  outline: 2px solid #ffe56a;
+  outline-offset: 2px;
 }
 .ember-atk { background: radial-gradient(circle, #ffb060 0%, #ff6020 55%, transparent 75%); box-shadow: 0 0 8px #ff8040; }
 .ember-heal { background: radial-gradient(circle, #a8ffc8 0%, #40c878 55%, transparent 75%); box-shadow: 0 0 8px #60e090; }
 .ember-trap { background: radial-gradient(circle, #2a1830 0%, #100818 60%, transparent 80%); box-shadow: inset 0 0 6px #000, 0 0 4px #604080; }
+.ember-bolt {
+  width: 40%;
+  height: 32%;
+  top: 70%;
+  opacity: 0.95;
+  background: radial-gradient(circle, #f6fbff 0%, #8ad4ff 32%, #3d6cff 62%, transparent 78%);
+  box-shadow: 0 0 14px #6cf0ff, 0 0 4px #fff;
+  animation: boltPulse 1.35s ease-in-out infinite;
+}
+@keyframes boltPulse {
+  0%, 100% { opacity: 0.78; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.14); }
+}
+.info-ember {
+  margin-top: 3px;
+  color: #9ee7ff;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.t-ember { background: #7ec8ff; }
 .hl-phase {
   outline: 2px solid rgba(180, 200, 255, 0.85);
   outline-offset: -2px;

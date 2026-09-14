@@ -9,7 +9,7 @@ import {
 } from '../../shared/data';
 import type { Rarity, Side } from '../../shared/data';
 import { AWAKEN_ATK, AWAKEN_MAX, Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
-import type { Action, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
+import type { Action, Ember, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
 import { AI } from './ai';
 import { HYAKKI_STAGE, soloBattleStage } from './solo';
@@ -33,7 +33,7 @@ import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ClockPhase, ServerBattleMessage, SkipStreak } from '../../shared/battle';
 import { SKIP_LIMIT } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, skipStreakForView, stateForView } from './online';
-import { initializeLocale } from './locale';
+import { initializeLocale, t } from './locale';
 import { confirmDialog } from './dialog';
 import {
   applyYokaiImage, isPlayerFacingText, userErrorMessage, yokaiDisplayName, yokaiOf,
@@ -1012,9 +1012,7 @@ function buildBoardCells() {
       c.appendChild(Object.assign(document.createElement('div'), { className: 'hl' }));
       c.addEventListener('click', () => onCellClick(x, y));
       bindLongPress(c, () => {
-        const pc = G?.board[y][x];
-        if (!pc) return;
-        showInfo(pc.id, pc.promoted);
+        inspectCell(x, y);
       });
       wrap.appendChild(c);
     }
@@ -1139,14 +1137,32 @@ function renderAll() {
   renderEmbers();
 }
 
+function emberLabel(e: Ember): string {
+  if (e.mode === 'bolt') return `残雷 味方+${e.value} / 敵-${e.value}（永久）`;
+  if (e.mode === 'atk') return `残火 +${e.value}`;
+  if (e.mode === 'heal') return `燐火 +${e.value}`;
+  return `落とし穴 ${e.value}`;
+}
+
+function liveEmberAt(x: number, y: number): Ember | undefined {
+  if (!G) return undefined;
+  const plies = G.plies ?? 0;
+  return (G.embers ?? []).find(e => e.x === x && e.y === y && Game.emberLive(e, plies));
+}
+
 function renderEmbers() {
   document.querySelectorAll('.ember-mark').forEach(el => el.remove());
   if (!G?.embers) return;
+  const plies = G.plies ?? 0;
   for (const e of G.embers) {
-    if (e.until < (G.plies ?? 0)) continue;
-    const mark = document.createElement('div');
+    if (!Game.emberLive(e, plies)) continue;
+    const mark = document.createElement('button');
+    mark.type = 'button';
     mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`;
-    mark.title = e.mode === 'atk' ? `残火 +${e.value}` : e.mode === 'heal' ? `燐火 +${e.value}` : `落とし穴 ${e.value}`;
+    mark.title = emberLabel(e);
+    mark.setAttribute('aria-label', emberLabel(e));
+    mark.addEventListener('click', ev => { ev.stopPropagation(); });
+    mark.addEventListener('focus', () => { showEmberInfo(e); });
     cellEl(e.x, e.y).appendChild(mark);
   }
 }
@@ -1342,7 +1358,48 @@ function updateComboHeat() {
 const LONG_PRESS_MS = 480;
 const LONG_PRESS_MOVE_PX = 14;
 
-function showInfo(id: string, promoted: boolean) {
+function inspectCell(x: number, y: number) {
+  if (!G) return;
+  const pc = G.board[y][x];
+  const em = liveEmberAt(x, y);
+  if (pc) {
+    showInfo(pc.id, pc.promoted, em);
+    return;
+  }
+  if (em) showEmberInfo(em);
+}
+
+function setEmberNote(em: Ember | undefined) {
+  const note = $('info-ember');
+  if (!em) {
+    note.classList.add('hidden');
+    note.textContent = '';
+    return;
+  }
+  note.classList.remove('hidden');
+  note.textContent = t(emberLabel(em));
+}
+
+function showEmberInfo(e: Ember) {
+  const fl = Game.emberFlavor(e.mode);
+  const srcId = e.mode === 'bolt' ? 'raiju' : e.mode === 'heal' ? 'rinka' : e.mode === 'trap' ? 'tsurube' : 'shiranui';
+  $('piece-info').classList.remove('hidden');
+  applyYokaiImage($<HTMLImageElement>('info-img'), srcId, 'sm');
+  const typeEl = $('info-type');
+  typeEl.hidden = false;
+  typeEl.textContent = t('マス効果');
+  typeEl.className = 'type-chip t-ember';
+  $('info-name').textContent = t(fl.name);
+  const left = e.until < 0 ? '永久' : `残り${Math.max(0, e.until - (G?.plies ?? 0) + 1)}手`;
+  $('info-atk').textContent = t(left);
+  $('info-move').textContent = t(e.side === 'p' ? '自軍の刻印' : '敵軍の刻印');
+  $('info-skill-name').textContent = `【${t(fl.name)}】`;
+  $('info-skill-desc').textContent = t(emberLabel(e));
+  setEmberNote(undefined);
+  AudioSys.play('select');
+}
+
+function showInfo(id: string, promoted: boolean, em?: Ember) {
   const def = yokaiOf(id);
   if (!def) return;
   $('piece-info').classList.remove('hidden');
@@ -1350,18 +1407,19 @@ function showInfo(id: string, promoted: boolean) {
   const typeEl = $('info-type');
   if (def.boss) {
     typeEl.hidden = false;
-    typeEl.textContent = '大将';
+    typeEl.textContent = t('大将');
     typeEl.className = 'type-chip t-boss';
   } else {
     typeEl.hidden = true;
     typeEl.textContent = '';
     typeEl.className = 'type-chip';
   }
-  $('info-name').textContent = def.name + (promoted ? '【成】' : '');
+  $('info-name').textContent = t(def.name + (promoted ? '【成】' : ''));
   $('info-atk').textContent = `ATK ${promoted ? Math.round(def.atk * 1.5) : def.atk}`;
-  $('info-move').textContent = def.moveText;
-  $('info-skill-name').textContent = `【${def.skill.name}】`;
-  $('info-skill-desc').textContent = def.skill.desc;
+  $('info-move').textContent = t(def.moveText);
+  $('info-skill-name').textContent = `【${t(def.skill.name)}】`;
+  $('info-skill-desc').textContent = t(def.skill.desc);
+  setEmberNote(em);
   AudioSys.play('select');
 }
 function hideInfo() { $('piece-info').classList.add('hidden'); }
@@ -1949,7 +2007,9 @@ async function animCapture(ev: CaptureEvent) {
   const colors = special ? [...special] : isPlayer ? COLORS_P : COLORS_E;
   const aDef = YOKAI[ev.attacker.id];
   const aSkill = aDef.skill;
-  const kindFx = SKILL_KIND_FX[aSkill.kind] ?? SSR_FX_COLORS;
+  const kindFx = (aSkill.kind === 'ember' && aSkill.mode === 'bolt')
+    ? ['#f4fbff', '#7ec8ff', '#3d6cff'] as const
+    : SKILL_KIND_FX[aSkill.kind] ?? SSR_FX_COLORS;
   const tier = rarityTier(ev.attacker.id);
   const scale = TIER_SCALE[tier];
   const vTier = rarityTier(ev.victim.id);

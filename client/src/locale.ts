@@ -195,6 +195,7 @@ const STATIC: Record<string, string> = {
   '百鬼夜行ランキング1位限定': 'Night Parade #1 reward', '土曜対戦会限定': 'Saturday Battle exclusive',
   '初期選択またはガチャ': 'Starter choice or summon', 'ガチャ': 'Summon',
   '神妖 顕現': 'Divine Yokai Manifested', '大妖怪 降臨': 'Great Yokai Descends', '希少妖怪 出現': 'Rare Yokai Appears',
+  'マス効果': 'Square effect', '永久': 'Permanent', '自軍の刻印': 'Your mark', '敵軍の刻印': 'Enemy mark',
 };
 Object.entries(STATIC).forEach(([ja, en]) => add(ja, en));
 
@@ -217,7 +218,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   suiko: ['Suiko', '1 square orthogonally (promoted: 1 in any direction)', 'Great Water Veil', 'While on the board, your army takes 22% less damage'],
   oonyudo: ['O-nyudo', '1 forward or sideways (promoted: orthogonal + forward diagonals)', 'Void Pressure', 'While on the board, your army takes 25% less damage'],
   daitengu: ['Great Tengu', 'Leaps 1–2 squares diagonally (promoted: +1 forward/back)', 'Tengu Gale', 'When captured, deals 400 counter damage to the captor'],
-  raiju: ['Raiju', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Lightning Fang', '30% chance for a capture to deal 1.8× damage'],
+  raiju: ['Raiju', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Lingering Lightning', 'Leaves permanent lightning on the captured square. Allied captures there deal +120. Enemy captures there take 120 HP'],
   ibaraki: ['Ibaraki-doji', 'Gold General movement (promoted: 1 in any direction)', "Arm's Return", 'When captured, returns to your hand instead of the enemy hand', 'Rashomon Severance'],
   tamamo: ['Tamamo-no-Mae', '1 square in any direction', 'Calamitous Invitation', 'After a capture, returns to its original square and the captured yokai joins you on that square', 'Ninefold Calamity'],
   sunakake: ['Sunakake-baba', '1 forward or forward-diagonal (promoted: Gold General movement)', 'Blinding Sand', 'While on the board, seals enemy critical skills'],
@@ -296,7 +297,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     </ul>
     <h3>How to Move</h3>
     <ul>
-      <li>A short tap selects and moves. <b>Press and hold</b> for details</li>
+      <li>A short tap selects and moves. <b>Press and hold</b> for details. Focus a lightning mark to see lingering lightning</li>
       <li>Capturing deals damage equal to your yokai's <b>attack</b></li>
       <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture, summon, or awakening resets it)</li>
     </ul>
@@ -346,6 +347,10 @@ function translatePatterns(value: string): string {
     [/酒蔵の猶予 あと(\d+)/g, 'Cellar grace: $1 left'],
     [/満月まで(\d+)夜/g, '$1 nights until Full Moon'], [/残火 \+(\d+)/g, 'Ember +$1'],
     [/燐火 \+(\d+)/g, 'Spirit Flame +$1'], [/落とし穴 (\d+)/g, 'Pit $1'],
+    [/残雷 味方\+(\d+) \/ 敵-(\d+)（永久）/g, 'Lightning: allies +$1 / enemies −$2 (permanent)'],
+    [/残雷の追撃 \+(\d+)!/g, 'Lingering Lightning strike +$1!'],
+    [/残雷 (\d+)ダメージ!/g, 'Lingering Lightning $1 damage!'],
+    [/残雷を刻んだ/g, 'Carved lingering lightning'],
     [/勝利報酬:\s*ガチャチケット\s*🎟\s*\+(\d+)/g, 'Victory reward: Ticket 🎟 +$1'],
     [/参加報酬:\s*ガチャチケット\s*🎟\s*\+(\d+)/g, 'Participation reward: Ticket 🎟 +$1'],
     [/通算発動\s*(\d+)回/g, 'Lifetime activations: $1'], [/(\d+)\s*\/\s*(\d+)\s*体/g, '$1 / $2 yokai'],

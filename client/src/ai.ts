@@ -348,7 +348,7 @@ export const AI = {
     if (Game.hasSkill(s, side, 'chill')) score += 40;
     if (Game.hasSkill(s, side, 'heal')) score += 30;
     for (const em of s.embers ?? []) {
-      if (em.side === side && em.until >= s.plies) score += 18;
+      if (em.side === side && Game.emberLive(em, s.plies ?? 0)) score += em.mode === 'bolt' ? 28 : 18;
     }
     return score;
   },

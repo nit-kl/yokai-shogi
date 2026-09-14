@@ -35,7 +35,7 @@ export type Skill =
   /* 食い逃げ・残火 */
   | { kind: 'retreat'; name: string; desc: string }                           // 取ったあと自動で元マスへ戻る
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
-  | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap'; value: number; span: number }
+  | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap' | 'bolt'; value: number; span: number } // span<=0 は永久
   | { kind: 'spawn'; name: string; desc: string; piece: string }              // 取ったあと周囲の空きへ駒を1体置く
   | { kind: 'veil'; name: string; desc: string }                              // SSR: 残留/帰影/影遁を選択
   | { kind: 'charm'; name: string; desc: string }                             // 取った駒を味方にして元マスへ戻る
@@ -250,7 +250,11 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'raiju', name: '雷獣', atk: 330, rarity: 'SR', gachaOnly: true,
     img: img('raiju'), imgSm: imgSm('raiju'),
     moveText: '前へ変則跳び・駒を飛び越す(成:+斜め1マス)',
-    skill: { kind: 'crit', name: '迅雷の牙', desc: '駒を取った時、30%で雷光が走りダメージ1.8倍', chance: 0.3, mult: 1.8 },
+    skill: {
+      kind: 'ember', name: '残雷',
+      desc: '取ったマスに残雷を永久に刻む。味方がそこで取るとダメージ+120。敵がそこで取ると魂力120の雷撃を受ける',
+      mode: 'bolt', value: 120, span: 0,
+    },
     moves: { jumps: [[1,-2],[-1,-2]] },
     promoted: { jumps: [[1,-2],[-1,-2]], steps: STEPS_DIAG4 },
     dropLimit: 2,
