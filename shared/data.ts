@@ -243,7 +243,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'daitengu', name: '大天狗', atk: 260, rarity: 'SR', gachaOnly: true,
     img: img('daitengu'), imgSm: imgSm('daitengu'),
     moveText: '斜めに1〜2マス飛行・駒を飛び越す(成:+前後1マス)',
-    skill: { kind: 'counter', name: '天狗颪', desc: '取られた時、羽団扇の烈風が吹き荒れ、取った相手に400の反撃ダメージ!', dmg: 400 },
+    skill: { kind: 'rush', name: '天狗颪', desc: '斜めに2マス飛んで駒を取ると、羽団扇の烈風でダメージ2倍', minDist: 2, mult: 2 },
     moves: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]] },
     promoted: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]], steps: [[0,-1],[0,1]] },
   },

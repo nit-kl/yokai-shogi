@@ -217,7 +217,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   hitouban: ['Hitoban', 'Any distance sideways +1 forward (promoted: +back/forward diagonals)', 'Flying Grudge', 'When captured, deals 300 counter damage to the captor'],
   suiko: ['Suiko', '1 forward, forward-diagonal, or sideways (promoted: Gold General movement)', 'Drink the Tide', 'Capturing restores 200 HP to your army'],
   oonyudo: ['O-nyudo', '1 forward or sideways (promoted: orthogonal + forward diagonals)', 'Void Pressure', 'While on the board, your army takes 25% less damage'],
-  daitengu: ['Great Tengu', 'Leaps 1–2 squares diagonally (promoted: +1 forward/back)', 'Tengu Gale', 'When captured, deals 400 counter damage to the captor'],
+  daitengu: ['Great Tengu', 'Leaps 1–2 squares diagonally (promoted: +1 forward/back)', 'Tengu Gale', 'A capture after leaping 2 squares diagonally deals 2× damage'],
   raiju: ['Raiju', 'Leaps forward over pieces (promoted: +1 diagonally)', 'Lingering Lightning', 'Leaves permanent lightning on the captured square. Allied captures there deal +120. Enemy captures there take 120 HP'],
   ibaraki: ['Ibaraki-doji', 'Gold General movement (promoted: 1 in any direction)', "Arm's Return", 'When captured, returns to your hand instead of the enemy hand', 'Rashomon Severance'],
   tamamo: ['Tamamo-no-Mae', '1 square in any direction', 'Calamitous Invitation', 'After a capture, returns to its original square and the captured yokai joins you on that square', 'Ninefold Calamity'],

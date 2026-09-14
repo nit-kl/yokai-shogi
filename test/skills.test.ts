@@ -153,3 +153,21 @@ test('道連れで消えた駒は成れない', () => {
   const events = cap(s, 1, 3, 2, 4);
   expect(events.some(e => e.t === 'promote'), '消滅した駒の成りイベントが出ない').toBe(false);
 });
+
+test('大天狗: 斜め2マスの取りは2倍、1マスでは倍化しない', () => {
+  const far = blank();
+  far.turn = 'p';
+  put(far, 1, 4, 'daitengu', 'p');
+  put(far, 3, 2, 'kooni', 'e');
+  put(far, 0, 0, 'ittan', 'e');
+  const farEv = capEv(cap(far, 1, 4, 3, 2, { rng: false }));
+  expect(farEv.damage).toBe(520);
+
+  const near = blank();
+  near.turn = 'p';
+  put(near, 2, 3, 'daitengu', 'p');
+  put(near, 3, 2, 'kooni', 'e');
+  put(near, 0, 0, 'ittan', 'e');
+  const nearEv = capEv(cap(near, 2, 3, 3, 2, { rng: false }));
+  expect(nearEv.damage).toBe(260);
+});
