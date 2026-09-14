@@ -161,6 +161,13 @@ const STATIC: Record<string, string> = {
   'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。': 'No opponent yet. Keep waiting or battle the AI now.',
   '秒読み！': 'Final countdown!', '秒読み': 'Countdown', '相手の秒読み': "Opponent's countdown",
   '相手の秒読み！': "Opponent's countdown!", '切れたら負け': 'Timeout is a loss', '切れれば勝ち': 'Timeout is a win',
+  '切れたら手番スキップ': 'Timeout skips your turn', '切れれば手番スキップ': 'Timeout skips their turn',
+  '次に切れたら負け': 'Next timeout is a loss', '次に切れれば勝ち': 'Next timeout wins',
+  '時間切れ！': 'Time out!', '相手が時間切れ': "Opponent timed out", '手番を飛ばした': 'Turn skipped',
+  '手番を飛ばしました': 'Your turn was skipped', '時間切れ': 'Time out',
+  '次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓や月齢も1手分進みます。':
+    'The next timeout will lose the game. Your opponent plays twice, and Hunger and the moon phase also advance one move.',
+  'わかった': 'Got it', '警告: 次の時間切れで負けです': 'Warning: the next timeout is a loss',
   'あなたの手番': 'Your turn', '相手の手番': "Opponent's turn", '敵の手番': 'Enemy turn', '対戦相手': 'Opponent',
   '満月 ― 会心確定!': 'Full Moon — Critical guaranteed!',
   '満月 ― 味方の取りが会心!': 'Full Moon — Allied captures are critical!',
@@ -180,6 +187,8 @@ const STATIC: Record<string, string> = {
   '対局に勝利した': 'You won the battle.', '対局に敗れた': 'You lost the battle.',
   '対局の通信でエラーが発生しました': 'A battle connection error occurred.',
   '相手の秒読みが切れた': "The opponent's countdown expired.", '秒読みが切れた…': 'Your countdown expired…',
+  '相手が2回連続で時間切れになった': 'The opponent timed out twice in a row.',
+  '2回連続で時間切れになった…': 'You timed out twice in a row…',
   '相手の再接続猶予が切れた': "The opponent's reconnection time expired.", '再接続猶予が切れた…': 'Your reconnection time expired…',
   '飢餓の夜で双方の魂力が尽きた': 'Both sides ran out of HP during the Night of Hunger.', '300手に達したため引き分け': 'Draw after 300 moves.',
   '飢餓の夜で敵の魂力が尽きた!': 'The enemy ran out of HP during the Night of Hunger!', '飢餓の夜で魂力が尽きた…': 'You ran out of HP during the Night of Hunger…',
@@ -304,7 +313,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <h3>Modes</h3>
     <ul>
       <li><b>Night Parade:</b> Solo win streaks. Weekly rankings; last week's #1 gets the exclusive “Champion · Nine-Tails” alt (first time only)</li>
-      <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Friend rooms use a 6-digit code</li>
+      <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code</li>
       <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
     </ul>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',

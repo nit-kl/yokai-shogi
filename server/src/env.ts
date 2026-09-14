@@ -16,6 +16,11 @@ export interface Env {
   MATCH_HOUR_ENFORCE?: string;
   /* 参加報酬の最低アクション数の上書き(テスト用。未設定は shared/match-hour.ts の既定値) */
   PARTICIPATION_MIN_ACTIONS?: string;
+  /* 対局時計の上書き(テスト用。未設定は 60000 / 30000) */
+  CLOCK_TURN_MS?: string;
+  CLOCK_BYOYOMI_MS?: string;
+  /* '1' のとき /init の turnMs/byoyomiMs を受け付ける(テスト専用) */
+  ALLOW_TEST_CLOCK?: string;
   /* リワード広告(doc 22)。'1' で有効。未設定/'0' は無効 */
   ADS_REWARD_ENABLED?: string;
   /* 'mock'(開発・検証) | 'gpt'(Google Publisher Tag Rewarded) */

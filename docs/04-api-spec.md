@@ -140,7 +140,7 @@ PUT時のサーバー検証(`shared/validate.ts` と同一ロジック): 2×5構
 | leave_queue | `{ reason?: "cancel" | "timeout" }` | 待機解除 |
 | create_room | `{}` | フレンドマッチ用ルーム作成 → `room_created {code}` |
 | join_room | `{ code }` | コードで参加 |
-| action | `{ kind:'move', from:{x,y}, to:{x,y} }` / `{ kind:'drop', id, to:{x,y} }` / `{ kind:'awaken', to:{x,y} }` | 現エンジンのaction形式そのまま |
+| action | `{ kind:'move', from:{x,y}, to:{x,y} }` / `{ kind:'drop', id, to:{x,y} }` / `{ kind:'awaken', to:{x,y} }` | 現エンジンのaction形式そのまま。`pass` はクライアントから送れない(時間切れ時にサーバーだけが適用) |
 | resign | `{}` | 投了 |
 | reconnect | `{ matchId, token }` | 再接続 |
 
@@ -152,11 +152,12 @@ PUT時のサーバー検証(`shared/validate.ts` と同一ロジック): 2×5構
 | room_created | `{ code }` | ルームコード発行 |
 | match_found | `{ matchId, reconnectToken, side:'p'｜'e', opponent:{name,rating,bossId}, formations:{p,e} }` | 対局成立 |
 | game_start | `{ state }` | 初期局面スナップショット |
-| events | `{ seq, events:[...] }` | **現エンジン `applyAction` の戻り値と同形式**(move/drop/capture/promote/gameover)。seqは欠落検知用の連番 |
-| your_turn | `{ remainMs, phase:'main'｜'byoyomi' }` | 手番通知+残り時間 |
-| clock | `{ remainMs, phase:'main'｜'byoyomi' }` | 本時間→秒読みなど時計位相の更新 |
+| events | `{ seq, events:[...] }` | **現エンジン `applyAction` の戻り値と同形式**(move/drop/capture/promote/pass/gameover)。seqは欠落検知用の連番 |
+| your_turn | `{ remainMs, phase:'main'｜'byoyomi', skipStreak:{p,e}, skipLimit }` | 手番通知+残り時間。skipStreakは連続スキップ回数 |
+| clock | `{ remainMs, phase:'main'｜'byoyomi', skipStreak, skipLimit }` | 本時間→秒読みなど時計位相の更新 |
+| turn_skipped | `{ side, skips, skipLimit, remainMs, phase, skipStreak }` | 秒読み切れで手番スキップ(1回目)。連続2回目は送らず `game_end` |
 | opponent_disconnected | `{ graceMs }` | 相手切断(猶予中) |
-| snapshot | `{ state, remainMs, phase:'main'｜'byoyomi', seq }` | 再接続時の現局面 |
+| snapshot | `{ state, remainMs, phase:'main'｜'byoyomi', seq, skipStreak, skipLimit }` | 再接続時の現局面 |
 | game_end | `{ winner, reason, reward:{tickets}, rating:{before,after} }` | 終局。reason: boss/hp/explode/nomoves/resign/timeout/disconnect/draw |
 | error | `{ code, message }` | 不正な操作など |
 

@@ -70,7 +70,8 @@ export const HUNGER_DRAIN = 50;
 export type Action =
   | { kind: 'move'; from: Pos; to: Pos; phaseTo?: Pos; spawnTo?: Pos; dualTo?: Pos }
   | { kind: 'drop'; id: string; to: Pos }
-  | { kind: 'awaken'; to: Pos }; // 自軍SSR駒(to)を覚醒させる(手番を消費)
+  | { kind: 'awaken'; to: Pos } // 自軍SSR駒(to)を覚醒させる(手番を消費)
+  | { kind: 'pass' }; // オンライン時間切れの手番スキップ。合法手には出さない
 
 export interface MoveTarget { x: number; y: number; capture: boolean; }
 
@@ -117,6 +118,7 @@ export type GameEvent =
   | CaptureEvent
   | { t: 'hunger'; drain: number; hp: Record<Side, number> }
   | { t: 'cellar'; side: Side; heal: number; name: string; img: string; hp: Record<Side, number> }
+  | { t: 'pass'; side: Side }
   | { t: 'gameover'; winner: Side | null; reason: GameOverReason };
 
 export interface ApplyOptions {
@@ -647,6 +649,9 @@ export const Game = {
         events.push({ t: 'gameover', winner: foe, reason: 'hp' });
         return events;
       }
+    } else if (action.kind === 'pass') {
+      s.combo[side] = 0;
+      events.push({ t: 'pass', side });
     } else {
       const { from, to } = action;
       const pc = s.board[from.y][from.x]!;
@@ -730,7 +735,7 @@ export const Game = {
 
     if (!s.winner && s.reason !== 'draw') {
       s.turn = foe;
-      s.lastMove = { to: { ...action.to } };
+      if (action.kind !== 'pass') s.lastMove = { to: { ...action.to } };
       if (!this.hasAnyAction(s, foe)) {
         s.winner = side;
         s.reason = 'nomoves';

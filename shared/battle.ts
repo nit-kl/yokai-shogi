@@ -3,6 +3,9 @@ import type { Action, GameEvent, GameState } from './game';
 
 export type MatchMode = 'random' | 'friend';
 export type ClockPhase = 'main' | 'byoyomi';
+export type SkipStreak = Record<Side, number>;
+/** 同一対局で連続スキップがこの回数に達したら時間切れ負け */
+export const SKIP_LIMIT = 2;
 export type BattleEndReason =
   | 'boss' | 'hp' | 'explode' | 'nomoves' | 'resign'
   | 'timeout' | 'disconnect' | 'draw';
@@ -35,11 +38,16 @@ export type ServerBattleMessage =
     }
   | { t: 'game_start'; state: GameState }
   | { t: 'events'; seq: number; events: GameEvent[] }
-  | { t: 'your_turn'; remainMs: number; phase: ClockPhase }
-  | { t: 'clock'; remainMs: number; phase: ClockPhase }
+  | { t: 'your_turn'; remainMs: number; phase: ClockPhase; skipStreak?: SkipStreak; skipLimit?: number }
+  | { t: 'clock'; remainMs: number; phase: ClockPhase; skipStreak?: SkipStreak; skipLimit?: number }
   | { t: 'opponent_disconnected'; graceMs: number }
   | { t: 'opponent_reconnected' }
-  | { t: 'snapshot'; state: GameState; remainMs: number; phase: ClockPhase; seq: number }
+  | {
+      t: 'turn_skipped'; side: Side; skips: number; skipLimit: number;
+      remainMs: number; phase: ClockPhase; skipStreak: SkipStreak;
+    }
+  | { t: 'snapshot'; state: GameState; remainMs: number; phase: ClockPhase; seq: number;
+      skipStreak?: SkipStreak; skipLimit?: number }
   | {
       t: 'game_end'; winner: Side | 'draw'; reason: BattleEndReason;
       /* tickets=勝利報酬 / participation=逢魔が時の完走報酬(勝敗不問・1日1回) /

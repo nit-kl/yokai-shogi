@@ -394,6 +394,7 @@
             </div>
             <div class="online-timer-track"><div id="online-turn-fill"></div></div>
             <div id="online-turn-hint" class="online-turn-hint hidden"></div>
+            <div id="online-skip-warn" class="online-skip-warn hidden"></div>
           </div>
           <div id="online-disconnect-block" class="online-timer-block online-disconnect-block hidden">
             <div class="online-timer-line">
@@ -666,6 +667,15 @@
     </div>
   </div>
 
+  <div id="modal-skip-warning" class="modal skip-warning-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="skip-warning-title" aria-describedby="skip-warning-message">
+    <div class="modal-box skip-warning-box">
+      <p class="skip-warning-kicker">時間切れ</p>
+      <h2 id="skip-warning-title">手番を飛ばしました</h2>
+      <p id="skip-warning-message" class="skip-warning-message">次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓や月齢も1手分進みます。</p>
+      <button id="btn-skip-warning-ok" class="btn btn-gold" type="button">わかった</button>
+    </div>
+  </div>
+
   <!-- ゲーム内確認(ブラウザ標準ダイアログはオリジンURLが出る) -->
   <div id="modal-confirm" class="modal confirm-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
     <div class="modal-box confirm-box">
@@ -709,7 +719,7 @@
         <h3>遊べるモード</h3>
         <ul>
           <li><b>百鬼夜行:</b> ソロ連戦。連勝は週間ランキングになり、先週1位には限定異装「覇者・九尾」（初回のみ）</li>
-          <li><b>オンライン:</b> ランダムマッチはいつでも。集まりやすい時間は毎日20:00〜22:00。1手60秒＋秒読み30秒。フレンドルームは6桁コード</li>
+          <li><b>オンライン:</b> ランダムマッチはいつでも。集まりやすい時間は毎日20:00〜22:00。1手60秒＋秒読み30秒。時間切れは手番スキップ、連続2回で負け。フレンドルームは6桁コード</li>
           <li><b>ガチャと編成:</b> チケットで召喚（10連はSR以上1枠確定）。被りは妖力になり、300でチケット1枚。編成は大将1体必須</li>
         </ul>
       </div>

@@ -267,6 +267,12 @@ export const AudioSys = {
         this._osc('sine', 660, t + 0.08, 0.18, 0.2);
         this._osc('sine', 990, t + 0.16, 0.22, 0.16);
         break;
+      case 'skip':
+        this._noise(t, 0.22, 0.45, 2400);
+        this._osc('sawtooth', 280, t, 0.28, 0.35, null, 90);
+        this._osc('sine', 520, t + 0.04, 0.22, 0.22, null, 180);
+        this._osc('triangle', 180, t + 0.12, 0.4, 0.28, null, 70);
+        break;
       case 'summon':
         this._noise(t, 1.1, 0.22, 1800);
         this._osc('sine', 90, t, 1.3, 0.55, null, 360);

@@ -403,6 +403,7 @@ export const AI = {
   },
 
   moveOrderKey(s: GameState, act: Action): number {
+    if (act.kind === 'pass') return -100;
     if (act.kind === 'awaken') return 500;
     if (act.kind === 'drop') {
       const def = YOKAI[act.id];
@@ -436,7 +437,7 @@ export const AI = {
   },
 
   positionBonus(before: GameState, _after: GameState, act: Action): number {
-    if (act.kind === 'awaken') return 0;
+    if (act.kind === 'awaken' || act.kind === 'pass') return 0;
     let b = 0;
     const def = YOKAI[act.kind === 'drop' ? act.id : before.board[act.from.y][act.from.x]!.id];
     if (act.kind === 'move') {

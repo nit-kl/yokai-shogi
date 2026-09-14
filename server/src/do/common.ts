@@ -8,7 +8,12 @@ export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
 export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v10'; // v10: がしゃどくろ・骨の山
+export const RULE_VERSION = 'phase2-v11'; // v11: 時間切れは手番スキップ、連続2回で負け
+
+export function envClockMs(raw: string | undefined, fallback: number): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 50 ? n : fallback;
+}
 
 export function send(ws: WebSocket, message: ServerBattleMessage): void {
   try { ws.send(JSON.stringify(message)); } catch { /* closed socket */ }
