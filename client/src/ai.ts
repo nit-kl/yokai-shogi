@@ -26,8 +26,8 @@ interface SearchCtx {
 
 const PROFILE: Record<AIDifficulty, SearchProfile> = {
   easy:   { depth: 1, quiesce: 0, noise: 48, randomPick: 0.35, budgetMs: 80 },
-  normal: { depth: 2, quiesce: 2, noise: 16, randomPick: 0, budgetMs: 220 },
-  hard:   { depth: 3, quiesce: 4, noise: 3,  randomPick: 0, budgetMs: 380 },
+  normal: { depth: 3, quiesce: 2, noise: 0, randomPick: 0, budgetMs: 160 },
+  hard:   { depth: 5, quiesce: 3, noise: 0, randomPick: 0, budgetMs: 250 },
 };
 
 const WIN = 1_000_000;
@@ -64,52 +64,59 @@ export const AI = {
   },
 
   chooseAction(state: GameState, difficulty: AIDifficulty = 'normal'): Action | null {
+    if (state.winner || state.reason === 'draw') return null;
+    const prof = PROFILE[difficulty];
+    const ctx: SearchCtx = { deadline: performance.now() + prof.budgetMs, nodes: 0, timedOut: false };
     const acts = Game.getAllActions(state, 'e');
     if (acts.length === 0) return null;
 
-    const prof = PROFILE[difficulty];
     if (prof.randomPick > 0 && Math.random() < prof.randomPick) {
       return acts[Math.floor(Math.random() * acts.length)];
     }
 
     const ordered = this.orderActions(state, acts);
-    for (const act of ordered) {
-      const sim = Game.clone(state);
-      Game.applyAction(sim, act, APPLY);
-      if (sim.winner === 'e') return act;
-    }
+    // Reuse root positions and search the previous iteration's best moves first.
+    const roots = ordered.map(act => ({ act, state: null as GameState | null, score: -Infinity }));
 
     /* 反復深化 + ルートαβ。持ち駒が増える局面で全合法手を独立探索すると数秒かかる */
-    const ctx: SearchCtx = { deadline: performance.now() + prof.budgetMs, nodes: 0, timedOut: false };
     let best: Action = ordered[0];
 
     for (let depth = 1; depth <= prof.depth; depth++) {
       ctx.timedOut = false;
-      const q = depth < prof.depth ? Math.min(prof.quiesce, depth === 1 ? 0 : 2) : prof.quiesce;
+      const q = Math.min(prof.quiesce, depth === 1 ? 1 : prof.quiesce);
       let alpha = -WIN;
       const beta = WIN;
       let iterBest: Action | null = null;
       let iterScore = -Infinity;
 
-      for (const act of ordered) {
+      for (const root of roots) {
         if (this.hitDeadline(ctx)) break;
-        const sim = Game.clone(state);
-        Game.applyAction(sim, act, APPLY);
-        if (sim.winner === 'p') continue;
+        const act = root.act;
+        if (!root.state) {
+          root.state = Game.clone(state);
+          Game.applyAction(root.state, act, APPLY);
+        }
+        const sim = root.state;
+        if (sim.winner === 'e') return act;
 
         const score = this.search(sim, depth - 1, alpha, beta, q, ctx);
         if (ctx.timedOut) break;
+        root.score = score;
 
         const noisy = score + Math.random() * prof.noise;
         if (noisy > iterScore) {
           iterScore = noisy;
           iterBest = act;
+          // Retain useful work even if the first iteration exhausts the budget.
+          if (depth === 1) best = act;
         }
         if (score > alpha) alpha = score;
       }
 
       if (ctx.timedOut) break;
       if (iterBest) best = iterBest;
+      roots.sort((a, b) => b.score - a.score);
+      if (Math.abs(iterScore) > WIN / 2) break;
     }
 
     return best;
@@ -118,7 +125,7 @@ export const AI = {
   hitDeadline(ctx: SearchCtx): boolean {
     if (ctx.timedOut) return true;
     ctx.nodes++;
-    if ((ctx.nodes & 31) === 0 && performance.now() >= ctx.deadline) {
+    if (performance.now() >= ctx.deadline) {
       ctx.timedOut = true;
       return true;
     }
@@ -175,11 +182,13 @@ export const AI = {
     if (depth <= 0) return standPat;
 
     const side = s.turn;
-    const captures = this.orderActions(s, this.captureActions(s, side));
+    // A threatened general cannot stand still: include escapes and blocking drops.
+    const threatened = this.bossThreatened(s, side);
+    const captures = this.orderActions(s, threatened ? Game.getAllActions(s, side) : this.captureActions(s, side));
     if (captures.length === 0) return standPat;
 
     if (side === 'e') {
-      let best = standPat;
+      let best = threatened ? -Infinity : standPat;
       if (best >= beta) return best;
       if (best > alpha) alpha = best;
       for (const act of captures) {
@@ -195,7 +204,7 @@ export const AI = {
       return best;
     }
 
-    let best = standPat;
+    let best = threatened ? Infinity : standPat;
     if (best <= alpha) return best;
     if (best < beta) beta = best;
     for (const act of captures) {
@@ -216,6 +225,17 @@ export const AI = {
     if (s.winner === 'p') return -(WIN - s.plies);
     if (s.reason === 'draw') return 0;
     return null;
+  },
+
+  bossThreatened(s: GameState, side: Side): boolean {
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const pc = s.board[y][x];
+        if (!pc || pc.owner === side) continue;
+        if (Game.getMoves(s, x, y).some(m => m.capture && YOKAI[s.board[m.y][m.x]!.id].boss)) return true;
+      }
+    }
+    return false;
   },
 
   captureActions(s: GameState, side: Side): Action[] {
@@ -405,14 +425,15 @@ export const AI = {
   },
 
   moveOrderKey(s: GameState, act: Action): number {
+    const forward = (y: number) => s.turn === 'e' ? y : ROWS - 1 - y;
     if (act.kind === 'pass') return -100;
     if (act.kind === 'awaken') return 500;
     if (act.kind === 'drop') {
       const def = YOKAI[act.id];
       let k = 40 + def.atk * 0.2;
-      k += act.to.y * 3;
+      k += forward(act.to.y) * 3;
       k += (2 - Math.abs(act.to.x - 2)) * 2;
-      if (def.skill.kind === 'counter') k += act.to.y * 3;
+      if (def.skill.kind === 'counter') k += forward(act.to.y) * 3;
       return k;
     }
     const victim = s.board[act.to.y][act.to.x];
@@ -427,8 +448,8 @@ export const AI = {
     if (!pc) return 0;
     const def = YOKAI[pc.id];
     let k = 10;
-    if (def.boss) k += (ROWS - 1 - act.to.y) * 4;
-    else k += act.to.y * 4;
+    if (def.boss) k += (ROWS - 1 - forward(act.to.y)) * 4;
+    else k += forward(act.to.y) * 4;
     k += (2 - Math.abs(act.to.x - 2)) * 2;
     return k;
   },

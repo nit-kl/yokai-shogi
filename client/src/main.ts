@@ -11,6 +11,7 @@ import type { Rarity, Side } from '../../shared/data';
 import { AWAKEN_ATK, AWAKEN_MAX, Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
 import type { Action, Ember, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
+import { chooseCPUAction } from './ai-client';
 import { AI } from './ai';
 import { HYAKKI_STAGE, soloBattleStage } from './solo';
 import type { SoloStage } from './solo';
@@ -1817,11 +1818,10 @@ async function doAction(action: Action) {
   if (G!.turn === 'e') {
     showBanner('e');
     $('thinking').classList.remove('hidden');
-    await sleep(40);
-    const started = performance.now();
-    const act = AI.chooseAction(G!, HYAKKI_RANK_DIFFICULTY);
-    const leftover = 420 + Math.random() * 180 - (performance.now() - started);
-    if (leftover > 0) await sleep(leftover);
+    const thinkingState = G!;
+    const thinkingPly = thinkingState.plies;
+    const act = await chooseCPUAction(thinkingState, HYAKKI_RANK_DIFFICULTY);
+    if (G !== thinkingState || G.plies !== thinkingPly || onlineSide || G.winner || (G as GameState).reason === 'draw') return;
     $('thinking').classList.add('hidden');
     if (act) { doAction(act); return; }
     // 指し手なし(エンジン側で勝敗確定済みのはず)
