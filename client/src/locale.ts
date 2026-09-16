@@ -326,7 +326,7 @@ const HTML_OVERRIDES: Record<string, string> = {
   '#modal-link-nudge .link-desc': 'Clearing browser data can erase your progress. Register a <b>passkey</b> or create a <b>transfer code</b> to keep it safe.',
   '#modal-session-recovery .link-desc:nth-of-type(1)': 'Local data may have been cleared, or this account may not have been used for a long time. Restore it with a <b>passkey</b> or <b>transfer code</b>.',
   '#modal-session-recovery .link-desc:nth-of-type(2)': 'If you have no recovery method, you can start with new progress.',
-  '#modal-support .link-desc': 'For bugs, feedback, or data questions, send a <b>DM</b> to <b id="support-handle">@nit_zunda_dev</b>. Use the <a href="https://discord.gg/qhm6YSSUz" target="_blank" rel="noopener noreferrer">official Discord</a> to find opponents or share feedback.',
+  '#modal-support .link-desc': 'For bugs, feedback, or data questions, send a <b>DM</b> to <b id="support-handle">@nit_zunda_dev</b>. Use the <a href="https://discord.com/channels/1530830388107415742/1530830388966985781" target="_blank" rel="noopener noreferrer">official Discord</a> to find opponents or share feedback.',
   '#modal-support .support-notes': '<li>The button below opens X with a report template (X login required).</li><li>Describe <b>what happened</b> and <b>which screen</b> you were using.</li><li>Never send <b>transfer codes, credentials, or personal information</b>.</li><li>Replies may take some time.</li>',
 };
 

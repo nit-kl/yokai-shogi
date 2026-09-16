@@ -75,7 +75,7 @@
 | お問い合わせ | `https://nit-games.com/contact.html` | サポート情報と一致させる |
 | ドキュメント / マニュアル | `https://nit-games.com/guide.html` | 遊び方ガイド |
 | オンラインマニュアル | （空） | 上と重複させない |
-| バグ / 開発報告 | `https://discord.gg/qhm6YSSUz` | 公式Discord。個人DM誘導はしない |
+| バグ / 開発報告 | `https://discord.com/channels/1530830388107415742/1530830388966985781` | 公式Discord。個人DM誘導はしない |
 | プライバシーポリシー | `https://yokai-shogi.nit-games.com/legal/privacy.html` | **必須**。Steam ID / Session Ticket / Valve 送信を追記済み（2026-08-22 公開） |
 | Metacritic | （空） | ない |
 
@@ -84,7 +84,7 @@
 | 種別 | URL |
 |---|---|
 | X (Twitter) | `https://x.com/nit_zunda_dev` |
-| Discord | `https://discord.gg/qhm6YSSUz` |
+| Discord | `https://discord.com/channels/1530830388107415742/1530830388966985781` |
 
 Facebook / YouTube / TikTok 等は公式が無いので足さない。
 
