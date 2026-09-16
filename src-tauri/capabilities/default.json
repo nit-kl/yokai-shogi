@@ -13,6 +13,7 @@
         { "url": "https://nit-games.com/*" },
         { "url": "https://www.nit-games.com/*" },
         { "url": "https://discord.gg/*" },
+        { "url": "https://discord.com/channels/*" },
         { "url": "https://x.com/*" },
         { "url": "https://twitter.com/*" },
         { "url": "https://store.steampowered.com/*" }

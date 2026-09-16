@@ -11,6 +11,7 @@ import type { Rarity, Side } from '../../shared/data';
 import { AWAKEN_ATK, AWAKEN_MAX, Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
 import type { Action, Ember, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
+import { chooseCPUAction } from './ai-client';
 import { AI } from './ai';
 import { HYAKKI_STAGE, soloBattleStage } from './solo';
 import type { SoloStage } from './solo';
@@ -135,6 +136,8 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
 };
 /* 会心系(発動="当たり")として扱うスキル */
 const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads', 'famine', 'bones']);
+/* 盤上オーラは味方の取りにも毎回乗るので、フルカットインは出さない */
+const BOSS_AURA_CUTIN_PROCS = new Set(['月の主', '百鬼夜行の総帥']);
 
 /* レアリティ段階(演出の格): N=0, R=1, SR=2, SSR・異装=3 */
 function rarityTier(id: string): 0 | 1 | 2 | 3 {
@@ -1815,11 +1818,10 @@ async function doAction(action: Action) {
   if (G!.turn === 'e') {
     showBanner('e');
     $('thinking').classList.remove('hidden');
-    await sleep(40);
-    const started = performance.now();
-    const act = AI.chooseAction(G!, HYAKKI_RANK_DIFFICULTY);
-    const leftover = 420 + Math.random() * 180 - (performance.now() - started);
-    if (leftover > 0) await sleep(leftover);
+    const thinkingState = G!;
+    const thinkingPly = thinkingState.plies;
+    const act = await chooseCPUAction(thinkingState, HYAKKI_RANK_DIFFICULTY);
+    if (G !== thinkingState || G.plies !== thinkingPly || onlineSide || G.winner || (G as GameState).reason === 'draw') return;
     $('thinking').classList.add('hidden');
     if (act) { doAction(act); return; }
     // 指し手なし(エンジン側で勝敗確定済みのはず)
@@ -2035,9 +2037,17 @@ async function animCapture(ev: CaptureEvent) {
   }
 
   /* スキル発動カットイン(系統別の前置き演出+系統色・レアリティ格のカットイン)。
-     覚醒・共鳴のprocは攻撃駒スキルと別名で並ぶため、前置き演出はスキル本体の1回だけ */
+     覚醒・共鳴のprocは攻撃駒スキルと別名で並ぶため、前置き演出はスキル本体の1回だけ。
+     大将オーラは味方の取りにも乗るのでカットインせずラベルだけ出す */
   for (const proc of ev.procs) {
     const isSkillProc = proc.name === aSkill.name;
+    if (BOSS_AURA_CUTIN_PROCS.has(proc.name)) {
+      const color = proc.name === '月の主' ? SKILL_KIND_FX.moon[1]
+        : proc.name === '百鬼夜行の総帥' ? SKILL_KIND_FX.legion[1]
+        : kindFx[1];
+      FX.floatLabel(c.x, c.y - 36, `${proc.name} ${proc.text}`, color);
+      continue;
+    }
     if (isSkillProc && jackpot) {
       /* 当たり: 暗転スポットライト+吸い込み(レアリティが高いほど長く・濃く) */
       FX.spotlight(c.x, c.y, kindFx[1], 1700 + tier * 200);
