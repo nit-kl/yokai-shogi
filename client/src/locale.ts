@@ -91,7 +91,7 @@ const STATIC: Record<string, string> = {
   '今週の1位報酬': 'Weekly #1 Reward', '今週の百鬼夜行': "This Week's Night Parade",
   '連勝ランキング(月曜リセット)': 'Win Streak Rankings (resets Monday)',
   '名前を設定して名乗りを上げる': 'Set a name to enter the rankings', '先週の百鬼夜行': "Last Week's Night Parade",
-  'チケットはログインボーナスや対戦報酬、任意の広告視聴などで手に入ります。': 'Earn tickets from login bonuses, battle rewards, and optional ads.',
+  'チケットはログインボーナス、道場、対戦報酬、任意の広告視聴などで手に入ります。': 'Earn tickets from login bonuses, the Dojo, battle rewards, and optional ads.',
   '1回召喚': 'Summon Once', 'チケット1枚': '1 Ticket', '10連召喚': 'Summon 10',
   '10枚・SR以上確定': '10 Tickets · SR+ guaranteed', '妖力300 → チケット1枚': '300 Spirit Power → 1 Ticket',
   '広告を見てチケット+1': 'Watch an Ad for +1 Ticket', '1日2回まで・任意視聴': 'Optional · Up to twice daily',
