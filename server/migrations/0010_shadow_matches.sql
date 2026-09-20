@@ -1,6 +1,7 @@
 -- ランダムマッチ待機からの影CPU対戦(mode=shadow)と番兵アカウント
-
-PRAGMA foreign_keys = OFF;
+-- D1はマイグレーションをトランザクション内で実行するため PRAGMA foreign_keys=OFF は無視される。
+-- match_actions が matches を参照したまま再作成できるよう、外部キー検査だけ遅延する。
+PRAGMA defer_foreign_keys = ON;
 CREATE TABLE matches_new (
   id           TEXT PRIMARY KEY,
   mode         TEXT NOT NULL CHECK (mode IN ('random', 'friend', 'shadow')),
@@ -20,8 +21,7 @@ DROP TABLE matches;
 ALTER TABLE matches_new RENAME TO matches;
 CREATE INDEX idx_matches_p ON matches(p_user_id, started_at);
 CREATE INDEX idx_matches_e ON matches(e_user_id, started_at);
-
-PRAGMA foreign_keys = ON;
+PRAGMA defer_foreign_keys = OFF;
 
 INSERT OR IGNORE INTO users (id, is_guest, status) VALUES ('u_shadow', 0, 'active');
 INSERT OR IGNORE INTO user_profiles (user_id, name, formation) VALUES (
