@@ -437,6 +437,12 @@ html[data-script="latn"] .title-sub-top {
   background: linear-gradient(150deg, #315f8c, #203452 58%, #15152b);
   box-shadow: 0 0 20px rgba(88,182,255,0.2), inset 0 1px rgba(255,255,255,0.15);
 }
+.title-action-dojo {
+  grid-column: 1 / -1;
+  color: #f4e8ff; border-color: rgba(200,120,255,0.55);
+  background: linear-gradient(150deg, #5a3a78, #32204a 58%, #1b1228);
+  box-shadow: 0 0 20px rgba(200,120,255,0.18), inset 0 1px rgba(255,255,255,0.12);
+}
 .online-random-schedule {
   margin: 0;
   color: #a99dbd;
@@ -600,6 +606,58 @@ html[data-script="latn"] .title-sub-top {
   line-height: 1.7;
   text-align: center;
   letter-spacing: 0.04em;
+}
+.dojo-col { width: min(98vw, 520px); }
+.dojo-note {
+  margin: 0 0 0.6rem;
+  color: #b3a8d6;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  text-align: center;
+}
+.dojo-progress {
+  text-align: center;
+  color: #ffe9a0;
+  font-family: "Yu Mincho", serif;
+  letter-spacing: 0.16em;
+  margin-bottom: 0.7rem;
+}
+.dojo-list { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.dojo-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  color: #efe7ff;
+  background: linear-gradient(180deg, rgba(42, 28, 58, 0.92), rgba(18, 12, 28, 0.92));
+  border: 1px solid rgba(200, 120, 255, 0.28);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.dojo-card:disabled { opacity: 0.45; cursor: not-allowed; }
+.dojo-card.is-cleared { border-color: rgba(232, 196, 106, 0.55); }
+.dojo-card-no { color: #e8c46a; font-family: "Yu Mincho", serif; min-width: 2em; }
+.dojo-card-title { display: block; letter-spacing: 0.12em; }
+.dojo-card-brief { display: block; margin-top: 2px; color: #b3a8d6; font-size: 0.72rem; }
+.dojo-card-mark { color: #ffe9a0; font-size: 0.85rem; }
+.dojo-brief {
+  position: absolute;
+  bottom: 8px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: 92%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(18, 10, 24, 0.88);
+  border: 1px solid rgba(200, 120, 255, 0.4);
+  color: #efe7ff;
+  font-size: clamp(0.62rem, 1.6vh, 0.78rem);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  white-space: nowrap;
 }
 .solo-lobby-links {
   display: grid;

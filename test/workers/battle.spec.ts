@@ -2,6 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { Game } from '../../shared/game';
 import type { BattlePlayer, ServerBattleMessage } from '../../shared/battle';
+import { SHADOW_FALLBACK_FORMATION, SHADOW_USER_ID } from '../../shared/battle';
 import { EVENT_YOKAI_ID, isEventDay, participationTicketsFor } from '../../shared/match-hour';
 import { bossId } from '../../server/src/do/common';
 
@@ -323,5 +324,70 @@ describe('オンライン報酬', () => {
       .bind(e.userId).first<{ tickets: number }>();
     expect(pProfile?.tickets).toBe(expected);      // 参加報酬のみ
     expect(eProfile?.tickets).toBe(2 + expected);  // 勝利2 + 参加報酬
+  });
+});
+
+describe('AI対戦フォールバック', () => {
+  function shadowOpponent(source: BattlePlayer): BattlePlayer {
+    return {
+      userId: SHADOW_USER_ID,
+      name: source.name,
+      rating: source.rating,
+      bossId: source.bossId,
+      formation: source.formation.length ? source.formation : SHADOW_FALLBACK_FORMATION,
+      reconnectToken: crypto.randomUUID(),
+    };
+  }
+
+  it('request_shadow で実在編成の影マッチが成立する', async () => {
+    const p = await createPlayer('待機ソロ');
+    const socket = await connectMatchmaker(p);
+    socket.ws.send(JSON.stringify({ t: 'join_queue' }));
+    await socket.nextType('queued');
+    socket.ws.send(JSON.stringify({ t: 'request_shadow' }));
+    const found = await socket.nextType('match_found');
+    expect(found.shadow).toBe(true);
+    expect(found.side).toBe('p');
+    expect(found.opponent.name.length).toBeGreaterThan(0);
+    expect(found.formations.e.flat().some(Boolean)).toBe(true);
+  });
+
+  it('人間の着手のあと影CPUが指し、勝利時は対人と同じチケットを付与する', async () => {
+    const p = await createPlayer('先手');
+    const source = await createPlayer('編成元');
+    const shadow = shadowOpponent(source);
+    const matchId = crypto.randomUUID();
+    const stub = env.BATTLE.get(env.BATTLE.idFromName(matchId));
+    const init = await stub.fetch('https://battle/init', {
+      method: 'POST',
+      body: JSON.stringify({ matchId, mode: 'shadow', players: { p, e: shadow } }),
+    });
+    expect(init.status).toBe(201);
+
+    const pws = await connect(stub, p, matchId);
+    const pSnapshot = await pws.nextType('snapshot');
+    await pws.nextType('your_turn');
+    const action = Game.getAllActions(pSnapshot.state, 'p')[0];
+    pws.ws.send(JSON.stringify({ t: 'action', action }));
+    await pws.nextType('events', 8000);
+    await pws.nextType('events', 8000);
+
+    const ews = await connect(stub, shadow, matchId);
+    await ews.nextType('snapshot');
+    ews.ws.send(JSON.stringify({ t: 'resign' }));
+    const end = await pws.nextType('game_end', 8000);
+    expect(end).toMatchObject({
+      t: 'game_end', winner: 'p',
+      reward: { tickets: 1, participation: participationTicketsFor(new Date()) },
+    });
+    const profile = await env.DB.prepare(
+      'SELECT tickets, online_win_reward_count FROM user_profiles WHERE user_id = ?1',
+    ).bind(p.userId).first<{ tickets: number; online_win_reward_count: number }>();
+    const expected = 1 + participationTicketsFor(new Date());
+    expect(profile).toEqual({ tickets: expected, online_win_reward_count: 1 });
+    const shadowTickets = await env.DB.prepare(
+      'SELECT tickets FROM user_profiles WHERE user_id = ?1',
+    ).bind(SHADOW_USER_ID).first<{ tickets: number }>();
+    expect(shadowTickets?.tickets).toBe(0);
   });
 });

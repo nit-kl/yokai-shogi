@@ -128,6 +128,10 @@ class MetaFacade {
   claimAdReward(provider: AdsStatus['provider']): Promise<AdsClaimResult | null> {
     return this.provider.claimAdReward(provider);
   }
+  dojoProgress(): Promise<{ cleared: string[] } | null> { return this.provider.dojoProgress(); }
+  dojoClear(id: string, actions: unknown): Promise<{ granted: number; tickets: number; already: boolean } | null> {
+    return this.provider.dojoClear(id, actions);
+  }
   addTickets(n: number): void { if (n > 0) this.provider.data.tickets += n; }
   /** サーバーが付与済みの妖怪をローカル表示へ反映(対戦会限定妖怪など) */
   addYokai(id: string): void { this.provider.data.owned[id] = 1; }

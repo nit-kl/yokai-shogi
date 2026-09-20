@@ -1,7 +1,18 @@
 import type { Side } from './data';
 import type { Action, GameEvent, GameState } from './game';
 
-export type MatchMode = 'random' | 'friend';
+export type MatchMode = 'random' | 'friend' | 'shadow';
+/** 影CPUの対戦相手として matches / user_profiles に置く番兵アカウント */
+export const SHADOW_USER_ID = 'u_shadow';
+/** ランダムマッチが成立しなければ影の対戦へ切り替えるまでの待ち(本番) */
+export const SHADOW_WAIT_MS = 15_000;
+/** 待ち時間のゆらぎ上限。実待ちは 15〜20 秒 */
+export const SHADOW_WAIT_JITTER_MS = 5_000;
+/** 影CPUが使う予備編成(他プレイヤーがいないとき) */
+export const SHADOW_FALLBACK_FORMATION: (string | null)[][] = [
+  ['ittan', 'kooni', null, 'nekomata', 'nue'],
+  ['tengu', 'kappa', 'kyubi', 'nurikabe', 'rokuro'],
+];
 export type ClockPhase = 'main' | 'byoyomi';
 export type SkipStreak = Record<Side, number>;
 /** 同一対局で連続スキップがこの回数に達したら時間切れ負け */
@@ -22,6 +33,7 @@ export interface BattlePlayer {
 export type ClientBattleMessage =
   | { t: 'join_queue' }
   | { t: 'leave_queue'; reason?: 'cancel' | 'timeout' }
+  | { t: 'request_shadow' }
   | { t: 'create_room' }
   | { t: 'join_room'; code: string }
   | { t: 'action'; action: Action }
@@ -35,6 +47,8 @@ export type ServerBattleMessage =
       t: 'match_found'; matchId: string; reconnectToken: string; side: Side;
       opponent: { name: string; rating: number; bossId: string };
       formations: Record<Side, (string | null)[][]>;
+      /** 実在プレイヤーの編成を使ったCPU代理対戦 */
+      shadow?: boolean;
     }
   | { t: 'game_start'; state: GameState }
   | { t: 'events'; seq: number; events: GameEvent[] }

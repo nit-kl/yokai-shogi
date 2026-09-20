@@ -19,6 +19,8 @@ import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
 import { SessionExpiredError } from './meta';
 import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
+import { DOJO_PUZZLES, buildDojoState, evaluateDojo, isDojoUnlocked } from '../../shared/dojo';
+import type { DojoPuzzle } from '../../shared/dojo';
 import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
 import { FX } from './effects';
@@ -34,7 +36,7 @@ import { trackLandingEvent, trackLandingEventOnce } from './analytics';
 import type { ClockPhase, ServerBattleMessage, SkipStreak } from '../../shared/battle';
 import { SKIP_LIMIT } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, skipStreakForView, stateForView } from './online';
-import { initializeLocale, t } from './locale';
+import { initializeLocale, t, getLocale } from './locale';
 import { confirmDialog } from './dialog';
 import {
   applyYokaiImage, isPlayerFacingText, userErrorMessage, yokaiDisplayName, yokaiOf,
@@ -54,7 +56,9 @@ let sel: Sel = null;            // 選択中
 const pieceEls = new Map<number, HTMLElement>(); // uid -> DOM要素
 let online: OnlineConnection | null = null;
 let onlineSide: Side | null = null;
-let onlineMatch: { matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string } | null = null;
+let onlineMatch: {
+  matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string; shadow?: boolean;
+} | null = null;
 let onlineEndReason: string | null = null;
 let onlineReward = 0;
 let onlineParticipation = 0;
@@ -63,7 +67,8 @@ let onlineSeq = 0;
 const ONLINE_TURN_MS = 60_000;
 const ONLINE_BYOYOMI_MS = 30_000;
 const ONLINE_DISCONNECT_MS = 60_000;
-const ONLINE_AI_OFFER_MS = 20_000;
+const ONLINE_SHADOW_WAIT_MS = 15_000;
+const ONLINE_AI_OFFER_MS = 5_000;
 const ONLINE_TIMER_WARN_MS = 20_000;
 const ONLINE_TIMER_LOW_MS = 10_000;
 let onlineTurnDeadline = 0;
@@ -73,7 +78,7 @@ let onlineDisconnectDeadline = 0;
 let onlineSkipStreak: SkipStreak = { p: 0, e: 0 };
 let onlineSkipLimit = SKIP_LIMIT;
 let onlineTimerId: ReturnType<typeof setInterval> | null = null;
-let onlineQueueTimerId: ReturnType<typeof setTimeout> | null = null;
+let onlineQueueTimerId: ReturnType<typeof setInterval> | null = null;
 let activeSoloStage: SoloStage = HYAKKI_STAGE;
 let pendingSoloStage: SoloStage | null = null;
 let soloStreak = 0;
@@ -83,10 +88,14 @@ let soloWinCounted = false;
 let hyakkiRanking: HyakkiRanking | null = null;
 let hyakkiRankingAt = 0; // 最終取得時刻(60秒キャッシュ)
 let rankingReturn: 'title' | 'solo' = 'title';
+let dojoPuzzle: DojoPuzzle | null = null;
+let dojoActions: Action[] = [];
+let dojoCleared: string[] = [];
 const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
 const CONSENT_KEY = 'yokaiShogi.consent.2026-08-22';
 type StoredOnlineMatch = {
   matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string; side: Side;
+  shadow?: boolean;
 };
 
 const COLORS_P = ['#ffd24a', '#ff9a3c', '#fff6d8', '#ffe9a0'];
@@ -314,6 +323,31 @@ function wireButtons() {
     AudioSys.play('click');
     openSolo();
   };
+  $('btn-dojo').onclick = () => {
+    trackLandingEvent('dojo_cta_click', { source: 'title' });
+    AudioSys.init();
+    AudioSys.play('click');
+    void openDojo();
+  };
+  $('btn-dojo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
+  $('btn-dojo-next').onclick = () => {
+    AudioSys.play('click');
+    const next = nextDojoPuzzle();
+    if (next) startDojoPuzzle(next);
+    else void openDojo();
+  };
+  $('btn-dojo-retry').onclick = () => {
+    AudioSys.play('click');
+    if (dojoPuzzle) startDojoPuzzle(dojoPuzzle);
+  };
+  $('btn-dojo-gacha').onclick = () => { AudioSys.play('click'); AudioSys.stopBgm(); MenuUI.openGacha(); };
+  $('btn-dojo-lobby').onclick = () => { AudioSys.play('click'); AudioSys.stopBgm(); void openDojo(); };
+  $('btn-dojo-hint').onclick = () => {
+    AudioSys.play('click');
+    if (!dojoPuzzle) return;
+    $('dojo-brief').textContent = t(getLocale() === 'en' ? dojoPuzzle.hintEn : dojoPuzzle.hint);
+    $('dojo-brief').classList.remove('hidden');
+  };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-solo-battle').onclick = () => { AudioSys.play('click'); openHyakkiPreview(); };
   $('btn-solo-formation').onclick = () => {
@@ -359,7 +393,7 @@ function wireButtons() {
   $('btn-online-random').onclick = () => {
     connectMatchmaker();
     online?.send({ t: 'join_queue' });
-    $('online-message').textContent = '対戦相手を探しています…';
+    $('online-message').textContent = t('対戦相手を探しています。15秒ほどでAI対戦に切り替わります');
     startOnlineQueueTimer();
   };
   $('btn-online-ai').onclick = () => switchQueueToAi();
@@ -479,6 +513,49 @@ function openSolo() {
   renderHyakkiLobby();
   showScreen('screen-solo');
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(200,120,255,0.4)', 'rgba(88,182,255,0.3)'], 0.04);
+}
+
+function dojoText(puzzle: DojoPuzzle, field: 'title' | 'brief' | 'hint'): string {
+  const en = getLocale() === 'en';
+  if (field === 'title') return t(en ? puzzle.titleEn : puzzle.title);
+  if (field === 'brief') return t(en ? puzzle.briefEn : puzzle.brief);
+  return t(en ? puzzle.hintEn : puzzle.hint);
+}
+
+async function openDojo() {
+  MatchHourUI.stop();
+  const progress = await Meta.dojoProgress().catch(() => null);
+  dojoCleared = progress?.cleared ?? dojoCleared;
+  renderDojoList();
+  showScreen('screen-dojo');
+  FX.setAmbient(['rgba(200,120,255,0.4)', 'rgba(232,196,106,0.3)', 'rgba(88,182,255,0.25)'], 0.04);
+}
+
+function renderDojoList() {
+  $('dojo-progress').textContent = `${dojoCleared.length} / ${DOJO_PUZZLES.length}`;
+  const list = $('dojo-list');
+  list.replaceChildren();
+  for (const puzzle of DOJO_PUZZLES) {
+    const cleared = dojoCleared.includes(puzzle.id);
+    const unlocked = isDojoUnlocked(puzzle.id, dojoCleared);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dojo-card' + (cleared ? ' is-cleared' : '');
+    btn.disabled = !unlocked;
+    btn.innerHTML =
+      `<span class="dojo-card-no">${String(puzzle.order).padStart(2, '0')}</span>`
+      + `<span><span class="dojo-card-title">${dojoText(puzzle, 'title')}</span>`
+      + `<span class="dojo-card-brief">${dojoText(puzzle, 'brief')}</span></span>`
+      + `<span class="dojo-card-mark">${cleared ? '🎟' : unlocked ? '挑戦' : '—'}</span>`;
+    btn.onclick = () => { AudioSys.play('click'); startDojoPuzzle(puzzle); };
+    list.appendChild(btn);
+  }
+}
+
+function nextDojoPuzzle(): DojoPuzzle | null {
+  const current = dojoPuzzle;
+  if (!current) return DOJO_PUZZLES.find(p => isDojoUnlocked(p.id, dojoCleared)) ?? null;
+  return DOJO_PUZZLES.find(p => p.order === current.order + 1 && isDojoUnlocked(p.id, dojoCleared)) ?? null;
 }
 
 function openHyakkiPreview() {
@@ -693,7 +770,7 @@ function connectMatchmaker(extra: Record<string, string> = {}) {
 
 async function onOnlineMessage(message: ServerBattleMessage) {
   if (message.t === 'queued') {
-    $('online-message').textContent = `対戦相手を探しています(待機 ${message.position}番目)`;
+    return;
   } else if (message.t === 'room_created') {
     $('online-message').textContent = 'このコードを相手に伝えてください';
     $('online-room-code').textContent = message.code;
@@ -710,6 +787,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     onlineMatch = {
       matchId: message.matchId, reconnectToken: message.reconnectToken,
       opponentName: message.opponent.name, opponentBossId: message.opponent.bossId,
+      shadow: !!message.shadow,
     };
     saveOnlineMatch();
     $('modal-online').classList.add('hidden');
@@ -780,26 +858,31 @@ async function onOnlineMessage(message: ServerBattleMessage) {
 
 function startOnlineQueueTimer(): void {
   clearOnlineQueueTimer();
-  onlineQueueTimerId = setTimeout(() => {
-    onlineQueueTimerId = null;
-    $('online-message').textContent = 'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。';
-    $('btn-online-ai').classList.remove('hidden');
-  }, ONLINE_AI_OFFER_MS);
+  const started = Date.now();
+  const tick = () => {
+    const elapsed = Date.now() - started;
+    const remainSec = Math.max(0, Math.ceil((ONLINE_SHADOW_WAIT_MS - elapsed) / 1000));
+    if (remainSec > 0) {
+      $('online-message').textContent =
+        t(`対戦相手を探しています… 約${remainSec}秒でAI対戦に切り替わります`);
+    } else {
+      $('online-message').textContent = t('対戦相手が見つからないため、AI対戦を準備しています…');
+    }
+    if (elapsed >= ONLINE_AI_OFFER_MS) $('btn-online-ai').classList.remove('hidden');
+  };
+  tick();
+  onlineQueueTimerId = setInterval(tick, 250);
 }
 
 function clearOnlineQueueTimer(): void {
-  if (onlineQueueTimerId !== null) clearTimeout(onlineQueueTimerId);
+  if (onlineQueueTimerId !== null) clearInterval(onlineQueueTimerId);
   onlineQueueTimerId = null;
   $('btn-online-ai').classList.add('hidden');
 }
 
 function switchQueueToAi(): void {
-  online?.send({ t: 'leave_queue', reason: 'timeout' });
-  clearOnlineQueueTimer();
-  online?.close();
-  online = null;
-  $('modal-online').classList.add('hidden');
-  openHyakkiPreview();
+  online?.send({ t: 'request_shadow' });
+  $('online-message').textContent = t('AI対戦を準備しています…');
 }
 
 function formatCountdown(ms: number, compact = false): string {
@@ -972,7 +1055,7 @@ function renderOnlineTimers(): void {
 }
 
 async function startOnlineBattle() {
-  trackLandingEvent('online_battle_start');
+  trackLandingEvent('online_battle_start', { shadow: !!onlineMatch?.shadow });
   busy = true; // 開幕演出中は入力・後続イベント演出をロック
   sel = null;
   pieceEls.forEach(el => el.remove());
@@ -999,7 +1082,7 @@ async function startOnlineBattle() {
   /* ソロと同様に VS → 共鳴の順。await しないと共鳴カットインが VS に被る */
   await playVsIntro(
     { bossId: onlineMatch?.opponentBossId || ENEMY_BOSS, label: onlineMatch?.opponentName || '対戦相手' },
-    'オンライン対戦',
+    onlineMatch?.shadow ? t('AI対戦') : t('オンライン対戦'),
   );
   await announceResonances();
 }
@@ -1738,6 +1821,10 @@ async function playVsIntro(enemy: { bossId: string; label: string }, stageLabel:
 }
 
 async function startBattle() {
+  dojoPuzzle = null;
+  dojoActions = [];
+  $('btn-dojo-hint').classList.add('hidden');
+  $('dojo-brief').classList.add('hidden');
   trackLandingEvent('solo_battle_start', {
     mode: 'streak',
     stage: 'hyakki',
@@ -1777,6 +1864,7 @@ async function startBattle() {
   $('player-name').textContent = Meta.data.name;
   $('enemy-name').textContent = yokaiDisplayName(stage.bossId, '敵将');
   $('hyakki-round-hud').classList.remove('hidden');
+  $('battle-mode-tag').textContent = t('百鬼夜行');
   $('hyakki-round-label').textContent = `${soloStreak + 1}戦目`;
   renderAll();
   updateHUD();
@@ -1794,6 +1882,55 @@ async function startBattle() {
   busy = false;
 }
 
+async function startDojoPuzzle(puzzle: DojoPuzzle) {
+  dojoPuzzle = puzzle;
+  dojoActions = [];
+  onlineSide = null;
+  onlineEndReason = null;
+  onlineReward = 0;
+  onlineParticipation = 0;
+  onlineEventYokai = null;
+  stopOnlineTimer();
+  $('online-status').classList.add('hidden');
+  G = buildDojoState(puzzle);
+  busy = true;
+  sel = null;
+  pieceEls.forEach(el => el.remove());
+  pieceEls.clear();
+  hideInfo();
+  clearSel();
+  setBattleStatusOpen(false);
+  document.querySelectorAll('.cell').forEach(c => c.classList.remove('hl-last'));
+  showScreen('screen-battle');
+  const enemyBoss = puzzle.pieces.find(pc => pc.owner === 'e' && yokaiOf(pc.id)?.boss)?.id
+    || puzzle.pieces.find(pc => pc.owner === 'e')?.id
+    || ENEMY_BOSS;
+  setBattleGenerals(Meta.bossId(), Meta.data.name, enemyBoss, yokaiDisplayName(enemyBoss, '敵将'));
+  $('player-name').textContent = Meta.data.name;
+  $('enemy-name').textContent = yokaiDisplayName(enemyBoss, '敵将');
+  $('hyakki-round-hud').classList.remove('hidden');
+  $('battle-mode-tag').textContent = t('妖怪道場');
+  $('hyakki-round-label').textContent = t(`第${puzzle.order}問`);
+  $('thinking').classList.add('hidden');
+  $('dojo-brief').textContent = dojoText(puzzle, 'brief');
+  $('dojo-brief').classList.remove('hidden');
+  $('btn-dojo-hint').classList.remove('hidden');
+  renderAll();
+  updateHUD();
+  FX.setAmbient(['rgba(200,120,255,0.35)', 'rgba(232,196,106,0.28)'], 0.025);
+  AudioSys.init();
+  AudioSys.startBattleBgm();
+  summonAnnounced.clear();
+  resonanceAnnounced.clear();
+  await playVsIntro(
+    { bossId: enemyBoss, label: yokaiDisplayName(enemyBoss, '敵将') },
+    `${t('妖怪道場')} ${t(`第${puzzle.order}問`)}`,
+  );
+  await announceResonances();
+  showBanner('p');
+  busy = false;
+}
+
 async function doAction(action: Action) {
   busy = true;
   clearSel();
@@ -1805,13 +1942,32 @@ async function doAction(action: Action) {
     return;
   }
 
-  const events = Game.applyAction(G!, action);
+  const events = Game.applyAction(G!, action, dojoPuzzle ? { rng: false } : {});
+  if (dojoPuzzle) dojoActions.push(action);
   for (const ev of events) await animEvent(ev);
 
   renderAll();
   updateHUD();
   await announceResonances(); // 打ち込みで因縁ペアが揃った場合
   if (action.kind !== 'pass') cellEl(action.to.x, action.to.y).classList.add('hl-last');
+
+  if (dojoPuzzle) {
+    const remain = dojoPuzzle.maxPlies - dojoActions.length;
+    $('hyakki-round-label').textContent = remain > 0 ? t(`残り${remain}手`) : t(`第${dojoPuzzle.order}問`);
+    if (G!.winner || G!.reason === 'draw') { await sleep(750); showResult(); return; }
+    if (dojoActions.length >= dojoPuzzle.maxPlies) {
+      G!.winner = 'e';
+      G!.reason = 'resign';
+      await sleep(400);
+      showResult();
+      return;
+    }
+    G!.turn = 'p';
+    G!.winner = null;
+    showBanner('p');
+    busy = false;
+    return;
+  }
 
   if (G!.winner || G!.reason === 'draw') { await sleep(750); showResult(); return; }
 
@@ -2264,22 +2420,64 @@ function showResult() {
   AudioSys.stopBgm();
   $('combo-vignette').className = '';
   const draw = onlineEndReason === 'draw' || G!.reason === 'draw';
-  const win = G!.winner === 'p';
-  const solo = !onlineSide;
+  const dojo = dojoPuzzle;
+  const judged = dojo ? evaluateDojo(dojo, dojoActions) : null;
+  const win = dojo ? !!judged?.ok : G!.winner === 'p';
+  const solo = !onlineSide && !dojo;
   trackLandingEvent('result_view', {
     online: !!onlineSide,
+    shadow: !!onlineMatch?.shadow,
+    dojo: dojo?.id ?? null,
     result: draw ? 'draw' : win ? 'win' : 'lose',
-    reason: onlineEndReason || G!.reason || null,
+    reason: onlineEndReason || G!.reason || judged?.reason || null,
   });
-  const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS) : activeSoloStage.bossId;
+  const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS)
+    : dojo ? (dojo.pieces.find(p => p.owner === 'e' && yokaiOf(p.id)?.boss)?.id || 'kyubi')
+    : activeSoloStage.bossId;
   const enemyBossName = yokaiDisplayName(enemyBoss, '敵将');
   applyYokaiImage($<HTMLImageElement>('result-boss'), win ? Meta.bossId() : enemyBoss);
 
   const streakEl = $('result-hyakki-streak');
   const onlineActions = $('result-actions-online');
   const hyakkiActions = $('result-actions-hyakki');
+  const dojoActionsEl = $('result-actions-dojo');
 
-  if (solo) {
+  if (dojo) {
+    streakEl.classList.add('hidden');
+    onlineActions.classList.add('hidden');
+    hyakkiActions.classList.add('hidden');
+    dojoActionsEl.classList.remove('hidden');
+    $('btn-dojo-retry').classList.toggle('hidden', win);
+    $('btn-dojo-gacha').classList.toggle('hidden', !win);
+    $('btn-dojo-next').classList.add('hidden');
+    if (win) {
+      $('result-sub').textContent = `${dojoText(dojo, 'title')} を達成した!`;
+      $('result-reward').textContent = t('報酬を確認中…');
+      $('result-reward').classList.remove('hidden');
+      const actions = [...dojoActions];
+      Meta.dojoClear(dojo.id, actions).then(res => {
+        if (!res) {
+          $('result-reward').textContent = t('課題の報酬を受け取れませんでした');
+          return;
+        }
+        if (!dojoCleared.includes(dojo.id)) dojoCleared = [...dojoCleared, dojo.id];
+        MenuUI.refreshCurrency();
+        if (res.already) {
+          $('result-reward').textContent = t('この課題のチケットは受取済みです');
+        } else if (res.granted > 0) {
+          $('result-reward').textContent = `クリア報酬: ガチャチケット 🎟 +${res.granted}`;
+        } else {
+          $('result-reward').textContent = t('チケット所持上限のため付与できませんでした');
+        }
+        $('btn-dojo-next').classList.toggle('hidden', !nextDojoPuzzle());
+      }).catch(() => {
+        $('result-reward').textContent = t('課題の報酬を受け取れませんでした(通信状態を確認)');
+      });
+    } else {
+      $('result-sub').textContent = t('手数内に課題を達成できなかった… ヒントを見て再挑戦しよう');
+      $('result-reward').classList.add('hidden');
+    }
+  } else if (solo) {
     if (win && !soloWinCounted) {
       soloStreak++;
       soloWinCounted = true;
@@ -2299,6 +2497,7 @@ function showResult() {
     streakEl.classList.remove('hidden');
     onlineActions.classList.add('hidden');
     hyakkiActions.classList.remove('hidden');
+    dojoActionsEl.classList.add('hidden');
     $('btn-hyakki-continue').classList.toggle('hidden', !win);
     $('btn-hyakki-retry').classList.toggle('hidden', win);
 
@@ -2339,6 +2538,7 @@ function showResult() {
     streakEl.classList.add('hidden');
     onlineActions.classList.remove('hidden');
     hyakkiActions.classList.add('hidden');
+    dojoActionsEl.classList.add('hidden');
     $('result-sub').textContent = reasonsFor(win, enemyBossName);
     const lines: string[] = [];
     if (win && onlineReward > 0) lines.push(`勝利報酬: ガチャチケット 🎟 +${onlineReward}`);
@@ -2353,7 +2553,9 @@ function showResult() {
   }
 
   const title = $('result-title');
-  title.textContent = draw ? '引き分け' : win ? '討伐成功' : '敗北';
+  title.textContent = dojo
+    ? (win ? '課題達成' : '未達')
+    : draw ? '引き分け' : win ? '討伐成功' : '敗北';
   title.className = win ? 'win' : 'lose';
   showScreen('screen-result');
   AudioSys.play(win ? 'win' : 'lose');

@@ -21,6 +21,10 @@ export interface Env {
   CLOCK_BYOYOMI_MS?: string;
   /* '1' のとき /init の turnMs/byoyomiMs を受け付ける(テスト専用) */
   ALLOW_TEST_CLOCK?: string;
+  /* ランダムマッチ未成立時に影CPUへ切り替えるまでの待ち(ミリ秒)。未設定は 15000 */
+  SHADOW_WAIT_MS?: string;
+  /* 待ちのゆらぎ上限。未設定は 5000 */
+  SHADOW_WAIT_JITTER_MS?: string;
   /* リワード広告(doc 22)。'1' で有効。未設定/'0' は無効 */
   ADS_REWARD_ENABLED?: string;
   /* 'mock'(開発・検証) | 'gpt'(Google Publisher Tag Rewarded) */

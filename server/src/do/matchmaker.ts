@@ -1,10 +1,11 @@
 import type { MatchMode, BattlePlayer, ClientBattleMessage, ServerBattleMessage } from '../../../shared/battle';
+import { SHADOW_WAIT_JITTER_MS, SHADOW_WAIT_MS } from '../../../shared/battle';
 import type { Env } from '../env';
 import { isMatchHour } from '../../../shared/match-hour';
-import { loadPlayer, randomCode, send } from './common';
+import { loadPlayer, loadShadowOpponent, randomCode, send } from './common';
 
 interface Attachment { userId: string }
-interface QueueEntry { userId: string; joinedAt: number }
+interface QueueEntry { userId: string; joinedAt: number; shadowAt: number }
 
 type MatchCreationResult =
   | { status: 'created' }
@@ -19,9 +20,16 @@ export class Matchmaker {
     state.blockConcurrencyWhile(async () => {
       const stored = (await state.storage.get<(string | QueueEntry)[]>('queue')) ?? [];
       const now = Date.now();
-      this.queue = stored.map(entry => typeof entry === 'string'
-        ? { userId: entry, joinedAt: now }
-        : entry);
+      this.queue = stored.map(entry => {
+        if (typeof entry === 'string') {
+          return { userId: entry, joinedAt: now, shadowAt: now + this.shadowWaitMs() };
+        }
+        return {
+          userId: entry.userId,
+          joinedAt: entry.joinedAt,
+          shadowAt: entry.shadowAt ?? entry.joinedAt + this.shadowWaitMs(),
+        };
+      });
     });
   }
 
@@ -57,17 +65,42 @@ export class Matchmaker {
         return;
       }
       if (!this.queue.some(entry => entry.userId === userId)) {
-        this.queue.push({ userId, joinedAt: Date.now() });
+        const now = Date.now();
+        this.queue.push({ userId, joinedAt: now, shadowAt: now + this.shadowWaitMs() });
         this.writeQueueMetric('queue_join', userId, 0, this.queue.length);
       }
       await this.persistQueue();
       send(ws, { t: 'queued', position: this.queue.findIndex(entry => entry.userId === userId) + 1 });
       await this.pairQueue();
+      await this.convertDueShadows();
+      await this.scheduleShadowAlarm();
+      return;
+    }
+    if (msg.t === 'request_shadow') {
+      if (this.env.MATCH_HOUR_ENFORCE === '1' && !isMatchHour()) {
+        send(ws, {
+          t: 'error', code: 'MATCH_HOUR_CLOSED',
+          message: 'ただいまメンテナンス中です。集まりやすい時間（毎日20:00〜22:00）に再度お試しください',
+        });
+        return;
+      }
+      if (!this.queue.some(entry => entry.userId === userId)) {
+        const now = Date.now();
+        this.queue.push({ userId, joinedAt: now, shadowAt: now });
+        this.writeQueueMetric('queue_join', userId, 0, this.queue.length);
+      }
+      await this.pairQueue();
+      if (this.queue.some(entry => entry.userId === userId)) {
+        await this.createShadowMatch(userId);
+      }
+      await this.persistQueue();
+      await this.scheduleShadowAlarm();
       return;
     }
     if (msg.t === 'leave_queue') {
       this.removeFromQueue(userId, msg.reason === 'timeout' ? 'timeout' : 'cancel');
       await this.persistQueue();
+      await this.scheduleShadowAlarm();
       return;
     }
     if (msg.t === 'create_room') {
@@ -97,10 +130,16 @@ export class Matchmaker {
     if (current && current !== ws) return;
     if (current === ws) this.sockets.delete(userId);
     this.removeFromQueue(userId, 'disconnect');
-    this.state.waitUntil(this.persistQueue());
+    this.state.waitUntil(this.persistQueue().then(() => this.scheduleShadowAlarm()));
   }
 
   webSocketError(ws: WebSocket): void { this.webSocketClose(ws); }
+
+  async alarm(): Promise<void> {
+    await this.pairQueue();
+    await this.convertDueShadows();
+    await this.scheduleShadowAlarm();
+  }
 
   private async pairQueue(): Promise<void> {
     this.pruneDisconnected();
@@ -124,6 +163,28 @@ export class Matchmaker {
     await this.persistQueue();
   }
 
+  private async convertDueShadows(): Promise<void> {
+    const now = Date.now();
+    const due = this.queue.filter(entry => entry.shadowAt <= now).map(entry => entry.userId);
+    for (const userId of due) {
+      if (!this.queue.some(entry => entry.userId === userId)) continue;
+      await this.createShadowMatch(userId);
+    }
+    await this.persistQueue();
+  }
+
+  private async createShadowMatch(userId: string): Promise<void> {
+    const pSocket = this.socketFor(userId);
+    const p = await loadPlayer(this.env.DB, userId);
+    if (!p || !pSocket) {
+      this.removeFromQueue(userId, 'invalid');
+      return;
+    }
+    const shadow = await loadShadowOpponent(this.env.DB, userId);
+    const result = await this.startBattle(p, pSocket, shadow, 'shadow', true);
+    if (result.status === 'created') this.removeFromQueue(userId, 'shadow');
+  }
+
   private async createMatch(pId: string, eId: string, mode: MatchMode): Promise<MatchCreationResult> {
     const [p, e] = await Promise.all([loadPlayer(this.env.DB, pId), loadPlayer(this.env.DB, eId)]);
     const pSocket = this.socketFor(pId);
@@ -135,6 +196,13 @@ export class Matchmaker {
     if (!pSocket || !eSocket) return { status: 'invalid', userIds: [
       ...(!pSocket ? [pId] : []), ...(!eSocket ? [eId] : []),
     ] };
+    return this.startBattle(p, pSocket, e, mode, false, eId, eSocket);
+  }
+
+  private async startBattle(
+    p: BattlePlayer, pSocket: WebSocket, e: BattlePlayer,
+    mode: MatchMode, shadow: boolean, eId?: string, eSocket?: WebSocket,
+  ): Promise<MatchCreationResult> {
     const matchId = crypto.randomUUID();
     const stub = this.env.BATTLE.get(this.env.BATTLE.idFromName(matchId));
     const response = await stub.fetch('https://battle/init', {
@@ -143,7 +211,8 @@ export class Matchmaker {
     });
     if (!response.ok) {
       const error: ServerBattleMessage = { t: 'error', code: 'MATCH_FAILED', message: '対局を開始できませんでした' };
-      send(pSocket, error); send(eSocket, error);
+      send(pSocket, error);
+      if (eSocket) send(eSocket, error);
       this.env.METRICS?.writeDataPoint({ blobs: ['match_failed', mode], doubles: [1] });
       return { status: 'failed' };
     }
@@ -156,12 +225,15 @@ export class Matchmaker {
       t: 'match_found', matchId, reconnectToken: p.reconnectToken, side: 'p',
       opponent: { name: e.name, rating: e.rating, bossId: e.bossId },
       formations: { p: p.formation, e: e.formation },
+      ...(shadow ? { shadow: true } : {}),
     });
-    send(eSocket, {
-      t: 'match_found', matchId, reconnectToken: e.reconnectToken, side: 'e',
-      opponent: { name: p.name, rating: p.rating, bossId: p.bossId },
-      formations: { p: p.formation, e: e.formation },
-    });
+    if (eSocket && eId) {
+      send(eSocket, {
+        t: 'match_found', matchId, reconnectToken: e.reconnectToken, side: 'e',
+        opponent: { name: p.name, rating: p.rating, bossId: p.bossId },
+        formations: { p: p.formation, e: e.formation },
+      });
+    }
     return { status: 'created' };
   }
 
@@ -183,6 +255,24 @@ export class Matchmaker {
 
   private persistQueue(): Promise<void> {
     return this.state.storage.put('queue', this.queue);
+  }
+
+  private async scheduleShadowAlarm(): Promise<void> {
+    const next = this.queue.reduce((min, entry) => Math.min(min, entry.shadowAt), Number.POSITIVE_INFINITY);
+    if (!Number.isFinite(next)) {
+      try { await this.state.storage.deleteAlarm(); } catch { /* アラーム未設定 */ }
+      return;
+    }
+    await this.state.storage.setAlarm(next);
+  }
+
+  private shadowWaitMs(): number {
+    const base = Number(this.env.SHADOW_WAIT_MS);
+    const wait = Number.isFinite(base) && base >= 0 ? base : SHADOW_WAIT_MS;
+    const jitterCap = Number(this.env.SHADOW_WAIT_JITTER_MS);
+    const jitterMax = Number.isFinite(jitterCap) && jitterCap >= 0 ? jitterCap : SHADOW_WAIT_JITTER_MS;
+    const jitter = jitterMax > 0 ? Math.floor(Math.random() * (jitterMax + 1)) : 0;
+    return wait + jitter;
   }
 
   private pruneDisconnected(): void {

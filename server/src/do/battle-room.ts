@@ -5,7 +5,8 @@ import type {
   BattleEndReason, BattlePlayer, ClientBattleMessage, ClockPhase, MatchMode, ServerBattleMessage,
   SkipStreak,
 } from '../../../shared/battle';
-import { SKIP_LIMIT } from '../../../shared/battle';
+import { SHADOW_USER_ID, SKIP_LIMIT } from '../../../shared/battle';
+import { AI } from '../../../shared/ai';
 import type { Env } from '../env';
 import {
   BYOYOMI_MS, DISCONNECT_GRACE_MS, RULE_VERSION, TURN_MS, envClockMs, isLegalAction, newOnlineState, other, send,
@@ -81,6 +82,7 @@ export class BattleRoom {
       ...this.clockSkipFields(),
     });
     this.sendTurn();
+    await this.playShadowIfNeeded();
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -104,31 +106,7 @@ export class BattleRoom {
     if (!isLegalAction(this.game, side, msg.action)) {
       send(ws, { t: 'error', code: 'ILLEGAL_ACTION', message: '合法手ではありません' }); return;
     }
-
-    const events = Game.applyAction(this.game, msg.action, { rand: () => this.nextRandom() });
-    this.seq++;
-    this.actions.push({ side, action: msg.action, events });
-    this.timers.skipStreak[side] = 0;
-    this.timers.turnDeadline = Date.now() + this.turnMs();
-    this.timers.phase = 'main';
-    await this.persistRuntime();
-    await this.scheduleAlarm();
-    this.broadcast({
-      t: 'snapshot', state: this.game, remainMs: this.remainMs(), phase: this.clockPhase(), seq: this.seq,
-      ...this.clockSkipFields(),
-    });
-    this.broadcast({ t: 'events', seq: this.seq, events });
-    if (this.game.reason === 'draw' || (this.game.reason === 'hunger' && !this.game.winner)) {
-      await this.finish('draw', 'draw');
-      return;
-    }
-    if (this.game.winner) {
-      const reason = this.game.reason === 'hunger' ? 'hp' : this.game.reason!;
-      await this.finish(this.game.winner, reason);
-      return;
-    }
-    if (this.seq >= 300) { await this.finish('draw', 'draw'); return; }
-    this.sendTurn();
+    await this.commitAction(side, msg.action);
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
@@ -145,6 +123,10 @@ export class BattleRoom {
     const expired = (['p', 'e'] as const).filter(side => (this.timers!.disconnected[side] ?? Infinity) <= now);
     if (expired.length === 2) { await this.finish('draw', 'draw'); return; }
     if (expired.length === 1) { await this.finish(other(expired[0]), 'disconnect'); return; }
+    if (this.isShadowMatch() && this.game.turn === 'e') {
+      await this.playShadowIfNeeded();
+      return;
+    }
     if (this.timers.turnDeadline <= now) {
       if (await this.enforceClock()) return;
     }
@@ -304,7 +286,51 @@ export class BattleRoom {
     }
     if (this.seq >= 300) { await this.finish('draw', 'draw'); return true; }
     this.sendTurn();
+    await this.playShadowIfNeeded();
     return true;
+  }
+
+  private isShadowMatch(): boolean {
+    return this.meta?.mode === 'shadow' || this.meta?.players.e.userId === SHADOW_USER_ID;
+  }
+
+  private async playShadowIfNeeded(): Promise<void> {
+    if (!this.isShadowMatch() || !this.game || this.game.winner || this.game.turn !== 'e') return;
+    const action = AI.chooseAction(this.game, 'normal');
+    if (!action || !isLegalAction(this.game, 'e', action)) {
+      await this.finish('p', 'nomoves');
+      return;
+    }
+    await this.commitAction('e', action);
+  }
+
+  private async commitAction(side: Side, action: Action): Promise<void> {
+    if (!this.game || this.game.winner || !this.timers) return;
+    const events = Game.applyAction(this.game, action, { rand: () => this.nextRandom() });
+    this.seq++;
+    this.actions.push({ side, action, events });
+    this.timers.skipStreak[side] = 0;
+    this.timers.turnDeadline = Date.now() + this.turnMs();
+    this.timers.phase = 'main';
+    await this.persistRuntime();
+    await this.scheduleAlarm();
+    this.broadcast({
+      t: 'snapshot', state: this.game, remainMs: this.remainMs(), phase: this.clockPhase(), seq: this.seq,
+      ...this.clockSkipFields(),
+    });
+    this.broadcast({ t: 'events', seq: this.seq, events });
+    if (this.game.reason === 'draw' || (this.game.reason === 'hunger' && !this.game.winner)) {
+      await this.finish('draw', 'draw');
+      return;
+    }
+    if (this.game.winner) {
+      const reason = this.game.reason === 'hunger' ? 'hp' : this.game.reason!;
+      await this.finish(this.game.winner, reason);
+      return;
+    }
+    if (this.seq >= 300) { await this.finish('draw', 'draw'); return; }
+    this.sendTurn();
+    if (side !== 'e') await this.playShadowIfNeeded();
   }
 
   private async markDisconnected(ws: WebSocket): Promise<void> {
@@ -380,7 +406,7 @@ export class BattleRoom {
     const result: Record<Side, { tickets: number; yokaiId: string | null }> = {
       p: { tickets: 0, yokaiId: null }, e: { tickets: 0, yokaiId: null },
     };
-    if (!this.meta || this.meta.mode !== 'random') return result;
+    if (!this.meta || (this.meta.mode !== 'random' && this.meta.mode !== 'shadow')) return result;
     const minActions = Number(this.env.PARTICIPATION_MIN_ACTIONS ?? '') || PARTICIPATION_MIN_ACTIONS;
     if (this.seq < minActions) return result;
     const startedAt = new Date(Date.parse(this.meta.startedAt));
@@ -389,6 +415,7 @@ export class BattleRoom {
     const eventYokai = isEventDay(startedAt) ? EVENT_YOKAI_ID : null;
     for (const side of ['p', 'e'] as const) {
       const userId = this.meta.players[side].userId;
+      if (userId === SHADOW_USER_ID) continue;
       try {
         const profile = await this.env.DB.prepare('SELECT tickets FROM user_profiles WHERE user_id = ?1')
           .bind(userId).first<{ tickets: number }>();
@@ -452,23 +479,28 @@ export class BattleRoom {
     }
     if (winner !== 'draw') {
       const loser = other(winner);
-      stmts.push(
-        this.env.DB.prepare('UPDATE user_profiles SET wins = wins + 1 WHERE user_id = ?1').bind(this.meta.players[winner].userId),
-        this.env.DB.prepare('UPDATE user_profiles SET losses = losses + 1 WHERE user_id = ?1').bind(this.meta.players[loser].userId),
-      );
-      if (this.meta.mode === 'random' && !['disconnect', 'timeout'].includes(reason)) {
+      const winnerId = this.meta.players[winner].userId;
+      const loserId = this.meta.players[loser].userId;
+      if (winnerId !== SHADOW_USER_ID) {
+        stmts.push(this.env.DB.prepare('UPDATE user_profiles SET wins = wins + 1 WHERE user_id = ?1').bind(winnerId));
+      }
+      if (loserId !== SHADOW_USER_ID) {
+        stmts.push(this.env.DB.prepare('UPDATE user_profiles SET losses = losses + 1 WHERE user_id = ?1').bind(loserId));
+      }
+      const rewardedMode = this.meta.mode === 'random' || this.meta.mode === 'shadow';
+      if (rewardedMode && winnerId !== SHADOW_USER_ID && !['disconnect', 'timeout'].includes(reason)) {
         const profile = await this.env.DB.prepare(
           'SELECT tickets, online_win_reward_count FROM user_profiles WHERE user_id = ?1',
-        ).bind(this.meta.players[winner].userId).first<{ tickets: number; online_win_reward_count: number }>();
+        ).bind(winnerId).first<{ tickets: number; online_win_reward_count: number }>();
         if (profile && profile.online_win_reward_count < 5 && profile.tickets < 999) {
           rewards[winner] = 1;
           stmts.push(
             this.env.DB.prepare(
               'UPDATE user_profiles SET tickets = tickets + 1, online_win_reward_count = online_win_reward_count + 1 WHERE user_id = ?1',
-            ).bind(this.meta.players[winner].userId),
+            ).bind(winnerId),
             this.env.DB.prepare(
               "INSERT INTO currency_logs (user_id, currency, delta, balance, reason, ref_id) VALUES (?1, 'tickets', 1, ?2, 'win_reward', ?3)",
-            ).bind(this.meta.players[winner].userId, profile.tickets + 1, this.meta.matchId),
+            ).bind(winnerId, profile.tickets + 1, this.meta.matchId),
           );
         }
       }
