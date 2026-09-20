@@ -105,6 +105,7 @@
       <div class="title-main-actions">
         <button id="btn-start" class="btn title-action-primary"><small>連勝に挑む</small>百鬼夜行</button>
         <button id="btn-online" class="btn title-action-online hidden"><small>猛者と競う</small>オンライン対戦</button>
+        <button id="btn-dojo" class="btn title-action-dojo"><small>一手で覚える</small>妖怪道場</button>
       </div>
       <div class="title-menu-label"><span>メニュー</span></div>
       <div class="title-secondary-actions">
@@ -207,6 +208,20 @@
     </div>
   </div>
 
+  <!-- 妖怪道場 -->
+  <div id="screen-dojo" class="screen">
+    <div class="menu-col dojo-col">
+      <div class="menu-head">
+        <button id="btn-dojo-back" class="tool-btn" title="戻る">←</button>
+        <h2 class="menu-title">妖怪道場</h2>
+        <div class="menu-head-spacer"></div>
+      </div>
+      <p class="dojo-note">1〜2手の課題を解いて、ルールを体で覚えよう。<br>クリアするごとにガチャチケット🎟を1枚もらえます。</p>
+      <div id="dojo-progress" class="dojo-progress">0 / 10</div>
+      <div id="dojo-list" class="dojo-list"></div>
+    </div>
+  </div>
+
   <!-- ガチャ画面 -->
   <div id="screen-gacha" class="screen">
     <div class="menu-col">
@@ -220,7 +235,7 @@
       </div>
       <div class="gacha-center">
         <div class="gacha-orb"><span>召</span><i></i></div>
-        <div class="gacha-note">チケットはログインボーナスや対戦報酬、任意の広告視聴などで手に入ります。</div>
+        <div class="gacha-note">チケットはログインボーナス、道場、対戦報酬、任意の広告視聴などで手に入ります。</div>
         <div class="title-buttons">
           <button id="btn-pull1" class="btn btn-gold">1回召喚<small>チケット1枚</small></button>
           <button id="btn-pull10" class="btn btn-gold">10連召喚<small>10枚・SR以上確定</small></button>
@@ -354,7 +369,8 @@
           <div id="board-cells"></div>
           <div id="board-pieces"></div>
         </div>
-        <div id="hyakki-round-hud" class="hidden"><span>百鬼夜行</span><b id="hyakki-round-label">1戦目</b></div>
+        <div id="hyakki-round-hud" class="hidden"><span id="battle-mode-tag">百鬼夜行</span><b id="hyakki-round-label">1戦目</b></div>
+        <div id="dojo-brief" class="dojo-brief hidden"></div>
         <div id="turn-banner"></div>
         <div id="thinking" class="hidden"><span></span>相手思考中…</div>
       </div>
@@ -422,6 +438,7 @@
         </div>
         <button id="btn-mute" class="tool-btn" title="音量設定">🔊</button>
         <button id="btn-resign" class="tool-btn" title="投了">🏳</button>
+        <button id="btn-dojo-hint" class="tool-btn hidden" title="ヒント">?</button>
         <button id="btn-rules2" class="tool-btn" title="遊び方">❔</button>
         <button id="btn-support-battle" class="tool-btn" title="お問い合わせ">✉</button>
       </div>
@@ -455,6 +472,12 @@
         <button id="btn-hyakki-continue" class="btn btn-gold">次の軍勢へ</button>
         <button id="btn-hyakki-retry" class="btn btn-gold hidden">もう一度挑む</button>
         <button id="btn-hyakki-retire" class="btn btn-dark">ロビーへ戻る</button>
+      </div>
+      <div id="result-actions-dojo" class="title-buttons hyakki-result-actions hidden">
+        <button id="btn-dojo-next" class="btn btn-gold">次の課題へ</button>
+        <button id="btn-dojo-retry" class="btn btn-gold hidden">もう一度</button>
+        <button id="btn-dojo-gacha" class="btn btn-gold hidden">召喚する</button>
+        <button id="btn-dojo-lobby" class="btn btn-dark">道場へ戻る</button>
       </div>
     </div>
   </div>
@@ -719,6 +742,7 @@
         <h3>遊べるモード</h3>
         <ul>
           <li><b>百鬼夜行:</b> ソロ連戦。連勝は週間ランキングになり、先週1位には限定異装「覇者・九尾」（初回のみ）</li>
+          <li><b>妖怪道場:</b> 1〜2手の詰問。初回クリアごとにガチャチケット🎟を1枚</li>
           <li><b>オンライン:</b> ランダムマッチはいつでも。集まりやすい時間は毎日20:00〜22:00。1手60秒＋秒読み30秒。時間切れは手番スキップ、連続2回で負け。フレンドルームは6桁コード</li>
           <li><b>ガチャと編成:</b> チケットで召喚（10連はSR以上1枠確定）。被りは妖力になり、300でチケット1枚。編成は大将1体必須</li>
         </ul>

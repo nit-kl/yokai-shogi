@@ -5,6 +5,7 @@ type LandingEventName =
   | 'title_view'
   | 'solo_cta_click'
   | 'online_cta_click'
+  | 'dojo_cta_click'
   | 'onboarding_start'
   | 'solo_battle_start'
   | 'online_battle_start'

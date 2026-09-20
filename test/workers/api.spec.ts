@@ -451,6 +451,67 @@ describe('編成', () => {
   });
 });
 
+describe('妖怪道場', () => {
+  it('未認証は拒否し、合法クリアのみチケット1枚・再クリアは0', async () => {
+    expect((await api('/v1/dojo')).status).toBe(401);
+
+    const g = await createGuest();
+    const listed = await api('/v1/dojo', { token: g.accessToken });
+    expect(listed.status).toBe(200);
+    expect(listed.body.cleared).toEqual([]);
+    expect(listed.body.total).toBe(10);
+
+    const skip = await api('/v1/dojo/clear', {
+      method: 'POST',
+      token: g.accessToken,
+      body: JSON.stringify({
+        id: 'd02-diagonal',
+        actions: [{ kind: 'move', from: { x: 1, y: 2 }, to: { x: 2, y: 1 } }],
+      }),
+    });
+    expect(skip.status).toBe(400);
+    expect(skip.body.error.code).toBe('VALIDATION');
+
+    const idle = await api('/v1/dojo/clear', {
+      method: 'POST',
+      token: g.accessToken,
+      body: JSON.stringify({
+        id: 'd01-advance',
+        actions: [{ kind: 'move', from: { x: 4, y: 5 }, to: { x: 4, y: 4 } }],
+      }),
+    });
+    expect(idle.status).toBe(400);
+
+    const me0 = await api('/v1/me', { token: g.accessToken });
+    const tickets0 = me0.body.tickets as number;
+
+    const ok = await api('/v1/dojo/clear', {
+      method: 'POST',
+      token: g.accessToken,
+      body: JSON.stringify({
+        id: 'd01-advance',
+        actions: [{ kind: 'move', from: { x: 2, y: 2 }, to: { x: 2, y: 1 } }],
+      }),
+    });
+    expect(ok.status).toBe(200);
+    expect(ok.body).toMatchObject({ granted: 1, already: false, tickets: tickets0 + 1 });
+
+    const again = await api('/v1/dojo/clear', {
+      method: 'POST',
+      token: g.accessToken,
+      body: JSON.stringify({
+        id: 'd01-advance',
+        actions: [{ kind: 'move', from: { x: 2, y: 2 }, to: { x: 2, y: 1 } }],
+      }),
+    });
+    expect(again.status).toBe(200);
+    expect(again.body).toMatchObject({ granted: 0, already: true, tickets: tickets0 + 1 });
+
+    const listed2 = await api('/v1/dojo', { token: g.accessToken });
+    expect(listed2.body.cleared).toEqual(['d01-advance']);
+  });
+});
+
 describe('ソロ勝利報酬', () => {
   it('日次上限2枚・上限後は付与0(勝利数は加算)', async () => {
     const g = await createGuest();

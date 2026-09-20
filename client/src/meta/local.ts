@@ -8,6 +8,7 @@ import { BOSS_CHOICES, EMPTY_FORMATION, formationWithBoss, type BossChoice } fro
 import { drawGacha } from '../../../shared/gacha';
 import type { GachaResult } from '../../../shared/gacha';
 import { validateDisplayName, validateFormation } from '../../../shared/validate';
+import { dojoPuzzleById, evaluateDojo, isDojoUnlocked } from '../../../shared/dojo';
 import { EXCHANGE_COST, ownedSet } from './types';
 import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
 
@@ -22,6 +23,7 @@ interface SaveBlob extends MetaState {
   streak: number;
   soloWinDate: string | null;
   soloWinCount: number;
+  dojoCleared?: string[];
 }
 
 interface StorageLike {
@@ -76,6 +78,7 @@ export class LocalMeta implements MetaProvider {
       streak: 0,
       soloWinDate: null,
       soloWinCount: 0,
+      dojoCleared: [],
     };
   }
 
@@ -201,6 +204,25 @@ export class LocalMeta implements MetaProvider {
   async hyakkiRanking(): Promise<HyakkiRanking | null> { return null; }
   async adsStatus(): Promise<AdsStatus | null> { return null; }
   async claimAdReward(_provider: AdsStatus['provider']): Promise<AdsClaimResult | null> { return null; }
+
+  async dojoProgress(): Promise<{ cleared: string[] } | null> {
+    return { cleared: this.blob.dojoCleared ?? [] };
+  }
+
+  async dojoClear(id: string, actions: unknown): Promise<{ granted: number; tickets: number; already: boolean } | null> {
+    const puzzle = dojoPuzzleById(id);
+    if (!puzzle) return null;
+    const judged = evaluateDojo(puzzle, actions);
+    if (!judged.ok) return null;
+    const cleared = this.blob.dojoCleared ?? [];
+    if (cleared.includes(id)) return { granted: 0, tickets: this.blob.tickets, already: true };
+    if (!isDojoUnlocked(id, cleared)) return null;
+    const grant = Math.min(puzzle.tickets, Math.max(0, TICKETS_CAP - this.blob.tickets));
+    this.blob.tickets += grant;
+    this.blob.dojoCleared = [...cleared, id];
+    this.save();
+    return { granted: grant, tickets: this.blob.tickets, already: false };
+  }
 
   async recordSoloWin(): Promise<number> {
     this.blob.wins++;

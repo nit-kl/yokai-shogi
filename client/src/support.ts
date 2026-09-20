@@ -13,6 +13,7 @@ const SCREEN_LABELS: Record<string, string> = {
   'screen-loading': '起動中',
   'screen-title': 'タイトル',
   'screen-solo': 'ソロ対戦',
+  'screen-dojo': '妖怪道場',
   'screen-hyakki-preview': '百鬼夜行',
   'screen-ranking': 'ランキング',
   'screen-gacha': 'ガチャ',

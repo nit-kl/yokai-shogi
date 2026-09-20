@@ -212,6 +212,23 @@ export class ApiMeta implements MetaProvider {
     }
   }
 
+  async dojoProgress(): Promise<{ cleared: string[] } | null> {
+    try {
+      return await this.client.get<{ cleared: string[] }>('/v1/dojo');
+    } catch {
+      return null;
+    }
+  }
+
+  async dojoClear(id: string, actions: unknown): Promise<{ granted: number; tickets: number; already: boolean } | null> {
+    const res = await this.client.post2<{ granted: number; tickets: number; already: boolean }>(
+      '/v1/dojo/clear',
+      { id, actions },
+    );
+    this.data.tickets = res.tickets;
+    return res;
+  }
+
   async pickBoss(bossId: string): Promise<string | null> {
     try {
       const res = await this.client.post2<{ bossId: string; owned: string[]; rows: (string | null)[][] }>(

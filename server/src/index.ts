@@ -21,6 +21,7 @@ import { announcementRoutes } from './routes/announcements';
 import { rankingRoutes } from './routes/rankings';
 import { adsRoutes } from './routes/ads';
 import { steamRoutes } from './routes/steam';
+import { dojoRoutes } from './routes/dojo';
 import { BattleRoom } from './do/battle-room';
 import { Matchmaker } from './do/matchmaker';
 
@@ -67,6 +68,7 @@ v1.route('/', announcementRoutes);
 v1.route('/', rankingRoutes);
 v1.route('/', adsRoutes);
 v1.route('/', steamRoutes);
+v1.route('/', dojoRoutes);
 app.route('/v1', v1);
 
 app.notFound(c => apiError(c, 'NOT_FOUND', '指定された機能は利用できません'));

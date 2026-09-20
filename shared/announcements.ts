@@ -17,6 +17,27 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-09-20-yokai-dojo',
+    type: 'update',
+    title: '妖怪道場を開設しました',
+    titleEn: 'Yokai Dojo Is Now Open',
+    body: [
+      '1〜2手で終わる詰問「妖怪道場」を追加しました。タイトルから入れます。',
+      '',
+      '大将取り・成り・打ち込み・コンボなど、対局の基本を短い課題で体感できます。',
+      '各問の初回クリアでガチャチケット🎟を1枚もらえます。もらったチケットで召喚し、自分のデッキを育てましょう。',
+    ].join('\n'),
+    bodyEn: [
+      'Yokai Dojo is a set of 1–2 move puzzles on the title screen.',
+      '',
+      'Learn capturing the general, promotion, drops, and combos in short drills.',
+      'The first clear of each puzzle grants one summon ticket, so you can go straight into building your deck.',
+    ].join('\n'),
+    publishedAt: '2026-09-20T20:00:00+09:00',
+    priority: 'high',
+    showUntil: '2026-10-20T23:59:59+09:00',
+  },
+  {
     id: '2026-08-02-discord-community',
     type: 'campaign',
     title: '公式Discordコミュニティを開設しました',

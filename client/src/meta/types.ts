@@ -79,6 +79,8 @@ export interface MetaProvider {
   adsStatus(): Promise<AdsStatus | null>;
   /** 視聴完了後のチケット請求。オフラインまたは失敗時は null */
   claimAdReward(provider: AdsStatus['provider']): Promise<AdsClaimResult | null>;
+  dojoProgress(): Promise<{ cleared: string[] } | null>;
+  dojoClear(id: string, actions: unknown): Promise<{ granted: number; tickets: number; already: boolean } | null>;
 }
 
 /* ---------- data から導出する同期ヘルパ(両実装共通) ---------- */
