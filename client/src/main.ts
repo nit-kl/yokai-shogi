@@ -54,7 +54,9 @@ let sel: Sel = null;            // 選択中
 const pieceEls = new Map<number, HTMLElement>(); // uid -> DOM要素
 let online: OnlineConnection | null = null;
 let onlineSide: Side | null = null;
-let onlineMatch: { matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string } | null = null;
+let onlineMatch: {
+  matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string; shadow?: boolean;
+} | null = null;
 let onlineEndReason: string | null = null;
 let onlineReward = 0;
 let onlineParticipation = 0;
@@ -63,7 +65,8 @@ let onlineSeq = 0;
 const ONLINE_TURN_MS = 60_000;
 const ONLINE_BYOYOMI_MS = 30_000;
 const ONLINE_DISCONNECT_MS = 60_000;
-const ONLINE_AI_OFFER_MS = 20_000;
+const ONLINE_SHADOW_WAIT_MS = 15_000;
+const ONLINE_AI_OFFER_MS = 5_000;
 const ONLINE_TIMER_WARN_MS = 20_000;
 const ONLINE_TIMER_LOW_MS = 10_000;
 let onlineTurnDeadline = 0;
@@ -73,7 +76,7 @@ let onlineDisconnectDeadline = 0;
 let onlineSkipStreak: SkipStreak = { p: 0, e: 0 };
 let onlineSkipLimit = SKIP_LIMIT;
 let onlineTimerId: ReturnType<typeof setInterval> | null = null;
-let onlineQueueTimerId: ReturnType<typeof setTimeout> | null = null;
+let onlineQueueTimerId: ReturnType<typeof setInterval> | null = null;
 let activeSoloStage: SoloStage = HYAKKI_STAGE;
 let pendingSoloStage: SoloStage | null = null;
 let soloStreak = 0;
@@ -87,6 +90,7 @@ const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
 const CONSENT_KEY = 'yokaiShogi.consent.2026-08-22';
 type StoredOnlineMatch = {
   matchId: string; reconnectToken: string; opponentName: string; opponentBossId: string; side: Side;
+  shadow?: boolean;
 };
 
 const COLORS_P = ['#ffd24a', '#ff9a3c', '#fff6d8', '#ffe9a0'];
@@ -359,7 +363,7 @@ function wireButtons() {
   $('btn-online-random').onclick = () => {
     connectMatchmaker();
     online?.send({ t: 'join_queue' });
-    $('online-message').textContent = '対戦相手を探しています…';
+    $('online-message').textContent = t('対戦相手を探しています。15秒ほどでAI対戦に切り替わります');
     startOnlineQueueTimer();
   };
   $('btn-online-ai').onclick = () => switchQueueToAi();
@@ -693,7 +697,7 @@ function connectMatchmaker(extra: Record<string, string> = {}) {
 
 async function onOnlineMessage(message: ServerBattleMessage) {
   if (message.t === 'queued') {
-    $('online-message').textContent = `対戦相手を探しています(待機 ${message.position}番目)`;
+    return;
   } else if (message.t === 'room_created') {
     $('online-message').textContent = 'このコードを相手に伝えてください';
     $('online-room-code').textContent = message.code;
@@ -710,6 +714,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     onlineMatch = {
       matchId: message.matchId, reconnectToken: message.reconnectToken,
       opponentName: message.opponent.name, opponentBossId: message.opponent.bossId,
+      shadow: !!message.shadow,
     };
     saveOnlineMatch();
     $('modal-online').classList.add('hidden');
@@ -780,26 +785,31 @@ async function onOnlineMessage(message: ServerBattleMessage) {
 
 function startOnlineQueueTimer(): void {
   clearOnlineQueueTimer();
-  onlineQueueTimerId = setTimeout(() => {
-    onlineQueueTimerId = null;
-    $('online-message').textContent = 'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。';
-    $('btn-online-ai').classList.remove('hidden');
-  }, ONLINE_AI_OFFER_MS);
+  const started = Date.now();
+  const tick = () => {
+    const elapsed = Date.now() - started;
+    const remainSec = Math.max(0, Math.ceil((ONLINE_SHADOW_WAIT_MS - elapsed) / 1000));
+    if (remainSec > 0) {
+      $('online-message').textContent =
+        t(`対戦相手を探しています… 約${remainSec}秒でAI対戦に切り替わります`);
+    } else {
+      $('online-message').textContent = t('対戦相手が見つからないため、AI対戦を準備しています…');
+    }
+    if (elapsed >= ONLINE_AI_OFFER_MS) $('btn-online-ai').classList.remove('hidden');
+  };
+  tick();
+  onlineQueueTimerId = setInterval(tick, 250);
 }
 
 function clearOnlineQueueTimer(): void {
-  if (onlineQueueTimerId !== null) clearTimeout(onlineQueueTimerId);
+  if (onlineQueueTimerId !== null) clearInterval(onlineQueueTimerId);
   onlineQueueTimerId = null;
   $('btn-online-ai').classList.add('hidden');
 }
 
 function switchQueueToAi(): void {
-  online?.send({ t: 'leave_queue', reason: 'timeout' });
-  clearOnlineQueueTimer();
-  online?.close();
-  online = null;
-  $('modal-online').classList.add('hidden');
-  openHyakkiPreview();
+  online?.send({ t: 'request_shadow' });
+  $('online-message').textContent = t('AI対戦を準備しています…');
 }
 
 function formatCountdown(ms: number, compact = false): string {
@@ -972,7 +982,7 @@ function renderOnlineTimers(): void {
 }
 
 async function startOnlineBattle() {
-  trackLandingEvent('online_battle_start');
+  trackLandingEvent('online_battle_start', { shadow: !!onlineMatch?.shadow });
   busy = true; // 開幕演出中は入力・後続イベント演出をロック
   sel = null;
   pieceEls.forEach(el => el.remove());
@@ -999,7 +1009,7 @@ async function startOnlineBattle() {
   /* ソロと同様に VS → 共鳴の順。await しないと共鳴カットインが VS に被る */
   await playVsIntro(
     { bossId: onlineMatch?.opponentBossId || ENEMY_BOSS, label: onlineMatch?.opponentName || '対戦相手' },
-    'オンライン対戦',
+    onlineMatch?.shadow ? t('AI対戦') : t('オンライン対戦'),
   );
   await announceResonances();
 }
@@ -2268,6 +2278,7 @@ function showResult() {
   const solo = !onlineSide;
   trackLandingEvent('result_view', {
     online: !!onlineSide,
+    shadow: !!onlineMatch?.shadow,
     result: draw ? 'draw' : win ? 'win' : 'lose',
     reason: onlineEndReason || G!.reason || null,
   });

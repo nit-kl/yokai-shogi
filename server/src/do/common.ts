@@ -2,7 +2,9 @@ import { ROWS, YOKAI } from '../../../shared/data';
 import type { Side } from '../../../shared/data';
 import { Game } from '../../../shared/game';
 import type { Action, GameState } from '../../../shared/game';
-import type { BattlePlayer, ServerBattleMessage } from '../../../shared/battle';
+import {
+  SHADOW_FALLBACK_FORMATION, SHADOW_USER_ID, type BattlePlayer, type ServerBattleMessage,
+} from '../../../shared/battle';
 
 export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
@@ -48,6 +50,39 @@ export function isLegalAction(state: GameState, side: Side, candidate: unknown):
   if (!candidate || typeof candidate !== 'object') return false;
   const json = JSON.stringify(candidate);
   return Game.getAllActions(state, side).some(action => JSON.stringify(action) === json);
+}
+
+function playableFormation(raw: string): (string | null)[][] | null {
+  try {
+    const formation = JSON.parse(raw) as (string | null)[][];
+    if (formation.flat().some(id => id && YOKAI[id]?.boss)) return formation;
+  } catch { /* invalid */ }
+  return null;
+}
+
+export async function loadShadowOpponent(db: D1Database, humanId: string): Promise<BattlePlayer> {
+  const row = await db.prepare(
+    `SELECT p.name, p.rating, p.formation FROM user_profiles p
+     JOIN users u ON u.id = p.user_id AND u.status = 'active'
+     WHERE p.user_id != ?1 AND p.user_id != ?2
+     ORDER BY RANDOM() LIMIT 1`,
+  ).bind(humanId, SHADOW_USER_ID).first<{ name: string; rating: number; formation: string }>();
+  let formation = SHADOW_FALLBACK_FORMATION;
+  let name = 'AIの対戦相手';
+  let rating = 1500;
+  const source = row ?? await db.prepare(
+    'SELECT name, rating, formation FROM user_profiles WHERE user_id = ?1',
+  ).bind(humanId).first<{ name: string; rating: number; formation: string }>();
+  const parsed = source ? playableFormation(source.formation) : null;
+  if (source && parsed) {
+    formation = parsed;
+    name = source.name;
+    rating = source.rating;
+  }
+  return {
+    userId: SHADOW_USER_ID, name, rating, formation,
+    bossId: bossId(formation), reconnectToken: crypto.randomUUID(),
+  };
 }
 
 export async function loadPlayer(db: D1Database, userId: string): Promise<BattlePlayer | null> {
