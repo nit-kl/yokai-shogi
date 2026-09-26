@@ -10,10 +10,18 @@ const THIRD_PARTY_AD_URL = /googlesyndication|doubleclick\.net|googleads|pagead2
 
 /**
  * pageerror と自前由来の console.error を errors に溜める。
- * 第三者広告・計測は遮断し、CSP report-only や protobuf の int64 例外は無視する。
+ * 第三者広告・計測は空レスポンスで差し替え(abort すると net::ERR_FAILED が console に出る)。
+ * CSP report-only や protobuf の int64 例外は無視する。
  */
 export function attachPageErrorCollectors(page, errors) {
-  void page.route(THIRD_PARTY_AD_URL, route => route.abort());
+  void page.route(THIRD_PARTY_AD_URL, async route => {
+    const type = route.request().resourceType();
+    if (type === 'script') {
+      await route.fulfill({ status: 200, contentType: 'application/javascript', body: '' });
+      return;
+    }
+    await route.fulfill({ status: 204, body: '' });
+  });
   page.on('pageerror', e => {
     const msg = e.message || String(e);
     const stack = e.stack || '';
@@ -25,7 +33,10 @@ export function attachPageErrorCollectors(page, errors) {
   page.on('console', m => {
     if (m.type() !== 'error') return;
     const text = m.text();
-    if (IGNORE_THIRD_PARTY_RE.test(text)) return;
+    const url = m.location()?.url || '';
+    if (IGNORE_THIRD_PARTY_RE.test(text) || IGNORE_THIRD_PARTY_RE.test(url)) return;
+    /* route 差し替え前の読み込み失敗や、URLなしの第三者ネットエラー */
+    if (/Failed to load resource: net::ERR_(FAILED|ABORTED|BLOCKED_BY_CLIENT)/i.test(text)) return;
     errors.push('console: ' + text);
   });
 }
