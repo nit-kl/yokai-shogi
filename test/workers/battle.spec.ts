@@ -154,8 +154,8 @@ describe('BattleRoom DO', () => {
     await ews.nextType('snapshot');
     await pws.nextType('your_turn');
 
-    await new Promise(resolve => setTimeout(resolve, 700));
-    pws.ws.send(JSON.stringify({ t: 'action', action: { kind: 'pass' } }));
+    const forced = await stub.fetch('https://battle/force-clock', { method: 'POST' });
+    expect(forced.status).toBe(200);
     const skipped = await pws.nextType('turn_skipped', 8000);
     expect(skipped).toMatchObject({ t: 'turn_skipped', side: 'p', skips: 1, skipLimit: 2 });
 
@@ -166,8 +166,8 @@ describe('BattleRoom DO', () => {
     await ews.nextType('events', 8000);
     await pws.nextType('your_turn', 8000);
 
-    await new Promise(resolve => setTimeout(resolve, 700));
-    pws.ws.send(JSON.stringify({ t: 'action', action: { kind: 'pass' } }));
+    const forcedAgain = await stub.fetch('https://battle/force-clock', { method: 'POST' });
+    expect(forcedAgain.status).toBe(200);
     const end = await pws.nextType('game_end', 8000);
     expect(end).toMatchObject({ t: 'game_end', winner: 'e', reason: 'timeout' });
   });

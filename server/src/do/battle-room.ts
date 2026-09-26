@@ -55,6 +55,7 @@ export class BattleRoom {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === 'POST' && url.pathname === '/init') return this.init(request);
+    if (request.method === 'POST' && url.pathname === '/force-clock') return this.forceClockForTest();
     if (request.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket required', { status: 426 });
     await this.ensureLoaded();
     const userId = request.headers.get('X-User-Id');
@@ -216,15 +217,30 @@ export class BattleRoom {
   private clockPhase(): ClockPhase { return this.timers?.phase === 'byoyomi' ? 'byoyomi' : 'main'; }
   private turnMs(): number { return this.timers?.turnMs ?? envClockMs(this.env.CLOCK_TURN_MS, TURN_MS); }
   private byoyomiMs(): number { return this.timers?.byoyomiMs ?? envClockMs(this.env.CLOCK_BYOYOMI_MS, BYOYOMI_MS); }
+  private testClockAllowed(): boolean {
+    const flag = this.env.ALLOW_TEST_CLOCK as unknown;
+    return flag === '1' || flag === 1 || flag === true;
+  }
   private resolveTurnMs(requested?: number): number {
     const fallback = envClockMs(this.env.CLOCK_TURN_MS, TURN_MS);
-    if (this.env.ALLOW_TEST_CLOCK !== '1' || requested == null) return fallback;
+    if (!this.testClockAllowed() || requested == null) return fallback;
     return envClockMs(String(requested), fallback);
   }
   private resolveByoyomiMs(requested?: number): number {
     const fallback = envClockMs(this.env.CLOCK_BYOYOMI_MS, BYOYOMI_MS);
-    if (this.env.ALLOW_TEST_CLOCK !== '1' || requested == null) return fallback;
+    if (!this.testClockAllowed() || requested == null) return fallback;
     return envClockMs(String(requested), fallback);
+  }
+  /** テスト専用: 秒読み切れを即時適用する。本番では 403 */
+  private async forceClockForTest(): Promise<Response> {
+    if (!this.testClockAllowed()) return new Response('Forbidden', { status: 403 });
+    await this.ensureLoaded();
+    if (!this.game || this.game.winner || !this.timers) return new Response('No game', { status: 409 });
+    this.timers.phase = 'byoyomi';
+    this.timers.turnDeadline = Date.now() - 1;
+    await this.persistRuntime();
+    await this.enforceClock();
+    return new Response(null, { status: 200 });
   }
   private clockSkipFields(): { skipStreak: SkipStreak; skipLimit: number } {
     return { skipStreak: this.timers?.skipStreak ?? { p: 0, e: 0 }, skipLimit: SKIP_LIMIT };

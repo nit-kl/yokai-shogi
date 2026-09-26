@@ -38,7 +38,8 @@
     "MAINTENANCE": "0",
     "ADS_REWARD_ENABLED": "1",
     "ADS_REWARD_PROVIDER": "mock",
-    "STEAM_AUTH_MOCK": "1"
+    "STEAM_AUTH_MOCK": "1",
+    "ALLOW_TEST_CLOCK": "1"
   },
   "env": {
     // ステージング: wrangler deploy --env staging
@@ -67,7 +68,8 @@
         "MAINTENANCE": "0",
         "ADS_REWARD_ENABLED": "1",
         "ADS_REWARD_PROVIDER": "mock",
-        "STEAM_AUTH_MOCK": "1"
+        "STEAM_AUTH_MOCK": "1",
+        "ALLOW_TEST_CLOCK": "0"
       }
     },
     // 本番: wrangler deploy --env production
@@ -102,7 +104,8 @@
         "MAINTENANCE": "0",
         "ADS_REWARD_ENABLED": "0",
         "ADS_REWARD_PROVIDER": "mock",
-        "STEAM_AUTH_MOCK": "0"
+        "STEAM_AUTH_MOCK": "0",
+        "ALLOW_TEST_CLOCK": "0"
       }
     }
   }
