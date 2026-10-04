@@ -200,6 +200,11 @@ const STATIC: Record<string, string> = {
   '百鬼夜行ランキング1位限定': 'Night Parade #1 reward', '土曜対戦会限定': 'Saturday Battle exclusive',
   '課題達成': 'Puzzle Cleared', '未達': 'Not Cleared',
   '一手で覚える': 'Learn in One Move', '妖怪道場': 'Yokai Dojo',
+  '型と戦う': 'Face a Set Army', '試陣': 'Trial Armies',
+  '決まった並びのCPUと戦えます。報酬も連勝もありません。': 'Battle a CPU army with a fixed lineup. No rewards and no win streak.',
+  '戦型は自分の編成、検証は自軍も固定です。': 'Archetypes use your formation. Checks also fix your army.',
+  '戦型': 'Archetype', '検証': 'Check', '自軍固定': 'Fixed army',
+  '次の型': 'Next Lineup', '試陣へ戻る': 'Back to Trial Armies',
   '1〜2手の課題を解いて、ルールを体で覚えよう。': 'Solve 1–2 move puzzles to learn the rules by playing.',
   'クリアするごとにガチャチケット🎟を1枚もらえます。': 'Each clear grants one summon ticket.',
   '次の課題へ': 'Next Puzzle', 'もう一度': 'Retry', '召喚する': 'Summon', '道場へ戻る': 'Return to Dojo',
@@ -347,6 +352,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <ul>
       <li><b>Night Parade:</b> Solo win streaks. Weekly rankings; last week's #1 gets the exclusive “Champion · Nine-Tails” alt (first time only)</li>
       <li><b>Yokai Dojo:</b> 1–2 move puzzles. Each first clear grants one summon ticket</li>
+      <li><b>Trial Armies:</b> CPU battles against a fixed enemy lineup. They do not grant rewards, streaks, or ranking</li>
       <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code</li>
       <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
     </ul>`,

@@ -15,6 +15,8 @@ import { chooseCPUAction } from './ai-client';
 import { AI } from './ai';
 import { HYAKKI_STAGE, soloBattleStage } from './solo';
 import type { SoloStage } from './solo';
+import { TRIALS, bossIdIn, makeTrialRand } from './trials';
+import type { Trial } from './trials';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
 import { SessionExpiredError } from './meta';
@@ -91,6 +93,8 @@ let rankingReturn: 'title' | 'solo' = 'title';
 let dojoPuzzle: DojoPuzzle | null = null;
 let dojoActions: Action[] = [];
 let dojoCleared: string[] = [];
+let activeTrial: Trial | null = null;
+let trialRoll: (() => number) | null = null;
 const ONLINE_MATCH_KEY = 'yokaiShogi.onlineMatch.v1';
 const CONSENT_KEY = 'yokaiShogi.consent.2026-08-22';
 type StoredOnlineMatch = {
@@ -329,6 +333,30 @@ function wireButtons() {
     AudioSys.play('click');
     void openDojo();
   };
+  $('btn-trials').onclick = () => {
+    trackLandingEvent('trial_cta_click', { source: 'title' });
+    AudioSys.init();
+    AudioSys.play('click');
+    openTrials();
+  };
+  $('btn-trials-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
+  $('btn-trial-formation').onclick = () => {
+    AudioSys.play('click');
+    MenuUI.openFormation({ onReturn: () => openTrials() });
+  };
+  $('btn-trial-retry').onclick = () => {
+    AudioSys.play('click');
+    if (activeTrial) startTrialBattle(activeTrial);
+    else openTrials();
+  };
+  $('btn-trial-next').onclick = () => {
+    AudioSys.play('click');
+    const index = activeTrial ? TRIALS.findIndex(trial => trial.id === activeTrial!.id) : -1;
+    const next = TRIALS[(index + 1) % TRIALS.length];
+    if (next) startTrialBattle(next);
+    else openTrials();
+  };
+  $('btn-trial-lobby').onclick = () => { AudioSys.play('click'); AudioSys.stopBgm(); openTrials(); };
   $('btn-dojo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
   $('btn-dojo-next').onclick = () => {
     AudioSys.play('click');
@@ -549,6 +577,60 @@ function renderDojoList() {
       + `<span class="dojo-card-mark">${cleared ? '🎟' : unlocked ? '挑戦' : '—'}</span>`;
     btn.onclick = () => { AudioSys.play('click'); startDojoPuzzle(puzzle); };
     list.appendChild(btn);
+  }
+}
+
+function trialFace(trial: Trial): { name: string; watch: string } {
+  const en = getLocale() === 'en';
+  return { name: en ? trial.nameEn : trial.name, watch: en ? trial.watchEn : trial.watch };
+}
+
+function openTrials() {
+  MatchHourUI.stop();
+  renderTrialList();
+  showScreen('screen-trials');
+  FX.setAmbient(['rgba(120,190,220,0.35)', 'rgba(232,196,106,0.28)', 'rgba(88,182,255,0.22)'], 0.04);
+}
+
+function renderTrialList() {
+  const list = $('trial-list');
+  list.replaceChildren();
+  for (const kind of ['archetype', 'verify'] as const) {
+    const group = document.createElement('section');
+    group.className = 'trial-group';
+    const heading = document.createElement('h3');
+    heading.textContent = kind === 'archetype' ? '戦型' : '検証';
+    const cards = document.createElement('div');
+    cards.className = 'trial-cards';
+    for (const trial of TRIALS.filter(item => item.kind === kind)) {
+      const face = trialFace(trial);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'trial-card' + (trial.kind === 'verify' ? ' is-verify' : '');
+      const img = document.createElement('img');
+      applyYokaiImage(img, trial.bossId, 'sm');
+      img.alt = face.name;
+      img.draggable = false;
+      const body = document.createElement('span');
+      const title = document.createElement('span');
+      title.className = 'trial-card-title';
+      title.textContent = face.name;
+      const brief = document.createElement('span');
+      brief.className = 'trial-card-brief';
+      brief.textContent = face.watch;
+      const id = document.createElement('span');
+      id.className = 'trial-card-id';
+      id.textContent = trial.seed != null ? `${trial.id} · seed ${trial.seed}` : trial.id;
+      body.append(title, brief, id);
+      const mark = document.createElement('span');
+      mark.className = 'trial-card-mark';
+      mark.textContent = trial.kind === 'verify' ? '自軍固定' : '戦型';
+      btn.append(img, body, mark);
+      btn.onclick = () => { AudioSys.play('click'); startTrialBattle(trial); };
+      cards.appendChild(btn);
+    }
+    group.append(heading, cards);
+    list.appendChild(group);
   }
 }
 
@@ -1796,9 +1878,13 @@ async function summonCutin(id: string, at?: Pos) {
 /* ---------- 開幕VS演出 ---------- */
 /* 両大将が斜め分割の構図で見得を切り、「開戦」の帯とともに盤面へ。
    タイミング(0.55s=VS着地 / 1.62s=開戦の帯)はCSSアニメの遅延と同期 */
-async function playVsIntro(enemy: { bossId: string; label: string }, stageLabel: string) {
+async function playVsIntro(
+  enemy: { bossId: string; label: string },
+  stageLabel: string,
+  playerBossId = Meta.bossId(),
+) {
   const root = $('vs-intro');
-  applyYokaiImage($<HTMLImageElement>('vs-img-p'), Meta.bossId());
+  applyYokaiImage($<HTMLImageElement>('vs-img-p'), playerBossId);
   $('vs-label-p').textContent = Meta.data.name;
   applyYokaiImage($<HTMLImageElement>('vs-img-e'), enemy.bossId);
   $('vs-label-e').textContent = enemy.label;
@@ -1823,6 +1909,8 @@ async function playVsIntro(enemy: { bossId: string; label: string }, stageLabel:
 async function startBattle() {
   dojoPuzzle = null;
   dojoActions = [];
+  activeTrial = null;
+  trialRoll = null;
   $('btn-dojo-hint').classList.add('hidden');
   $('dojo-brief').classList.add('hidden');
   trackLandingEvent('solo_battle_start', {
@@ -1882,7 +1970,65 @@ async function startBattle() {
   busy = false;
 }
 
+async function startTrialBattle(trial: Trial) {
+  activeTrial = trial;
+  trialRoll = trial.seed != null ? makeTrialRand(trial.seed) : null;
+  dojoPuzzle = null;
+  dojoActions = [];
+  const face = trialFace(trial);
+  const playerRows = trial.playerRows ?? Meta.formationRows();
+  const playerBoss = trial.playerRows ? (bossIdIn(trial.playerRows) ?? Meta.bossId()) : Meta.bossId();
+  trackLandingEvent('solo_battle_start', {
+    mode: 'trial',
+    stage: trial.id,
+    difficulty: HYAKKI_RANK_DIFFICULTY,
+  });
+  onlineSide = null;
+  onlineEndReason = null;
+  onlineReward = 0;
+  onlineParticipation = 0;
+  onlineEventYokai = null;
+  stopOnlineTimer();
+  $('online-status').classList.add('hidden');
+  G = Game.newState(playerRows, trial.enemyRows);
+  busy = true;
+  sel = null;
+  pieceEls.forEach(el => el.remove());
+  pieceEls.clear();
+  hideInfo();
+  clearSel();
+  setBattleStatusOpen(false);
+  document.querySelectorAll('.cell').forEach(c => c.classList.remove('hl-last'));
+  showScreen('screen-battle');
+  setBattleGenerals(playerBoss, Meta.data.name, trial.bossId, face.name);
+  $('player-name').textContent = Meta.data.name;
+  $('enemy-name').textContent = face.name;
+  $('hyakki-round-hud').classList.remove('hidden');
+  $('battle-mode-tag').textContent = t('試陣');
+  $('hyakki-round-label').textContent = face.name;
+  $('thinking').classList.add('hidden');
+  $('btn-dojo-hint').classList.add('hidden');
+  $('dojo-brief').classList.add('hidden');
+  renderAll();
+  updateHUD();
+  FX.setAmbient(['rgba(120,190,220,0.28)', 'rgba(255,170,60,0.22)'], 0.025);
+  AudioSys.init();
+  AudioSys.startBattleBgm();
+  summonAnnounced.clear();
+  resonanceAnnounced.clear();
+  await playVsIntro(
+    { bossId: trial.bossId, label: face.name },
+    `${t('試陣')} ${face.name}`,
+    playerBoss,
+  );
+  await announceResonances();
+  showBanner('p');
+  busy = false;
+}
+
 async function startDojoPuzzle(puzzle: DojoPuzzle) {
+  activeTrial = null;
+  trialRoll = null;
   dojoPuzzle = puzzle;
   dojoActions = [];
   onlineSide = null;
@@ -1942,7 +2088,11 @@ async function doAction(action: Action) {
     return;
   }
 
-  const events = Game.applyAction(G!, action, dojoPuzzle ? { rng: false } : {});
+  const events = Game.applyAction(
+    G!,
+    action,
+    dojoPuzzle ? { rng: false } : trialRoll ? { rand: trialRoll } : {},
+  );
   if (dojoPuzzle) dojoActions.push(action);
   for (const ev of events) await animEvent(ev);
 
@@ -2421,32 +2571,38 @@ function showResult() {
   $('combo-vignette').className = '';
   const draw = onlineEndReason === 'draw' || G!.reason === 'draw';
   const dojo = dojoPuzzle;
+  const trial = activeTrial;
   const judged = dojo ? evaluateDojo(dojo, dojoActions) : null;
   const win = dojo ? !!judged?.ok : G!.winner === 'p';
-  const solo = !onlineSide && !dojo;
+  const solo = !onlineSide && !dojo && !trial;
   trackLandingEvent('result_view', {
     online: !!onlineSide,
     shadow: !!onlineMatch?.shadow,
     dojo: dojo?.id ?? null,
+    trial: trial?.id ?? null,
     result: draw ? 'draw' : win ? 'win' : 'lose',
     reason: onlineEndReason || G!.reason || judged?.reason || null,
   });
   const enemyBoss = onlineSide ? (onlineMatch?.opponentBossId || ENEMY_BOSS)
     : dojo ? (dojo.pieces.find(p => p.owner === 'e' && yokaiOf(p.id)?.boss)?.id || 'kyubi')
+    : trial ? trial.bossId
     : activeSoloStage.bossId;
   const enemyBossName = yokaiDisplayName(enemyBoss, '敵将');
-  applyYokaiImage($<HTMLImageElement>('result-boss'), win ? Meta.bossId() : enemyBoss);
+  const playerBoss = trial?.playerRows ? (bossIdIn(trial.playerRows) ?? Meta.bossId()) : Meta.bossId();
+  applyYokaiImage($<HTMLImageElement>('result-boss'), win ? playerBoss : enemyBoss);
 
   const streakEl = $('result-hyakki-streak');
   const onlineActions = $('result-actions-online');
   const hyakkiActions = $('result-actions-hyakki');
   const dojoActionsEl = $('result-actions-dojo');
+  const trialActions = $('result-actions-trial');
 
   if (dojo) {
     streakEl.classList.add('hidden');
     onlineActions.classList.add('hidden');
     hyakkiActions.classList.add('hidden');
     dojoActionsEl.classList.remove('hidden');
+    trialActions.classList.add('hidden');
     $('btn-dojo-retry').classList.toggle('hidden', win);
     $('btn-dojo-gacha').classList.toggle('hidden', !win);
     $('btn-dojo-next').classList.add('hidden');
@@ -2477,6 +2633,16 @@ function showResult() {
       $('result-sub').textContent = t('手数内に課題を達成できなかった… ヒントを見て再挑戦しよう');
       $('result-reward').classList.add('hidden');
     }
+  } else if (trial) {
+    const face = trialFace(trial);
+    const seed = trial.seed != null ? ` · seed ${trial.seed}` : '';
+    streakEl.classList.add('hidden');
+    onlineActions.classList.add('hidden');
+    hyakkiActions.classList.add('hidden');
+    dojoActionsEl.classList.add('hidden');
+    trialActions.classList.remove('hidden');
+    $('result-reward').classList.add('hidden');
+    $('result-sub').textContent = `${reasonsFor(win, enemyBossName)}　${face.name}（${trial.id}${seed}）`;
   } else if (solo) {
     if (win && !soloWinCounted) {
       soloStreak++;
@@ -2498,6 +2664,7 @@ function showResult() {
     onlineActions.classList.add('hidden');
     hyakkiActions.classList.remove('hidden');
     dojoActionsEl.classList.add('hidden');
+    trialActions.classList.add('hidden');
     $('btn-hyakki-continue').classList.toggle('hidden', !win);
     $('btn-hyakki-retry').classList.toggle('hidden', win);
 
@@ -2539,6 +2706,7 @@ function showResult() {
     onlineActions.classList.remove('hidden');
     hyakkiActions.classList.add('hidden');
     dojoActionsEl.classList.add('hidden');
+    trialActions.classList.add('hidden');
     $('result-sub').textContent = reasonsFor(win, enemyBossName);
     const lines: string[] = [];
     if (win && onlineReward > 0) lines.push(`勝利報酬: ガチャチケット 🎟 +${onlineReward}`);
