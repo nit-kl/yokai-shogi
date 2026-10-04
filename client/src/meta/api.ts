@@ -27,12 +27,14 @@ interface MeResponse {
   loginBonus?: LoginBonus;
   releaseGift?: ReleaseGift;
   rating: number; wins: number; losses: number;
+  unlockAll?: boolean;
 }
 
 export class ApiMeta implements MetaProvider {
   readonly data: MetaState = {
     tickets: 0, yoryoku: 0, owned: {}, formation: [],
     name: 'プレイヤー', wins: 0, isGuest: true, hasPasskey: false, online: true, onboardingDone: false,
+    unlockAll: false,
   };
   /** 直近の /me で付与されたリリース記念(タイトル表示で消費) */
   pendingReleaseGift: ReleaseGift | null = null;
@@ -76,6 +78,7 @@ export class ApiMeta implements MetaProvider {
     this.data.wins = me.wins;
     this.data.online = true;
     this.data.onboardingDone = me.onboardingDone;
+    this.data.unlockAll = !!me.unlockAll;
     this.data.owned = Object.fromEntries(col.owned.map(id => [id, 1]));
     this.data.formation = form.rows;
     this.pendingReleaseGift = me.releaseGift ?? null;

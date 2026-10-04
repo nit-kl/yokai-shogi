@@ -107,6 +107,7 @@ meRoutes.get('/me', async c => {
     wins: p.wins,
     losses: p.losses,
     soloWinRewardToday: p.daily_reset_date === today ? p.daily_win_reward_count : 0,
+    unlockAll: !!p.unlock_all,
   });
 });
 

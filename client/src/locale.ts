@@ -124,6 +124,27 @@ const STATIC: Record<string, string> = {
   'ランダムマッチ': 'Random Match', '今すぐAI対戦を始める': 'Start an AI Battle Now',
   'AI対戦': 'AI Battle',
   'フレンドルーム作成': 'Create Friend Room', '6桁コード': '6-digit code', '参加': 'Join',
+  'ルーム': 'Room', 'コードをコピー': 'Copy Code',
+  'このコードはルームを閉じるまで同じです。参加しても、両方の準備完了まで開戦しません。':
+    'This code stays until the room is closed. The battle starts when both players are ready.',
+  'ホスト': 'Host', 'ゲスト': 'Guest', '空き': 'Open', '未準備': 'Not Ready', '準備完了': 'Ready',
+  '準備を取り消す': 'Cancel Ready', '編成を変える': 'Edit Formation',
+  '席を空ける': 'Clear Seat',
+  '相手の参加を待っています': 'Waiting for the other player',
+  '相手の準備完了を待っています': 'Waiting for the other player to ready up',
+  '準備完了で開戦します': 'Ready up to start',
+  '相手は準備完了です': 'The other player is ready',
+  'ルームを準備しています…': 'Preparing the room…',
+  'ルームに戻っています…': 'Returning to the room…',
+  'ルームに戻る': 'Return to Room',
+  'コードをコピーしました': 'Code copied',
+  'コードを選択してコピーしてください': 'Select the code to copy it',
+  'ルームから外されました': 'You were removed from the room',
+  'ルームを閉じますか？コードは使えなくなります。': 'Close the room? This code will stop working.',
+  'ルームから出ますか？': 'Leave the room?',
+  '出る': 'Leave', '空ける': 'Clear',
+  '席を空けますか？': 'Clear the guest seat?',
+  '標準の編成が未設定です': 'No default formation is saved yet',
   'いつでもマッチ可能。集まりやすい時間は毎日 20:00〜22:00（逢魔が時）': 'Match anytime. The busiest hours are 20:00–22:00 JST daily.',
   '対戦募集は': 'Find opponents on the', 'でも行っています': 'as well.',
   'レアリティで絞り込み': 'Filter by rarity', '駒画像の拡大表示': 'Enlarged yokai image',
@@ -200,6 +221,11 @@ const STATIC: Record<string, string> = {
   '百鬼夜行ランキング1位限定': 'Night Parade #1 reward', '土曜対戦会限定': 'Saturday Battle exclusive',
   '課題達成': 'Puzzle Cleared', '未達': 'Not Cleared',
   '一手で覚える': 'Learn in One Move', '妖怪道場': 'Yokai Dojo',
+  '型と戦う': 'Face a Set Army', '試陣': 'Trial Armies',
+  '決まった並びのCPUと戦えます。報酬も連勝もありません。': 'Battle a CPU army with a fixed lineup. No rewards and no win streak.',
+  '戦型は自分の編成、検証は自軍も固定です。': 'Archetypes use your formation. Checks also fix your army.',
+  '戦型': 'Archetype', '検証': 'Check', '自軍固定': 'Fixed army',
+  '次の型': 'Next Lineup', '試陣へ戻る': 'Back to Trial Armies',
   '1〜2手の課題を解いて、ルールを体で覚えよう。': 'Solve 1–2 move puzzles to learn the rules by playing.',
   'クリアするごとにガチャチケット🎟を1枚もらえます。': 'Each clear grants one summon ticket.',
   '次の課題へ': 'Next Puzzle', 'もう一度': 'Retry', '召喚する': 'Summon', '道場へ戻る': 'Return to Dojo',
@@ -347,7 +373,8 @@ const HTML_OVERRIDES: Record<string, string> = {
     <ul>
       <li><b>Night Parade:</b> Solo win streaks. Weekly rankings; last week's #1 gets the exclusive “Champion · Nine-Tails” alt (first time only)</li>
       <li><b>Yokai Dojo:</b> 1–2 move puzzles. Each first clear grants one summon ticket</li>
-      <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code</li>
+      <li><b>Trial Armies:</b> CPU battles against a fixed enemy lineup. They do not grant rewards, streaks, or ranking</li>
+      <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code and start when both players are ready</li>
       <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
     </ul>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',

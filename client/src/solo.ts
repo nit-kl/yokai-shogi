@@ -10,7 +10,7 @@ export interface SoloStage {
   randomized?: boolean;
 }
 
-/** ソロ対戦は百鬼夜行(連戦)のみ */
+/** 百鬼夜行(連戦)。固定のCPU対戦は trials.ts */
 export const HYAKKI_STAGE: SoloStage = {
   id: 'hyakki',
   name: '百鬼夜行',

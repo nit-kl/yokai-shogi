@@ -1,6 +1,6 @@
 /* D1アクセスヘルパ・ゲーム定数(doc 05 のパターンに従う) */
 
-import { EMPTY_FORMATION } from '../../shared/data';
+import { EMPTY_FORMATION, YOKAI } from '../../shared/data';
 
 /* ---------- 経済定数(doc 08) ---------- */
 export const TICKETS_CAP = 999;
@@ -59,6 +59,8 @@ export interface ProfileRow {
   hyakki_streak: number;
   hyakki_week: string | null;
   hyakki_pending_at: string | null;
+  /** 1 のとき所持チェックを全妖怪通過（デモアカウント） */
+  unlock_all: number;
 }
 
 export async function getProfile(db: D1Database, userId: string): Promise<ProfileRow | null> {
@@ -66,6 +68,9 @@ export async function getProfile(db: D1Database, userId: string): Promise<Profil
 }
 
 export async function getOwnedSet(db: D1Database, userId: string): Promise<Set<string>> {
+  const flag = await db.prepare('SELECT unlock_all FROM user_profiles WHERE user_id = ?1')
+    .bind(userId).first<{ unlock_all: number }>();
+  if (flag?.unlock_all) return new Set(Object.keys(YOKAI));
   const rs = await db.prepare('SELECT yokai_id FROM user_yokai WHERE user_id = ?1').bind(userId).all<{ yokai_id: string }>();
   return new Set(rs.results.map(r => r.yokai_id));
 }

@@ -74,6 +74,7 @@ export class LocalMeta implements MetaProvider {
       hasPasskey: false,
       online: false,
       onboardingDone: false,
+      unlockAll: false,
       lastLogin: null,
       streak: 0,
       soloWinDate: null,

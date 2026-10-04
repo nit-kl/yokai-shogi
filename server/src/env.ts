@@ -39,6 +39,8 @@ export interface Env {
   STEAM_APP_ID?: string;
   /* '1' で mock:<steamId> を明示許可。未設定でもキー未設定時は mock 可 */
   STEAM_AUTH_MOCK?: string;
+  /* デモアカウントの全駒開放。未設定なら管理APIは 404 */
+  ADMIN_SECRET?: string;
 }
 
 /* Honoのコンテキスト型 */
