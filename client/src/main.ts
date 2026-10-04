@@ -69,6 +69,7 @@ let onlineSeq = 0;
 let onlineMode: MatchMode | null = null;
 let inOnlineBattle = false;
 let friendRoom: { code: string; role: 'host' | 'guest' } | null = null;
+let friendLobbyPending = false;
 let roomSelfReady = false;
 let wakeLockSentinel: WakeLockSentinel | null = null;
 const ONLINE_TURN_MS = 60_000;
@@ -321,6 +322,7 @@ function enterTitle() {
   MenuUI.onEnterTitle();
   void AnnouncementsUI.refresh({ popup: true });
   $('btn-online').classList.toggle('hidden', !Meta.onlineAvailable);
+  $('btn-friend').classList.toggle('hidden', !Meta.onlineAvailable);
   if (Meta.onlineAvailable) {
     MatchHourUI.start();
   } else {
@@ -423,28 +425,38 @@ function wireButtons() {
     else enterTitle();
   };
   $('btn-online').onclick = () => {
-    trackLandingEvent('online_cta_click', { source: 'title' });
-    void openOnline();
+    trackLandingEvent('online_cta_click', { source: 'title', mode: 'random' });
+    void openRandom();
   };
-  $('btn-online-close').onclick = () => closeOnlineModal();
+  $('btn-friend').onclick = () => {
+    trackLandingEvent('online_cta_click', { source: 'title', mode: 'friend' });
+    AudioSys.play('click');
+    void openFriend();
+  };
+  $('btn-random-close').onclick = () => closeRandomModal();
+  $('btn-friend-close').onclick = () => closeFriendModal();
   $('btn-online-random').onclick = () => {
-    connectMatchmaker();
-    online?.send({ t: 'join_queue' });
-    $('online-message').textContent = t('対戦相手を探しています。15秒ほどでAI対戦に切り替わります');
+    const btn = $<HTMLButtonElement>('btn-online-random');
+    btn.disabled = true;
+    const conn = connectMatchmaker();
+    if (!conn) { btn.disabled = false; return; }
+    conn.send({ t: 'join_queue' });
     startOnlineQueueTimer();
   };
   $('btn-online-ai').onclick = () => switchQueueToAi();
   $('btn-online-create').onclick = () => {
+    friendLobbyPending = true;
     connectMatchmaker();
     online?.send({ t: 'create_room' });
-    $('online-message').textContent = t('ルームを準備しています…');
+    setLobbyMessage(t('ルームを準備しています…'));
   };
   $('btn-online-join').onclick = () => {
     const code = $<HTMLInputElement>('online-code-input').value.trim().toUpperCase();
     if (!code) return;
+    friendLobbyPending = true;
     connectMatchmaker();
     online?.send({ t: 'join_room', code });
-    $('online-message').textContent = t('ルームへ参加しています…');
+    setLobbyMessage(t('ルームへ参加しています…'));
   };
   $('btn-room-back').onclick = () => {
     const host = friendRoom?.role === 'host';
@@ -577,6 +589,7 @@ function wireButtons() {
     inOnlineBattle = false;
     onlineMode = null;
     friendRoom = null;
+    friendLobbyPending = false;
     onlineSide = null;
     onlineMatch = null;
     online = null;
@@ -848,40 +861,87 @@ function onlineConnectErrorMessage(err: unknown): string {
   );
 }
 
-async function openOnline() {
-  AudioSys.play('click');
-  $('online-room-code').classList.add('hidden');
-  clearOnlineQueueTimer();
-  $('modal-online').classList.remove('hidden');
-  if (!Meta.online) {
-    $('online-message').textContent = 'オンラインへ接続しています…';
-    try {
-      await Meta.init();
-      if (!Meta.online) throw new Error('online connection unavailable');
-      MenuUI.onEnterTitle();
-    } catch (err) {
-      console.error('[meta] online retry failed', err);
-      captureException(err);
-      $('online-message').textContent = onlineConnectErrorMessage(err);
-      return;
-    }
+function setLobbyMessage(text: string): void {
+  if ($('screen-room').classList.contains('active')) {
+    $('room-message').textContent = text;
+    return;
   }
-  $('online-message').textContent = '対戦方法を選んでください';
+  if (!$('modal-friend').classList.contains('hidden')) {
+    $('friend-message').textContent = text;
+    return;
+  }
+  if (!$('modal-random').classList.contains('hidden')) {
+    $('random-message').textContent = text;
+  }
+}
+
+async function ensureOnlineReady(message: HTMLElement): Promise<boolean> {
+  if (Meta.online) return true;
+  message.textContent = 'オンラインへ接続しています…';
+  try {
+    await Meta.init();
+    if (!Meta.online) throw new Error('online connection unavailable');
+    MenuUI.onEnterTitle();
+    return true;
+  } catch (err) {
+    console.error('[meta] online retry failed', err);
+    captureException(err);
+    message.textContent = onlineConnectErrorMessage(err);
+    return false;
+  }
+}
+
+async function openRandom() {
+  AudioSys.play('click');
+  resetRandomSearch();
+  $('modal-friend').classList.add('hidden');
+  $('modal-random').classList.remove('hidden');
+  const message = $('random-message');
+  if (!(await ensureOnlineReady(message))) return;
+  message.textContent = '知らない相手と対戦します。見つからないときはAI対戦になります。';
   MatchHourUI.refresh();
 }
 
-function closeOnlineModal() {
+async function openFriend(notice = '') {
+  $('modal-random').classList.add('hidden');
+  $('modal-friend').classList.remove('hidden');
+  const message = $('friend-message');
+  if (!(await ensureOnlineReady(message))) return;
+  message.textContent = notice || 'ルームを作ってコードを伝えるか、もらったコードで参加します。';
+}
+
+function closeRandomModal() {
   online?.send({ t: 'leave_queue', reason: 'cancel' });
-  clearOnlineQueueTimer();
+  resetRandomSearch();
   online?.close();
   online = null;
-  $('modal-online').classList.add('hidden');
+  $('modal-random').classList.add('hidden');
+}
+
+function closeFriendModal() {
+  $('modal-friend').classList.add('hidden');
+  if ($('screen-room').classList.contains('active')) {
+    friendLobbyPending = false;
+    return;
+  }
+  const socket = online;
+  const cancelRoom = friendLobbyPending;
+  friendLobbyPending = false;
+  if (!socket) return;
+  if (cancelRoom) socket.send({ t: 'leave_room' });
+  socket.close();
+  if (online === socket) online = null;
+}
+
+function resetRandomSearch(): void {
+  clearOnlineQueueTimer();
+  $<HTMLButtonElement>('btn-online-random').disabled = false;
 }
 
 function connectMatchmaker(extra: Record<string, string> = {}): OnlineConnection | null {
   if (online) return online;
   const url = Meta.battleUrl();
-  if (!url) { $('online-message').textContent = 'オンライン接続が利用できません'; return null; }
+  if (!url) { setLobbyMessage('オンライン接続が利用できません'); return null; }
   online = new OnlineConnection(url);
   /* Promiseを返すことで OnlineConnection の直列キューが演出完了を待つ */
   online.onMessage = message => onOnlineMessage(message);
@@ -903,8 +963,14 @@ function connectMatchmaker(extra: Record<string, string> = {}): OnlineConnection
       }, 800);
     } else if (state !== 'connected') {
       const text = state === 'error' ? '接続エラーが発生しました' : '接続が切れました';
-      if ($('screen-room').classList.contains('active')) $('room-message').textContent = t(text);
-      else $('online-message').textContent = t(text);
+      setLobbyMessage(t(text));
+      $<HTMLButtonElement>('btn-online-random').disabled = false;
+      if (!friendRoom && !onlineMatch && !inOnlineBattle) {
+        const lost = online;
+        online = null;
+        friendLobbyPending = false;
+        lost?.close();
+      }
     }
   };
   online.connect(extra);
@@ -914,35 +980,31 @@ function connectMatchmaker(extra: Record<string, string> = {}): OnlineConnection
 async function onOnlineMessage(message: ServerBattleMessage) {
   if (message.t === 'queued') {
     return;
-  } else if (message.t === 'room_created') {
-    $('online-message').textContent = 'このコードを相手に伝えてください';
-    $('online-room-code').textContent = message.code;
-    $('online-room-code').classList.remove('hidden');
   } else if (message.t === 'room_state') {
     showFriendRoom(message);
   } else if (message.t === 'room_closed') {
     const kicked = message.reason === 'kicked';
     friendRoom = null;
+    friendLobbyPending = false;
     roomSelfReady = false;
     inOnlineBattle = false;
     releaseWakeLock();
     enterTitle();
     if (kicked) {
-      void openOnline().then(() => {
-        $('online-message').textContent = t('ルームから外されました');
-      });
+      void openFriend(t('ルームから外されました'));
     }
   } else if (message.t === 'error') {
     const text = isPlayerFacingText(message.message)
       ? message.message
       : '対局の通信でエラーが発生しました';
-    if ($('screen-room').classList.contains('active')) $('room-message').textContent = text;
-    else $('online-message').textContent = text;
+    setLobbyMessage(text);
+    friendLobbyPending = false;
+    $<HTMLButtonElement>('btn-online-random').disabled = false;
     busy = false;
   } else if (message.t === 'match_found') {
     inOnlineBattle = true;
     onlineMode = message.mode ?? null;
-    clearOnlineQueueTimer();
+    resetRandomSearch();
     onlineSide = message.side;
     onlineSeq = 0;
     onlineMatch = {
@@ -951,7 +1013,8 @@ async function onOnlineMessage(message: ServerBattleMessage) {
       shadow: !!message.shadow,
     };
     saveOnlineMatch();
-    $('modal-online').classList.add('hidden');
+    $('modal-random').classList.add('hidden');
+    $('modal-friend').classList.add('hidden');
     online!.connect({ matchId: message.matchId, reconnectToken: message.reconnectToken });
   } else if (message.t === 'snapshot') {
     if (!onlineSide) return;
@@ -1024,10 +1087,10 @@ function startOnlineQueueTimer(): void {
     const elapsed = Date.now() - started;
     const remainSec = Math.max(0, Math.ceil((ONLINE_SHADOW_WAIT_MS - elapsed) / 1000));
     if (remainSec > 0) {
-      $('online-message').textContent =
+      $('random-message').textContent =
         t(`対戦相手を探しています… 約${remainSec}秒でAI対戦に切り替わります`);
     } else {
-      $('online-message').textContent = t('対戦相手が見つからないため、AI対戦を準備しています…');
+      $('random-message').textContent = t('対戦相手が見つからないため、AI対戦を準備しています…');
     }
     if (elapsed >= ONLINE_AI_OFFER_MS) $('btn-online-ai').classList.remove('hidden');
   };
@@ -1043,7 +1106,7 @@ function clearOnlineQueueTimer(): void {
 
 function switchQueueToAi(): void {
   online?.send({ t: 'request_shadow' });
-  $('online-message').textContent = t('AI対戦を準備しています…');
+  $('random-message').textContent = t('AI対戦を準備しています…');
 }
 
 function formatCountdown(ms: number, compact = false): string {
@@ -1234,10 +1297,12 @@ function releaseWakeLock(): void {
 
 function showFriendRoom(message: Extract<ServerBattleMessage, { t: 'room_state' }>): void {
   if (inOnlineBattle) return;
+  friendLobbyPending = false;
   friendRoom = { code: message.code, role: message.role };
   const self = message.role === 'host' ? message.host : message.guest;
   roomSelfReady = !!self?.ready;
-  $('modal-online').classList.add('hidden');
+  $('modal-random').classList.add('hidden');
+  $('modal-friend').classList.add('hidden');
   clearOnlineQueueTimer();
   showScreen('screen-room');
   const codeEl = $('room-code');
@@ -1270,20 +1335,6 @@ function renderRoomSeat(role: 'host' | 'guest', seat: RoomSeatView | null): void
     ready.textContent = !seat
       ? '—'
       : seat.ready ? t('準備完了') : seat.connected ? t('未準備') : t('接続が切れました');
-  }
-  const formation = root.querySelector('.room-formation');
-  if (!formation) return;
-  formation.replaceChildren();
-  for (const id of (seat?.formation ?? []).flat()) {
-    if (!id) {
-      formation.appendChild(document.createElement('span'));
-      continue;
-    }
-    const img = document.createElement('img');
-    img.alt = '';
-    img.draggable = false;
-    applyYokaiImage(img, id, 'sm');
-    formation.appendChild(img);
   }
 }
 

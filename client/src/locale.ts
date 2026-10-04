@@ -121,7 +121,15 @@ const STATIC: Record<string, string> = {
   'データを守りましょう': 'Protect Your Progress', 'コードを発行する': 'Create a Code', 'あとで': 'Later',
   'セッションが切れました': 'Session Expired', 'パスキーで復元': 'Restore with Passkey', 'コードで復元': 'Restore with Code',
   '新規に始める': 'Start Fresh', '対戦方法を選んでください': 'Choose how to battle',
-  'ランダムマッチ': 'Random Match', '今すぐAI対戦を始める': 'Start an AI Battle Now',
+  'ランダムマッチ': 'Random Match', 'フレンドマッチ': 'Friend Match', '今すぐAI対戦を始める': 'Start an AI Battle Now',
+  '知らない相手と': 'With a stranger', 'コードで誘う': 'Invite with a code',
+  'マッチ開始': 'Start Match', 'ルームを作る': 'Create Room',
+  '知らない相手と対戦します。見つからないときはAI対戦になります。':
+    'Battle a stranger. If nobody is found, you face an AI.',
+  'ルームを作ってコードを伝えるか、もらったコードで参加します。':
+    'Create a room and share the code, or join with a code you received.',
+  'このコードはルームを閉じるまで同じです。参加しても、両方の準備完了まで開戦しません。編成は相手に見えません。':
+    'This code stays until the room is closed. The battle starts when both players are ready. Formations stay hidden.',
   'AI対戦': 'AI Battle',
   'フレンドルーム作成': 'Create Friend Room', '6桁コード': '6-digit code', '参加': 'Join',
   'ルーム': 'Room', 'コードをコピー': 'Copy Code',

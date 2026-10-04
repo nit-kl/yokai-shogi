@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム</title>
 <meta name="description" content="妖怪を集めて、取って、HPを削る対戦ゲーム。ソロ対戦、編成、ガチャ、オンライン対戦に対応。登録なしですぐに遊べます。">
 <meta name="robots" content="index, follow">
@@ -104,7 +104,10 @@
       </h1>
       <div class="title-main-actions">
         <button id="btn-start" class="btn title-action-primary"><small>連勝に挑む</small>百鬼夜行</button>
-        <button id="btn-online" class="btn title-action-online hidden"><small>猛者と競う</small>オンライン対戦</button>
+        <div class="title-online-actions">
+          <button id="btn-online" class="btn title-action-online hidden" type="button"><small>知らない相手と</small>ランダムマッチ</button>
+          <button id="btn-friend" class="btn title-action-friend hidden" type="button"><small>コードで誘う</small>フレンドマッチ</button>
+        </div>
         <button id="btn-dojo" class="btn title-action-dojo"><small>一手で覚える</small>妖怪道場</button>
         <button id="btn-trials" class="btn title-action-trial"><small>型と戦う</small>試陣</button>
       </div>
@@ -682,48 +685,59 @@
         <h2 class="menu-title">ルーム</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p id="room-code" class="room-code" data-code="">------</p>
-      <button id="btn-room-copy" class="btn btn-dark btn-sub" type="button">コードをコピー</button>
-      <p class="room-note">このコードはルームを閉じるまで同じです。参加しても、両方の準備完了まで開戦しません。</p>
-      <div class="room-seats">
-        <section class="room-seat" id="room-seat-host">
-          <div class="room-role">ホスト</div>
-          <div class="room-name">—</div>
-          <div class="room-formation"></div>
-          <div class="room-ready">未準備</div>
-        </section>
-        <section class="room-seat" id="room-seat-guest">
-          <div class="room-role">ゲスト</div>
-          <div class="room-name">空き</div>
-          <div class="room-formation"></div>
-          <div class="room-ready">—</div>
-        </section>
+      <div class="room-scroll">
+        <p id="room-code" class="room-code" data-code="">------</p>
+        <button id="btn-room-copy" class="btn btn-dark btn-sub" type="button">コードをコピー</button>
+        <p class="room-note">このコードはルームを閉じるまで同じです。参加しても、両方の準備完了まで開戦しません。編成は相手に見えません。</p>
+        <div class="room-seats">
+          <section class="room-seat" id="room-seat-host">
+            <div class="room-role">ホスト</div>
+            <div class="room-name">—</div>
+            <div class="room-ready">未準備</div>
+          </section>
+          <section class="room-seat" id="room-seat-guest">
+            <div class="room-role">ゲスト</div>
+            <div class="room-name">空き</div>
+            <div class="room-ready">—</div>
+          </section>
+        </div>
+        <p id="room-message" class="room-message">相手の参加を待っています</p>
       </div>
-      <p id="room-message" class="room-message">相手の参加を待っています</p>
-      <button id="btn-room-ready" class="btn btn-gold" type="button">準備完了</button>
-      <div class="room-tools">
-        <button id="btn-room-formation" class="btn btn-dark btn-sub" type="button">編成を変える</button>
-        <button id="btn-room-kick" class="btn btn-dark btn-sub hidden" type="button">席を空ける</button>
+      <div class="room-actions">
+        <button id="btn-room-ready" class="btn btn-gold" type="button">準備完了</button>
+        <div class="room-tools">
+          <button id="btn-room-formation" class="btn btn-dark btn-sub" type="button">編成を変える</button>
+          <button id="btn-room-kick" class="btn btn-dark btn-sub hidden" type="button">席を空ける</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- オンライン対戦モーダル -->
-  <div id="modal-online" class="modal hidden">
+  <!-- ランダムマッチ -->
+  <div id="modal-random" class="modal hidden">
     <div class="modal-box online-box">
-      <h2>オンライン対戦</h2>
-      <div id="online-message">対戦方法を選んでください</div>
+      <h2>ランダムマッチ</h2>
+      <div id="random-message">知らない相手と対戦します。見つからないときはAI対戦になります。</div>
       <p id="online-random-schedule" class="online-random-schedule">いつでもマッチ可能。集まりやすい時間は毎日 20:00〜22:00（逢魔が時）</p>
       <p class="online-discord-note">対戦募集は <a href="https://discord.com/channels/1530830388107415742/1530830388966985781" target="_blank" rel="noopener noreferrer">公式Discord</a> でも行っています</p>
-      <button id="btn-online-random" class="btn btn-gold">ランダムマッチ</button>
-      <button id="btn-online-ai" class="btn btn-dark hidden">今すぐAI対戦を始める</button>
-      <button id="btn-online-create" class="btn btn-dark">フレンドルーム作成</button>
+      <button id="btn-online-random" class="btn btn-gold" type="button">マッチ開始</button>
+      <button id="btn-online-ai" class="btn btn-dark hidden" type="button">今すぐAI対戦を始める</button>
+      <button id="btn-random-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <!-- フレンドマッチ -->
+  <div id="modal-friend" class="modal hidden">
+    <div class="modal-box online-box">
+      <h2>フレンドマッチ</h2>
+      <div id="friend-message">ルームを作ってコードを伝えるか、もらったコードで参加します。</div>
+      <button id="btn-online-create" class="btn btn-gold" type="button">ルームを作る</button>
       <div class="online-code-row">
         <input id="online-code-input" type="text" maxlength="6" placeholder="6桁コード" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
-        <button id="btn-online-join" class="btn btn-dark btn-sub">参加</button>
+        <button id="btn-online-join" class="btn btn-dark" type="button">参加</button>
       </div>
-      <div id="online-room-code" class="link-code hidden"></div>
-      <button id="btn-online-close" class="btn btn-dark btn-sub">閉じる</button>
+      <p class="online-discord-note">対戦募集は <a href="https://discord.com/channels/1530830388107415742/1530830388966985781" target="_blank" rel="noopener noreferrer">公式Discord</a> でも行っています</p>
+      <button id="btn-friend-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
     </div>
   </div>
 

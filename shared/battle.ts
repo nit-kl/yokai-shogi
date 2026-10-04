@@ -30,11 +30,9 @@ export interface BattlePlayer {
   reconnectToken: string;
 }
 
-/** フレンドルームの席。編成は待ち受け中のプレビュー */
+/** フレンドルームの席。待ち受け中は名前と準備状態だけを渡す */
 export interface RoomSeatView {
   name: string;
-  bossId: string;
-  formation: (string | null)[][];
   ready: boolean;
   connected: boolean;
 }
