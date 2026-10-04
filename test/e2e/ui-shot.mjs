@@ -27,7 +27,9 @@ await page.click('#btn-profile-save');
 await page.locator('#modal-profile').waitFor({ state: 'hidden' });
 if (await page.locator('#title-player-name').textContent() !== '九尾使い') errors.push('タイトルにプレイヤーネームが反映されていない');
 
-// 駒一覧
+// 駒一覧（ホームの「妖怪」から開く）
+await page.click('#btn-yokai');
+await page.locator('#modal-yokai').waitFor({ state: 'visible' });
 await page.click('#btn-pieces');
 await page.waitForSelector('#screen-pieces.active');
 const pieceCount = await page.locator('#pieces-list .piece-card').count();

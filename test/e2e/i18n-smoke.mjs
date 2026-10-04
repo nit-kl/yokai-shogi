@@ -6,7 +6,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errors = [];
 
 await page.goto(`${BASE_URL}?lang=en`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-await page.waitForSelector('#locale-select');
+await page.waitForSelector('#locale-select', { state: 'attached' });
 await page.waitForFunction(() => document.documentElement.lang === 'en' && document.documentElement.dataset.script === 'latn');
 await page.waitForSelector('#pieces-list .piece-card', { state: 'attached' });
 await page.waitForTimeout(200);
@@ -69,6 +69,7 @@ if (/[ぁ-んァ-ヶ一-龠々]/.test(announcementText)) {
 await page.locator('#btn-announcements-close').click();
 await page.screenshot({ path: 'test/e2e/i18n-en.png', fullPage: true });
 
+await page.locator('#btn-settings').click();
 await page.locator('#locale-select').selectOption('ja');
 await page.waitForFunction(() => document.documentElement.lang === 'ja' && document.documentElement.dataset.script === 'jpan');
 if (await page.title() !== '百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム') errors.push('Japanese title was not restored');
