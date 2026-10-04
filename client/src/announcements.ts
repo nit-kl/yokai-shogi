@@ -112,9 +112,10 @@ export const AnnouncementsUI = {
 
   renderBadge(): void {
     const unread = this.unreadItems().length;
-    const badge = $('announcement-badge');
-    badge.textContent = unread ? String(unread) : '';
-    badge.classList.toggle('hidden', unread === 0);
+    for (const badge of document.querySelectorAll<HTMLElement>('.announcement-badge')) {
+      badge.textContent = unread ? String(unread) : '';
+      badge.classList.toggle('hidden', unread === 0);
+    }
   },
 
   open(): void {

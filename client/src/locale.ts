@@ -77,6 +77,8 @@ const STATIC: Record<string, string> = {
   'プレイヤー': 'Player', '百鬼盤': 'Hyakkiban',
   '妖怪を集めて、取って、HPを削る対戦ゲーム': 'Collect yokai, capture, and drain HP',
   '妖怪': 'Yokai', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
+  'ほかの対局': 'Other Battles', '道場・対戦・試陣': 'Dojo, matches, and trials',
+  'ガチャと編成': 'Summon and formation', '言語': 'Language',
   '猛者と競う': 'Face other players', 'オンライン対戦': 'Online Battle',
   'メニュー': 'Menu',
   '妖怪ガチャ': 'Yokai Summon', '編 成': 'Formation', '駒一覧': 'Compendium',
@@ -384,7 +386,8 @@ const HTML_OVERRIDES: Record<string, string> = {
       <li><b>Trial Armies:</b> CPU battles against a fixed enemy lineup. They do not grant rewards, streaks, or ranking</li>
       <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code and start when both players are ready</li>
       <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
-    </ul>`,
+    </ul>
+    <p class="rules-more"><a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">How-to Guide</a></p>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',
   '.pieces-note': 'Review each yokai’s movement, abilities, SSR traits, awakening, and resonances. Promotion grants 1.5× attack and stronger movement.',
   '#modal-consent .link-desc': 'Online features store an account ID, play data, and access logs. The Steam version sends a Session Ticket to Valve to authenticate with your Steam ID. On the browser version, optional rewarded ads may send device and connection information to an ad network. The Steam version has no ads. Review the policies below before accepting.',
