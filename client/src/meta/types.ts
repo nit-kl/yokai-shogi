@@ -27,6 +27,8 @@ export interface MetaState {
   hasPasskey: boolean;
   online: boolean;                 // true=サーバー権威 / false=ローカル(オフライン)
   onboardingDone: boolean;
+  /** サーバーが全妖怪を所持扱いにしているデモアカウント */
+  unlockAll: boolean;
 }
 
 export interface LoginBonus { day: number; tickets: number; }

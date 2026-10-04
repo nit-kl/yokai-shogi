@@ -3,6 +3,7 @@
 import { env, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { ANNOUNCEMENTS, currentAnnouncements } from '../../shared/announcements';
+import { YOKAI } from '../../shared/data';
 import { runDailyJobs } from '../../server/src/cron';
 import { gameDate, gameWeek, prevGameDate } from '../../server/src/lib/time';
 
@@ -863,5 +864,43 @@ describe('統計', () => {
     const after = await api('/v1/stats/players');
     expect(after.status).toBe(200);
     expect(after.body.registered).toBe(base + 1);
+  });
+});
+
+describe('デモアカウント', () => {
+  it('引き継ぎコードで全駒を開放する', async () => {
+    const g = await createGuest();
+    const issued = await api('/v1/auth/link-code', { method: 'POST', token: g.accessToken, body: '{}' });
+    expect(issued.status).toBe(200);
+    const code = issued.body.code as string;
+
+    const missing = await SELF.fetch(`${BASE}/v1/admin/demo-unlock`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'CF-Connecting-IP': freshIp() },
+      body: JSON.stringify({ code }),
+    });
+    expect(missing.status).toBe(404);
+
+    const unlocked = await SELF.fetch(`${BASE}/v1/admin/demo-unlock`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-admin-secret': 'test-admin',
+        'CF-Connecting-IP': freshIp(),
+      },
+      body: JSON.stringify({ code }),
+    });
+    expect(unlocked.status).toBe(200);
+
+    const collection = await api('/v1/me/collection', { token: g.accessToken });
+    expect(collection.body.owned).toHaveLength(Object.keys(YOKAI).length);
+
+    const rows = [
+      [null, null, null, null, null],
+      [null, null, 'kyubi', null, null],
+    ];
+    expect((await api('/v1/me/formation', {
+      method: 'PUT', token: g.accessToken, body: JSON.stringify({ rows }),
+    })).status).toBe(200);
   });
 });

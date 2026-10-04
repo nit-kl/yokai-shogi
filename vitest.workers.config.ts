@@ -20,6 +20,7 @@ export default defineConfig(async () => {
             MATCH_HOUR_ENFORCE: '0',
             PARTICIPATION_MIN_ACTIONS: '1',
             ALLOW_TEST_CLOCK: '1',
+            ADMIN_SECRET: 'test-admin',
             ADS_REWARD_ENABLED: '1',
             ADS_REWARD_PROVIDER: 'mock',
           },

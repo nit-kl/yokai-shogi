@@ -174,24 +174,76 @@ describe('BattleRoom DO', () => {
 });
 
 describe('Matchmaker DO', () => {
-  it('6桁コードでフレンドマッチを成立させる', async () => {
+  it('フレンドルームは準備完了で成立し、コードは残る', async () => {
     const host = await createPlayer('ホスト');
     const guest = await createPlayer('ゲスト');
     const hostSocket = await connectMatchmaker(host);
     const guestSocket = await connectMatchmaker(guest);
 
     hostSocket.ws.send(JSON.stringify({ t: 'create_room' }));
-    const room = await hostSocket.nextType('room_created');
-    expect(room.code).toMatch(/^[A-Z2-9]{6}$/);
+    const created = await hostSocket.nextType('room_state');
+    expect(created.code).toMatch(/^[A-Z2-9]{6}$/);
+    expect(created.role).toBe('host');
+    expect(created.guest).toBeNull();
 
-    guestSocket.ws.send(JSON.stringify({ t: 'join_room', code: room.code }));
+    guestSocket.ws.send(JSON.stringify({ t: 'join_room', code: created.code }));
+    const joined = await guestSocket.nextType('room_state');
+    expect(joined.role).toBe('guest');
+    expect(joined.guest?.name).toBe('ゲスト');
+    const hostSawJoin = await hostSocket.nextType('room_state');
+    expect(hostSawJoin.guest?.name).toBe('ゲスト');
+
+    hostSocket.ws.send(JSON.stringify({ t: 'room_ready', ready: true }));
+    expect((await hostSocket.nextType('room_state')).host.ready).toBe(true);
+
+    guestSocket.ws.send(JSON.stringify({ t: 'room_ready', ready: true }));
     const [hostFound, guestFound] = await Promise.all([
       hostSocket.nextType('match_found'),
       guestSocket.nextType('match_found'),
     ]);
     expect(hostFound.side).toBe('p');
     expect(guestFound.side).toBe('e');
+    expect(hostFound.mode).toBe('friend');
     expect(hostFound.matchId).toBe(guestFound.matchId);
+
+    hostSocket.ws.close();
+    guestSocket.ws.close();
+    const hostAgain = await connectMatchmaker(host);
+    const guestAgain = await connectMatchmaker(guest);
+    hostAgain.ws.send(JSON.stringify({ t: 'rejoin_room' }));
+    guestAgain.ws.send(JSON.stringify({ t: 'rejoin_room' }));
+    const [hostBack, guestBack] = await Promise.all([
+      hostAgain.nextType('room_state'),
+      guestAgain.nextType('room_state'),
+    ]);
+    expect(hostBack.code).toBe(created.code);
+    expect(guestBack.code).toBe(created.code);
+    expect(hostBack.host.ready).toBe(false);
+    expect(guestBack.guest?.ready).toBe(false);
+  });
+
+  it('満員のルームは拒否し、ホストは席を空けられる', async () => {
+    const host = await createPlayer('ホスト');
+    const guest = await createPlayer('ゲスト');
+    const other = await createPlayer('別の人');
+    const hostSocket = await connectMatchmaker(host);
+    const guestSocket = await connectMatchmaker(guest);
+    const otherSocket = await connectMatchmaker(other);
+    hostSocket.ws.send(JSON.stringify({ t: 'create_room' }));
+    const room = await hostSocket.nextType('room_state');
+    guestSocket.ws.send(JSON.stringify({ t: 'join_room', code: room.code }));
+    await guestSocket.nextType('room_state');
+    await hostSocket.nextType('room_state');
+
+    otherSocket.ws.send(JSON.stringify({ t: 'join_room', code: room.code }));
+    expect(await otherSocket.nextType('error')).toMatchObject({ code: 'ROOM_FULL' });
+
+    hostSocket.ws.send(JSON.stringify({ t: 'kick_guest' }));
+    expect(await guestSocket.nextType('room_closed')).toMatchObject({ reason: 'kicked' });
+    expect((await hostSocket.nextType('room_state')).guest).toBeNull();
+
+    otherSocket.ws.send(JSON.stringify({ t: 'join_room', code: room.code }));
+    expect((await otherSocket.nextType('room_state')).role).toBe('guest');
   });
 
   it('ランダムマッチを成立させる', async () => {

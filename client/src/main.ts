@@ -35,7 +35,7 @@ import { SupportUI } from './support';
 import { MatchHourUI } from './match-hour';
 import { AnnouncementsUI } from './announcements';
 import { trackLandingEvent, trackLandingEventOnce } from './analytics';
-import type { ClockPhase, ServerBattleMessage, SkipStreak } from '../../shared/battle';
+import type { ClockPhase, MatchMode, RoomSeatView, ServerBattleMessage, SkipStreak } from '../../shared/battle';
 import { SKIP_LIMIT } from '../../shared/battle';
 import { OnlineConnection, actionToServer, eventsForView, skipStreakForView, stateForView } from './online';
 import { initializeLocale, t, getLocale } from './locale';
@@ -66,6 +66,11 @@ let onlineReward = 0;
 let onlineParticipation = 0;
 let onlineEventYokai: string | null = null;
 let onlineSeq = 0;
+let onlineMode: MatchMode | null = null;
+let inOnlineBattle = false;
+let friendRoom: { code: string; role: 'host' | 'guest' } | null = null;
+let roomSelfReady = false;
+let wakeLockSentinel: WakeLockSentinel | null = null;
 const ONLINE_TURN_MS = 60_000;
 const ONLINE_BYOYOMI_MS = 30_000;
 const ONLINE_DISCONNECT_MS = 60_000;
@@ -177,6 +182,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // 初回操作でオーディオ起動
   const audioKick = () => { AudioSys.init(); AudioSys.resume(); };
   addEventListener('pointerdown', audioKick, { once: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && (friendRoom || inOnlineBattle)) void acquireWakeLock();
+  });
 });
 
 /* 画像プリロードとメタ初期化(認証・ログボ判定)を待ってからタイトルへ */
@@ -293,6 +301,7 @@ function preloadImages(): Promise<void> {
 
 function enterTitle() {
   stopOnlineTimer();
+  releaseWakeLock();
   $('combo-vignette').className = '';
   if (!Meta.isOnboardingDone()) {
     trackLandingEventOnce('onboarding_start', 'onboarding_start', { online: Meta.online });
@@ -425,13 +434,46 @@ function wireButtons() {
     startOnlineQueueTimer();
   };
   $('btn-online-ai').onclick = () => switchQueueToAi();
-  $('btn-online-create').onclick = () => { connectMatchmaker(); online?.send({ t: 'create_room' }); };
+  $('btn-online-create').onclick = () => {
+    connectMatchmaker();
+    online?.send({ t: 'create_room' });
+    $('online-message').textContent = t('ルームを準備しています…');
+  };
   $('btn-online-join').onclick = () => {
     const code = $<HTMLInputElement>('online-code-input').value.trim().toUpperCase();
     if (!code) return;
     connectMatchmaker();
     online?.send({ t: 'join_room', code });
-    $('online-message').textContent = 'ルームへ参加しています…';
+    $('online-message').textContent = t('ルームへ参加しています…');
+  };
+  $('btn-room-back').onclick = () => {
+    const host = friendRoom?.role === 'host';
+    void confirmDialog(
+      t(host ? 'ルームを閉じますか？コードは使えなくなります。' : 'ルームから出ますか？'),
+      { title: t('ルーム'), ok: t(host ? '閉じる' : '出る'), cancel: t('やめる') },
+    ).then(ok => {
+      if (!ok) return;
+      online?.send({ t: 'leave_room' });
+    });
+  };
+  $('btn-room-copy').onclick = () => { void copyRoomCode(); };
+  $('btn-room-ready').onclick = () => {
+    online?.send({ t: 'room_ready', ready: !roomSelfReady });
+  };
+  $('btn-room-formation').onclick = () => {
+    AudioSys.play('click');
+    MenuUI.openFormation({
+      onReturn: () => {
+        showScreen('screen-room');
+        online?.send({ t: 'room_sync' });
+      },
+    });
+  };
+  $('btn-room-kick').onclick = () => {
+    void confirmDialog(t('席を空けますか？'), { title: t('ルーム'), ok: t('空ける'), cancel: t('やめる') }).then(ok => {
+      if (!ok) return;
+      online?.send({ t: 'kick_guest' });
+    });
   };
   $('btn-rules').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
   $('btn-rules2').onclick = () => { AudioSys.play('click'); $('modal-rules').classList.remove('hidden'); };
@@ -524,14 +566,22 @@ function wireButtons() {
   };
   $('btn-retry').onclick = () => {
     AudioSys.play('click');
+    if (onlineMode === 'friend') { returnToFriendRoom(); return; }
     if (onlineSide) { online?.close(); clearOnlineMatch(); onlineSide = null; onlineMatch = null; enterTitle(); }
   };
   $('btn-title').onclick = () => {
     AudioSys.play('click');
     AudioSys.stopBgm();
-    online?.close();
+    const socket = online;
+    if (friendRoom?.role === 'guest') socket?.send({ t: 'leave_room' });
+    inOnlineBattle = false;
+    onlineMode = null;
+    friendRoom = null;
+    onlineSide = null;
+    onlineMatch = null;
+    online = null;
     clearOnlineMatch();
-    online = null; onlineSide = null; onlineMatch = null;
+    window.setTimeout(() => socket?.close(), 200);
     enterTitle();
   };
 }
@@ -828,10 +878,10 @@ function closeOnlineModal() {
   $('modal-online').classList.add('hidden');
 }
 
-function connectMatchmaker(extra: Record<string, string> = {}) {
-  if (online) return;
+function connectMatchmaker(extra: Record<string, string> = {}): OnlineConnection | null {
+  if (online) return online;
   const url = Meta.battleUrl();
-  if (!url) { $('online-message').textContent = 'オンライン接続が利用できません'; return; }
+  if (!url) { $('online-message').textContent = 'オンライン接続が利用できません'; return null; }
   online = new OnlineConnection(url);
   /* Promiseを返すことで OnlineConnection の直列キューが演出完了を待つ */
   online.onMessage = message => onOnlineMessage(message);
@@ -843,11 +893,22 @@ function connectMatchmaker(extra: Record<string, string> = {}) {
       setTimeout(() => online?.connect({
         matchId: onlineMatch!.matchId, reconnectToken: onlineMatch!.reconnectToken,
       }), 1000);
+    } else if (state === 'disconnected' && friendRoom && !inOnlineBattle && !onlineMatch) {
+      const lost = online;
+      window.setTimeout(() => {
+        if (online && online !== lost) return;
+        online = null;
+        if (!friendRoom || inOnlineBattle) return;
+        connectMatchmaker()?.send({ t: 'rejoin_room' });
+      }, 800);
     } else if (state !== 'connected') {
-      $('online-message').textContent = state === 'error' ? '接続エラーが発生しました' : '接続が切れました';
+      const text = state === 'error' ? '接続エラーが発生しました' : '接続が切れました';
+      if ($('screen-room').classList.contains('active')) $('room-message').textContent = t(text);
+      else $('online-message').textContent = t(text);
     }
   };
   online.connect(extra);
+  return online;
 }
 
 async function onOnlineMessage(message: ServerBattleMessage) {
@@ -857,12 +918,30 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     $('online-message').textContent = 'このコードを相手に伝えてください';
     $('online-room-code').textContent = message.code;
     $('online-room-code').classList.remove('hidden');
+  } else if (message.t === 'room_state') {
+    showFriendRoom(message);
+  } else if (message.t === 'room_closed') {
+    const kicked = message.reason === 'kicked';
+    friendRoom = null;
+    roomSelfReady = false;
+    inOnlineBattle = false;
+    releaseWakeLock();
+    enterTitle();
+    if (kicked) {
+      void openOnline().then(() => {
+        $('online-message').textContent = t('ルームから外されました');
+      });
+    }
   } else if (message.t === 'error') {
-    $('online-message').textContent = isPlayerFacingText(message.message)
+    const text = isPlayerFacingText(message.message)
       ? message.message
       : '対局の通信でエラーが発生しました';
+    if ($('screen-room').classList.contains('active')) $('room-message').textContent = text;
+    else $('online-message').textContent = text;
     busy = false;
   } else if (message.t === 'match_found') {
+    inOnlineBattle = true;
+    onlineMode = message.mode ?? null;
     clearOnlineQueueTimer();
     onlineSide = message.side;
     onlineSeq = 0;
@@ -1136,6 +1215,104 @@ function renderOnlineTimers(): void {
   }
 }
 
+function acquireWakeLock(): void {
+  const locks = navigator.wakeLock;
+  if (!locks || wakeLockSentinel) return;
+  void locks.request('screen').then(lock => {
+    wakeLockSentinel = lock;
+    lock.addEventListener('release', () => {
+      if (wakeLockSentinel === lock) wakeLockSentinel = null;
+    });
+  }).catch(() => { /* 未対応や拒否でも対局は続ける */ });
+}
+
+function releaseWakeLock(): void {
+  const lock = wakeLockSentinel;
+  wakeLockSentinel = null;
+  void lock?.release().catch(() => {});
+}
+
+function showFriendRoom(message: Extract<ServerBattleMessage, { t: 'room_state' }>): void {
+  if (inOnlineBattle) return;
+  friendRoom = { code: message.code, role: message.role };
+  const self = message.role === 'host' ? message.host : message.guest;
+  roomSelfReady = !!self?.ready;
+  $('modal-online').classList.add('hidden');
+  clearOnlineQueueTimer();
+  showScreen('screen-room');
+  const codeEl = $('room-code');
+  codeEl.dataset.code = message.code;
+  codeEl.textContent = message.code.split('').join(' ');
+  renderRoomSeat('host', message.host);
+  renderRoomSeat('guest', message.guest);
+  const readyBtn = $<HTMLButtonElement>('btn-room-ready');
+  readyBtn.disabled = !message.guest;
+  readyBtn.textContent = roomSelfReady ? t('準備を取り消す') : t('準備完了');
+  $('btn-room-kick').classList.toggle('hidden', message.role !== 'host' || !message.guest);
+  const other = message.role === 'host' ? message.guest : message.host;
+  $('room-message').textContent = !message.guest
+    ? t('相手の参加を待っています')
+    : roomSelfReady
+      ? t('相手の準備完了を待っています')
+      : other?.ready
+        ? t('相手は準備完了です')
+        : t('準備完了で開戦します');
+  acquireWakeLock();
+}
+
+function renderRoomSeat(role: 'host' | 'guest', seat: RoomSeatView | null): void {
+  const root = $(`room-seat-${role}`);
+  root.classList.toggle('is-ready', !!seat?.ready);
+  const name = root.querySelector('.room-name');
+  const ready = root.querySelector('.room-ready');
+  if (name) name.textContent = seat?.name || (role === 'guest' ? t('空き') : '—');
+  if (ready) {
+    ready.textContent = !seat
+      ? '—'
+      : seat.ready ? t('準備完了') : seat.connected ? t('未準備') : t('接続が切れました');
+  }
+  const formation = root.querySelector('.room-formation');
+  if (!formation) return;
+  formation.replaceChildren();
+  for (const id of (seat?.formation ?? []).flat()) {
+    if (!id) {
+      formation.appendChild(document.createElement('span'));
+      continue;
+    }
+    const img = document.createElement('img');
+    img.alt = '';
+    img.draggable = false;
+    applyYokaiImage(img, id, 'sm');
+    formation.appendChild(img);
+  }
+}
+
+function returnToFriendRoom(): void {
+  inOnlineBattle = false;
+  onlineMode = null;
+  onlineSide = null;
+  onlineMatch = null;
+  clearOnlineMatch();
+  const previous = online;
+  online = null;
+  previous?.close();
+  showScreen('screen-room');
+  $('room-message').textContent = t('ルームに戻っています…');
+  connectMatchmaker()?.send({ t: 'rejoin_room' });
+  acquireWakeLock();
+}
+
+async function copyRoomCode(): Promise<void> {
+  const code = $('room-code').dataset.code || '';
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    $('room-message').textContent = t('コードをコピーしました');
+  } catch {
+    $('room-message').textContent = t('コードを選択してコピーしてください');
+  }
+}
+
 async function startOnlineBattle() {
   trackLandingEvent('online_battle_start', { shadow: !!onlineMatch?.shadow });
   busy = true; // 開幕演出中は入力・後続イベント演出をロック
@@ -1157,6 +1334,7 @@ async function startOnlineBattle() {
   FX.setAmbient(['rgba(255,170,60,0.35)', 'rgba(130,160,255,0.3)'], 0.025);
   AudioSys.init();
   AudioSys.startBattleBgm();
+  void acquireWakeLock();
   summonAnnounced.clear();
   resonanceAnnounced.clear();
   renderAll();
@@ -2718,6 +2896,9 @@ function showResult() {
     } else {
       $('result-reward').classList.add('hidden');
     }
+    const backToRoom = onlineMode === 'friend';
+    $('btn-retry').classList.toggle('hidden', !backToRoom);
+    $('btn-retry').textContent = t('ルームに戻る');
   }
 
   const title = $('result-title');

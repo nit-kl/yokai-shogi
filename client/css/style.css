@@ -3034,6 +3034,42 @@ html[data-script="latn"] .cur-yoryoku {
 }
 .online-code-row { display: flex; gap: 0.6rem; justify-content: center; }
 .online-code-row input { width: 10rem; text-align: center; letter-spacing: 0.18em; text-transform: uppercase; }
+.room-col { width: min(720px, 100%); }
+.room-code {
+  margin: 0.2rem 0 0;
+  text-align: center;
+  font-family: ui-monospace, "Courier New", monospace;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  letter-spacing: 0.28em;
+  color: #ffd24a;
+  user-select: all;
+}
+.room-note { margin: 0.4rem 0 0.8rem; text-align: center; line-height: 1.6; color: #d8d2e4; font-size: 0.86rem; }
+.room-seats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.room-seat {
+  padding: 0.8rem;
+  border-radius: 14px;
+  background: rgba(8, 6, 16, 0.45);
+  border: 1px solid rgba(232, 196, 106, 0.28);
+  text-align: center;
+}
+.room-role { font-size: 0.75rem; letter-spacing: 0.14em; color: #ffd76a; }
+.room-name { margin: 0.35rem 0 0.55rem; font-size: 1.05rem; }
+.room-formation {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.25rem;
+  min-height: 4.6rem;
+}
+.room-formation img { width: 100%; aspect-ratio: 1; object-fit: contain; }
+.room-ready { margin-top: 0.55rem; font-size: 0.82rem; color: #d8d2e4; }
+.room-seat.is-ready .room-ready { color: #ffd24a; }
+.room-message { min-height: 1.4em; text-align: center; color: #ffd76a; }
+.room-tools { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+@media (max-width: 680px) {
+  .room-seats { grid-template-columns: 1fr; }
+  .room-code { letter-spacing: 0.18em; }
+}
 .online-status {
   width: min(45vw, 210px);
   padding: 8px 10px;

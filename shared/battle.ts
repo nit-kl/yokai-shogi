@@ -30,12 +30,26 @@ export interface BattlePlayer {
   reconnectToken: string;
 }
 
+/** フレンドルームの席。編成は待ち受け中のプレビュー */
+export interface RoomSeatView {
+  name: string;
+  bossId: string;
+  formation: (string | null)[][];
+  ready: boolean;
+  connected: boolean;
+}
+
 export type ClientBattleMessage =
   | { t: 'join_queue' }
   | { t: 'leave_queue'; reason?: 'cancel' | 'timeout' }
   | { t: 'request_shadow' }
   | { t: 'create_room' }
   | { t: 'join_room'; code: string }
+  | { t: 'rejoin_room' }
+  | { t: 'leave_room' }
+  | { t: 'room_ready'; ready: boolean }
+  | { t: 'kick_guest' }
+  | { t: 'room_sync' }
   | { t: 'action'; action: Action }
   | { t: 'resign' }
   | { t: 'rematch' };
@@ -44,9 +58,18 @@ export type ServerBattleMessage =
   | { t: 'queued'; position: number }
   | { t: 'room_created'; code: string }
   | {
+      t: 'room_state';
+      code: string;
+      role: 'host' | 'guest';
+      host: RoomSeatView;
+      guest: RoomSeatView | null;
+    }
+  | { t: 'room_closed'; reason: 'left' | 'kicked' }
+  | {
       t: 'match_found'; matchId: string; reconnectToken: string; side: Side;
       opponent: { name: string; rating: number; bossId: string };
       formations: Record<Side, (string | null)[][]>;
+      mode?: MatchMode;
       /** 実在プレイヤーの編成を使ったCPU代理対戦 */
       shadow?: boolean;
     }
