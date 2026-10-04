@@ -306,7 +306,7 @@ html[data-script="latn"] .screen h3 {
 .title-center {
   position: relative; z-index: 3;
   display: flex; flex-direction: column; align-items: center;
-  width: min(94vw, 640px);
+  width: min(94vw, 520px);
   padding: clamp(14px, 2.2vh, 24px) clamp(16px, 4vw, 36px);
   text-align: center;
   border: 1px solid rgba(232,196,106,0.32);
@@ -415,36 +415,43 @@ html[data-script="latn"] .title-sub-top {
   to { --title-spin: 360deg; }
 }
 .title-buttons { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
-.title-main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: min(100%, 460px); }
-.title-main-actions:has(#btn-online.hidden) { grid-template-columns: minmax(220px, 260px); justify-content: center; }
-.title-main-actions:has(#btn-online.hidden) .title-online-actions { display: none; }
-.title-online-actions {
+.title-main-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 0;
+  gap: 10px;
+  width: min(100%, 420px);
 }
+.title-side-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .title-main-actions .btn {
   position: relative; min-width: 0; overflow: hidden;
   padding: 0.7em 1em;
   font-size: clamp(1rem, 3vw, 1.2rem);
-  letter-spacing: 0.22em; text-indent: 0.22em;
+  letter-spacing: 0.18em; text-indent: 0.18em;
   border-radius: 3px;
+}
+.title-action-hero {
+  width: 100%;
+  height: auto;
+  min-height: 4.8rem;
+  font-size: clamp(1.25rem, 4vw, 1.55rem);
+}
+.title-main-actions .title-action-quiet {
+  color: #f6efe2;
+  border-color: rgba(232,196,106,0.38);
+  background: linear-gradient(160deg, rgba(52, 40, 74, 0.92), rgba(22, 16, 36, 0.94));
+  box-shadow: inset 0 1px rgba(255,255,255,0.08);
+  letter-spacing: 0.06em;
+  text-indent: 0;
+  font-size: clamp(0.92rem, 2.6vw, 1.05rem);
+  padding: 0.72em 0.35em;
 }
 .title-main-actions .btn small {
   margin: 0 0 0.25em; color: inherit; opacity: 0.65;
-  font: 0.52em sans-serif; letter-spacing: 0.18em;
-}
-.title-main-actions .title-online-actions .btn {
-  width: 100%;
-  flex: 1;
-  letter-spacing: 0.04em;
+  font: 0.52em sans-serif; letter-spacing: 0.12em;
   text-indent: 0;
-  font-size: clamp(0.78rem, 2.4vw, 0.98rem);
-  padding: 0.55em 0.3em;
 }
 .title-action-primary {
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -464,17 +471,93 @@ html[data-script="latn"] .title-sub-top {
   box-shadow: 0 0 20px rgba(232, 140, 80, 0.18), inset 0 1px rgba(255,255,255,0.12);
 }
 .title-action-dojo {
-  grid-column: 1 / -1;
   color: #f4e8ff; border-color: rgba(200,120,255,0.55);
   background: linear-gradient(150deg, #5a3a78, #32204a 58%, #1b1228);
   box-shadow: 0 0 20px rgba(200,120,255,0.18), inset 0 1px rgba(255,255,255,0.12);
 }
 .title-action-trial {
-  grid-column: 1 / -1;
   color: #e7f6ff; border-color: rgba(120,190,220,0.55);
   background: linear-gradient(150deg, #2c5464, #1a3040 58%, #101820);
   box-shadow: 0 0 20px rgba(120,190,220,0.16), inset 0 1px rgba(255,255,255,0.12);
 }
+.title-sheet { width: min(92vw, 420px); }
+.title-sheet-actions, .title-sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.title-sheet-list { overflow-y: auto; max-height: min(58vh, 520px); padding-right: 2px; }
+.title-sheet-actions .btn,
+.title-sheet-mode {
+  width: 100%;
+  letter-spacing: 0.12em;
+  text-indent: 0;
+  font-size: 1.02rem;
+  padding: 0.7em 0.5em;
+}
+.yokai-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.yokai-tab {
+  min-height: 64px;
+  padding: 0.7em 0.4em;
+  color: #241704;
+  border: 1px solid #e8c46a;
+  border-radius: 8px;
+  background: linear-gradient(150deg, #fff0b8, #d9a93b 58%, #9b661e);
+  box-shadow: 0 0 18px rgba(232,196,106,0.22);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+.yokai-tab:hover { filter: brightness(1.08); }
+.yokai-pieces-link {
+  align-self: center;
+  background: none;
+  border: none;
+  color: #d8d2e4;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+}
+.yokai-pieces-link:hover { color: #fff6d8; }
+.title-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.7em 0.9em;
+  border-radius: 8px;
+  border: 1px solid rgba(232,196,106,0.22);
+  background: rgba(10, 8, 18, 0.42);
+  color: #f3e7c9;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: 0.98rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+.title-sheet-item:hover { border-color: rgba(232,196,106,0.55); color: #fff6d8; }
+.title-sheet-item .announcement-badge { position: static; margin-left: auto; }
+.title-sheet-lang { cursor: default; }
+.title-sheet-lang .title-language-select {
+  margin-left: auto;
+  height: 2rem;
+  border: 1px solid rgba(232,196,106,0.45);
+  border-radius: 999px;
+  background-color: rgba(22, 17, 38, 0.95);
+  color: #ffe9a0;
+  box-shadow: none;
+}
+.title-sheet-lang .title-language-select option {
+  color: #ffe9a0;
+  background: #1a1428;
+}
+.rules-more { margin: 0.8em 0 0.2em; text-align: center; }
+.rules-more a { color: #e8c46a; }
 .online-random-schedule {
   margin: 0;
   color: #a99dbd;
@@ -2609,6 +2692,14 @@ html[data-script="latn"] .cur-yoryoku {
   border-color: var(--gold);
   box-shadow: 0 0 14px rgba(232,196,106,0.25);
 }
+.title-gear { position: relative; font-size: 1.05rem; }
+.title-gear > span {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.title-gear .announcement-badge { top: -6px; right: -6px; }
 
 .title-language {
   display: inline-flex;
@@ -2671,7 +2762,7 @@ html[data-script="latn"] .cur-yoryoku {
 .title-profile span { color: #9a8fc0; font-size: 0.58rem; letter-spacing: 0.15em; }
 .title-profile b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
 .title-profile:hover { border-color: var(--p-blue); box-shadow: 0 0 14px rgba(88,182,255,0.25); }
-.title-currency span, .currency span {
+.title-currency > span, .currency span {
   padding: 4px 12px;
   border-radius: 14px;
   background: rgba(22, 17, 38, 0.85);
@@ -3511,15 +3602,11 @@ html[data-script="latn"] .skip-warning-box h2 {
   .title-lead { margin-bottom: 0.65em; font-size: 0.66rem; line-height: 1.5; }
   .title-main-actions { gap: 7px; }
   .title-main-actions .btn { padding: 0.62em 0.35em; font-size: 0.88rem; }
-  .title-menu-label { margin-top: 0.65em; }
-  .title-secondary-actions { gap: 5px; width: min(100%, 560px); }
-  .title-menu-btn { padding: 6px 2px; }
-  .title-menu-btn b { width: 26px; height: 26px; }
-  .title-menu-btn span { font-size: 0.6rem; }
-  .announcement-badge { top: 3px; right: 4px; min-width: 15px; height: 15px; font-size: 0.55rem; }
+  .title-action-hero { min-height: 4.2rem; font-size: 1.15rem; }
+  .title-gear .announcement-badge { min-width: 15px; height: 15px; font-size: 0.55rem; }
   .title-profile { top: 8px; left: 8px; max-width: 38vw; padding: 4px 10px; }
   .title-currency { top: 8px; right: 8px; gap: 4px; font-size: 0.66rem; }
-  .title-currency span { padding: 3px 7px; }
+  .title-currency > span { padding: 3px 7px; }
   .title-audio-btn { width: 1.75rem; height: 1.75rem; font-size: 0.85rem; border-radius: 10px; }
   .title-language-select {
     width: auto;

@@ -85,11 +85,10 @@
     <div class="title-currency">
       <span class="cur-tickets">🎟 ×0</span>
       <span class="cur-yoryoku">妖力 0</span>
-      <label class="title-language">
-        <span class="sr-only">Language</span>
-        <select id="locale-select" class="title-audio-btn title-language-select" aria-label="Language"></select>
-      </label>
-      <button type="button" id="btn-audio" class="title-audio-btn" title="音量設定">🔊</button>
+      <button type="button" id="btn-settings" class="title-audio-btn title-gear" title="メニュー" aria-label="メニュー">
+        <span aria-hidden="true">⚙</span>
+        <i id="announcement-badge" class="announcement-badge hidden"></i>
+      </button>
     </div>
     <button id="btn-profile" class="title-profile" title="プレイヤーネームを変更">
       <span>プレイヤー</span><b id="title-player-name">プレイヤー</b>
@@ -103,34 +102,60 @@
         <img src="/assets/ui/title-logo.webp" alt="百鬼盤" width="986" height="483" draggable="false">
       </h1>
       <div class="title-main-actions">
-        <button id="btn-start" class="btn title-action-primary"><small>連勝に挑む</small>百鬼夜行</button>
-        <div class="title-online-actions">
-          <button id="btn-online" class="btn title-action-online hidden" type="button"><small>知らない相手と</small>ランダムマッチ</button>
-          <button id="btn-friend" class="btn title-action-friend hidden" type="button"><small>コードで誘う</small>フレンドマッチ</button>
+        <button id="btn-start" class="btn title-action-primary title-action-hero"><small>連勝に挑む</small>百鬼夜行</button>
+        <div class="title-side-actions">
+          <button id="btn-modes" class="btn title-action-quiet" type="button"><small>道場・対戦・試陣</small>ほかの対局</button>
+          <button id="btn-yokai" class="btn title-action-quiet" type="button"><small>ガチャと編成</small>妖怪</button>
         </div>
-        <button id="btn-dojo" class="btn title-action-dojo"><small>一手で覚える</small>妖怪道場</button>
-        <button id="btn-trials" class="btn title-action-trial"><small>型と戦う</small>試陣</button>
-      </div>
-      <div class="title-menu-label"><span>メニュー</span></div>
-      <div class="title-secondary-actions">
-        <button id="btn-gacha" class="title-menu-btn"><b>召</b><span>妖怪ガチャ</span></button>
-        <button id="btn-formation" class="title-menu-btn"><b>陣</b><span>編 成</span></button>
-        <button id="btn-pieces" class="title-menu-btn"><b>録</b><span>駒一覧</span></button>
-        <button id="btn-ranking" class="title-menu-btn"><b>冠</b><span>ランキング</span></button>
-        <button id="btn-rules" class="title-menu-btn"><b>指南</b><span>遊び方</span></button>
-        <button id="btn-announcements" class="title-menu-btn announcement-title-btn"><b>告</b><span>お知らせ</span><i id="announcement-badge" class="announcement-badge hidden"></i></button>
       </div>
     </div>
-    <div class="title-foot">
-      <span class="title-foot-links">
-        <a href="https://discord.com/channels/1530830388107415742/1530830388966985781" target="_blank" rel="noopener noreferrer">公式Discord</a>
-        <a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">遊び方ガイド</a>
-        <a href="/legal/terms.html" target="_blank" rel="noopener noreferrer">利用規約</a>
-        <a href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">プライバシー</a>
-        <a href="https://nit-games.com/contact.html" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
-        <button type="button" id="btn-support" class="title-foot-btn">DMで報告</button>
-        <button id="btn-link" class="title-link-btn hidden">データ引き継ぎ</button>
-      </span>
+  </div>
+
+  <div id="modal-modes" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modes-sheet-title">
+    <div class="modal-box title-sheet">
+      <h2 id="modes-sheet-title">ほかの対局</h2>
+      <div class="title-sheet-actions">
+        <button id="btn-online" class="btn title-sheet-mode title-action-online hidden" type="button"><small>知らない相手と</small>ランダムマッチ</button>
+        <button id="btn-friend" class="btn title-sheet-mode title-action-friend hidden" type="button"><small>コードで誘う</small>フレンドマッチ</button>
+        <button id="btn-dojo" class="btn title-sheet-mode title-action-dojo" type="button"><small>一手で覚える</small>妖怪道場</button>
+        <button id="btn-trials" class="btn title-sheet-mode title-action-trial" type="button"><small>型と戦う</small>試陣</button>
+      </div>
+      <button id="btn-modes-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <div id="modal-yokai" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="yokai-sheet-title">
+    <div class="modal-box title-sheet">
+      <h2 id="yokai-sheet-title">妖怪</h2>
+      <div class="yokai-tabs" role="tablist" aria-label="妖怪">
+        <button id="btn-gacha" class="yokai-tab" type="button" role="tab">妖怪ガチャ</button>
+        <button id="btn-formation" class="yokai-tab" type="button" role="tab">編 成</button>
+      </div>
+      <button id="btn-pieces" class="yokai-pieces-link" type="button">駒一覧</button>
+      <button id="btn-yokai-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <div id="modal-settings" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-sheet-title">
+    <div class="modal-box title-sheet">
+      <h2 id="settings-sheet-title">メニュー</h2>
+      <div class="title-sheet-list">
+        <button id="btn-ranking" class="title-sheet-item" type="button">ランキング</button>
+        <button id="btn-rules" class="title-sheet-item" type="button">遊び方</button>
+        <button id="btn-announcements" class="title-sheet-item" type="button">お知らせ<i class="announcement-badge hidden"></i></button>
+        <button id="btn-audio" class="title-sheet-item" type="button"><span class="audio-icon" aria-hidden="true">🔊</span><span>音量設定</span></button>
+        <label class="title-sheet-item title-sheet-lang title-language">
+          <span>言語</span>
+          <select id="locale-select" class="title-language-select" aria-label="Language"></select>
+        </label>
+        <button id="btn-link" class="title-sheet-item hidden" type="button">データ引き継ぎ</button>
+        <button id="btn-support" class="title-sheet-item" type="button">DMで報告</button>
+        <a class="title-sheet-item" href="https://discord.com/channels/1530830388107415742/1530830388966985781" target="_blank" rel="noopener noreferrer">公式Discord</a>
+        <a class="title-sheet-item" href="/legal/terms.html" target="_blank" rel="noopener noreferrer">利用規約</a>
+        <a class="title-sheet-item" href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">プライバシー</a>
+        <a class="title-sheet-item" href="https://nit-games.com/contact.html" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
+      </div>
+      <button id="btn-settings-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
     </div>
   </div>
 
@@ -815,6 +840,7 @@
           <li><b>オンライン:</b> ランダムマッチはいつでも。集まりやすい時間は毎日20:00〜22:00。1手60秒＋秒読み30秒。時間切れは手番スキップ、連続2回で負け。フレンドルームは6桁コードで待ち受け、両方の準備完了で開戦します</li>
           <li><b>ガチャと編成:</b> チケットで召喚（10連はSR以上1枠確定）。被りは妖力になり、300でチケット1枚。編成は大将1体必須</li>
         </ul>
+        <p class="rules-more"><a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">遊び方ガイド</a></p>
       </div>
       <button id="btn-close-rules" class="btn btn-gold">閉じる</button>
     </div>

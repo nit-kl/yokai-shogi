@@ -68,10 +68,14 @@ export const MenuUI = {
   initAudioSettings() {
     const syncMuteBtn = () => {
       const icon = AudioSys.enabled ? '🔊' : '🔇';
-      const muteBtn = document.getElementById('btn-mute');
-      const titleBtn = document.getElementById('btn-audio');
-      if (muteBtn) muteBtn.textContent = icon;
-      if (titleBtn) titleBtn.textContent = icon;
+      const applyIcon = (el: HTMLElement | null) => {
+        if (!el) return;
+        const mark = el.querySelector('.audio-icon');
+        if (mark) mark.textContent = icon;
+        else el.textContent = icon;
+      };
+      applyIcon(document.getElementById('btn-mute'));
+      applyIcon(document.getElementById('btn-audio'));
     };
     const syncForm = () => {
       const bgm = Math.round(AudioSys.bgmVolume * 100);

@@ -338,6 +338,34 @@ function wireButtons() {
     AudioSys.play('click');
     openSolo();
   };
+  $('btn-modes').onclick = () => {
+    AudioSys.play('click');
+    $('modal-modes').classList.remove('hidden');
+  };
+  $('btn-yokai').onclick = () => {
+    AudioSys.play('click');
+    $('modal-yokai').classList.remove('hidden');
+  };
+  $('btn-settings').onclick = () => {
+    AudioSys.play('click');
+    $('modal-settings').classList.remove('hidden');
+  };
+  $('btn-modes-close').onclick = () => { AudioSys.play('click'); $('modal-modes').classList.add('hidden'); };
+  $('btn-yokai-close').onclick = () => { AudioSys.play('click'); $('modal-yokai').classList.add('hidden'); };
+  $('btn-settings-close').onclick = () => { AudioSys.play('click'); $('modal-settings').classList.add('hidden'); };
+  for (const id of ['modal-modes', 'modal-yokai', 'modal-settings']) {
+    const sheet = $(id);
+    sheet.addEventListener('click', ev => {
+      if (ev.target === sheet) {
+        sheet.classList.add('hidden');
+        return;
+      }
+      const target = ev.target;
+      if (!(target instanceof Element) || !target.closest('button, a')) return;
+      if (target.closest('.title-sheet-lang')) return;
+      sheet.classList.add('hidden');
+    });
+  }
   $('btn-dojo').onclick = () => {
     trackLandingEvent('dojo_cta_click', { source: 'title' });
     AudioSys.init();
@@ -538,7 +566,16 @@ function wireButtons() {
       setBattleStatusOpen(false);
       return;
     }
-    if (!$('piece-info').classList.contains('hidden')) hideInfo();
+    if (!$('piece-info').classList.contains('hidden')) {
+      hideInfo();
+      return;
+    }
+    for (const id of ['modal-yokai', 'modal-modes', 'modal-settings']) {
+      if (!$(id).classList.contains('hidden')) {
+        $(id).classList.add('hidden');
+        return;
+      }
+    }
   });
   $('btn-pieces').onclick = () => {
     AudioSys.play('click');

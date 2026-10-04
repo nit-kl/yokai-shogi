@@ -58,6 +58,7 @@ await page.evaluate(() => {
 await page.reload({ waitUntil: 'domcontentloaded' });
 await page.waitForSelector('#screen-title.active', { timeout: 90000 });
 await page.evaluate(() => document.querySelectorAll('.modal').forEach(modal => modal.classList.add('hidden')));
+await page.locator('#btn-settings').click();
 await page.locator('#btn-announcements').click();
 await page.waitForSelector('#announcements-list .announcement-card', { timeout: 10000 });
 const announcementText = await page.locator('#announcements-list').innerText();
