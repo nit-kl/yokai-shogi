@@ -185,11 +185,17 @@ describe('Matchmaker DO', () => {
     expect(created.code).toMatch(/^[A-Z2-9]{6}$/);
     expect(created.role).toBe('host');
     expect(created.guest).toBeNull();
+    expect(created.host).not.toHaveProperty('formation');
+    expect(created.host).not.toHaveProperty('bossId');
 
     guestSocket.ws.send(JSON.stringify({ t: 'join_room', code: created.code }));
     const joined = await guestSocket.nextType('room_state');
     expect(joined.role).toBe('guest');
     expect(joined.guest?.name).toBe('ゲスト');
+    expect(joined.host).not.toHaveProperty('formation');
+    expect(joined.host).not.toHaveProperty('bossId');
+    expect(joined.guest).not.toHaveProperty('formation');
+    expect(joined.guest).not.toHaveProperty('bossId');
     const hostSawJoin = await hostSocket.nextType('room_state');
     expect(hostSawJoin.guest?.name).toBe('ゲスト');
 

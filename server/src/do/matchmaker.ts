@@ -445,8 +445,6 @@ export class Matchmaker {
     if (!player) return null;
     return {
       name: player.name,
-      bossId: player.bossId,
-      formation: player.formation,
       ready,
       connected: !!this.socketFor(userId),
     };
