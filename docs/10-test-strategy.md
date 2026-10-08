@@ -80,5 +80,6 @@ nodeから素のWSクライアント2本を張り、シナリオを自動実行:
 - [ ] CI green(typecheck / unit / workers / build / e2e)
 - [ ] staging接続スモークテスト完了
 - [ ] チート手動検証: DevToolsからのWSメッセージ偽造で不正が通らないこと(doc 07の手口リストを順に試す)
+- [ ] 認証・通貨・ガチャ・管理API・広告・Steam認証・CORSを変えた場合、doc 26 の scoped 監査を終えている。それ以外は、直近四半期の standard 監査が現行ソースをカバーしている
 - [ ] 実機マトリクス: iOS Safari / Android Chrome / PC各ブラウザで1局完走
 - [ ] 障害Runbookのドライラン(ロールバック実演1回)
