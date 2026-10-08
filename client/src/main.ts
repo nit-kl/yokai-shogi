@@ -2901,14 +2901,13 @@ function showResult() {
     }
   } else if (trial) {
     const face = trialFace(trial);
-    const seed = trial.seed != null ? ` · seed ${trial.seed}` : '';
     streakEl.classList.add('hidden');
     onlineActions.classList.add('hidden');
     hyakkiActions.classList.add('hidden');
     dojoActionsEl.classList.add('hidden');
     trialActions.classList.remove('hidden');
     $('result-reward').classList.add('hidden');
-    $('result-sub').textContent = `${reasonsFor(win, enemyBossName)}　${face.name}（${trial.id}${seed}）`;
+    $('result-sub').textContent = `${reasonsFor(win, enemyBossName)}　${face.name}`;
   } else if (solo) {
     if (win && !soloWinCounted) {
       soloStreak++;
