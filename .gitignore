@@ -49,5 +49,8 @@ Desktop.ini
 .vscode/
 .idea/
 
+# security-audit のラン出力(doc 26)。正本はリポジトリ外。ここは明示したときだけ使う
+.security-audit/
+
 # Claude Code 個人設定(チーム共有する設定は .claude/settings.json に置く)
 .claude/settings.local.json
