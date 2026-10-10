@@ -3143,7 +3143,38 @@ html[data-script="latn"] .cur-yoryoku {
   letter-spacing: 0.08em;
 }
 .title-link-btn:hover { background: rgba(40, 32, 56, 0.85); }
-.link-box { max-width: 440px; text-align: center; }
+.link-box {
+  width: min(92vw, 440px);
+  max-width: 440px;
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  text-align: center;
+}
+.link-box::-webkit-scrollbar { width: 6px; }
+.link-box::-webkit-scrollbar-thumb { background: rgba(232,196,106,0.35); border-radius: 3px; }
+.link-box .btn {
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  font-size: clamp(0.95rem, 4vw, 1.12rem);
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  padding: 0.68em 0.5em;
+  white-space: normal;
+}
+.link-box > * { flex-shrink: 0; }
+html[data-script="latn"] .link-box .btn { letter-spacing: 0.02em; }
+.link-box h2 {
+  font-size: clamp(1.15rem, 5.2vw, 1.5rem);
+  letter-spacing: 0.16em;
+}
+@media (max-width: 680px) {
+  .link-box { padding: 16px 14px 18px; gap: 10px; }
+}
 .online-box { max-width: 440px; text-align: center; gap: 0.8rem; }
 .online-box > .btn {
   min-width: min(100%, 18rem);
@@ -3435,27 +3466,30 @@ html[data-script="latn"] .skip-warning-box h2 {
 .link-desc { font-size: 0.82rem; line-height: 1.6; color: #d8d2e4; margin: 0.6em 0; }
 .link-code {
   font-family: ui-monospace, "Courier New", monospace;
-  font-size: clamp(1rem, 4.5vw, 1.5rem);
-  letter-spacing: 0.12em;
+  font-size: clamp(0.92rem, 4.5vw, 1.28rem);
+  letter-spacing: 0.04em;
+  line-height: 1.45;
   color: #ffd24a;
   background: rgba(0, 0, 0, 0.35);
   border: 1px dashed rgba(255, 210, 90, 0.5);
   border-radius: 10px;
-  padding: 0.6em 0.4em;
+  padding: 0.6em 0.35em;
   margin: 0.6em 0;
-  word-break: break-all;
+  white-space: nowrap;
   user-select: all;
 }
 .link-sep { border: none; border-top: 1px solid rgba(255, 255, 255, 0.12); margin: 1.2em 0; }
-#link-code-input {
+#link-code-input,
+#recovery-code-input {
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   font-family: ui-monospace, "Courier New", monospace;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
+  font-size: clamp(0.82rem, 4.1vw, 1rem);
+  letter-spacing: 0.03em;
   text-align: center;
   text-transform: uppercase;
-  padding: 0.6em;
+  padding: 0.6em 0.35em;
   margin: 0.4em 0 0.8em;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.25);
