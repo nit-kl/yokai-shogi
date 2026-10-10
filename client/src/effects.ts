@@ -45,9 +45,29 @@ export const FX = {
     addEventListener('resize', fit);
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     this._reduceMotion = motion.matches;
-    motion.addEventListener('change', ev => { this._reduceMotion = ev.matches; });
-    const loop = () => { this._tick(); this._raf = requestAnimationFrame(loop); };
-    loop();
+    motion.addEventListener('change', ev => {
+      this._reduceMotion = ev.matches;
+      this._ensureLoop();
+    });
+  },
+
+  _needsFrame(): boolean {
+    return this.parts.length > 0 || (!this._reduceMotion && !!this.ambient);
+  },
+
+  /* 何も描かないフレームでも clearRect すると、下の画面が毎フレーム再合成されてちらつく */
+  _ensureLoop() {
+    if (this._raf || !this.g || !this._needsFrame()) return;
+    const loop = () => {
+      if (!this._needsFrame()) {
+        this.g!.clearRect(0, 0, innerWidth, innerHeight);
+        this._raf = 0;
+        return;
+      }
+      this._tick();
+      this._raf = requestAnimationFrame(loop);
+    };
+    this._raf = requestAnimationFrame(loop);
   },
 
   _tick() {
@@ -170,6 +190,7 @@ export const FX = {
     this.ambient = colors
       ? { colors, rate: rate || 0.06, bubbles: opts?.bubbles, dust: opts?.dust }
       : null;
+    this._ensureLoop();
   },
 
   /* ---------- バースト系 ---------- */
@@ -188,6 +209,7 @@ export const FX = {
         color: colors[Math.floor(Math.random() * colors.length)],
       });
     }
+    this._ensureLoop();
   },
 
   ring(x: number, y: number, color: string, count = 18, radius = 60) {
@@ -201,6 +223,7 @@ export const FX = {
         color,
       });
     }
+    this._ensureLoop();
   },
 
   /* 立ち昇る光の柱(既定は成りの金色。colors指定でスキル演出に流用) */
@@ -218,6 +241,7 @@ export const FX = {
         color: colors[Math.floor(Math.random() * colors.length)],
       });
     }
+    this._ensureLoop();
   },
 
   /* 葉吹雪(化け狸の葉隠れ) */
@@ -238,6 +262,7 @@ export const FX = {
         color: cs[Math.floor(Math.random() * cs.length)],
       });
     }
+    this._ensureLoop();
   },
 
   /* 勝利の紙吹雪 */
@@ -255,6 +280,7 @@ export const FX = {
         color: ['#ffd24a', '#ff6b6b', '#6bd6ff', '#c88aff', '#fff6d8', '#7cf2a4'][Math.floor(Math.random() * 6)],
       });
     }
+    this._ensureLoop();
   },
 
   /* 移動の軌跡: 2点間に光の粒を撒く(strong: SSR・異装用の火花混じり高密度版) */
@@ -275,6 +301,7 @@ export const FX = {
         color: colors[Math.floor(Math.random() * colors.length)],
       });
     }
+    this._ensureLoop();
   },
 
   /* 収束: 円周から中心へ光が吸い込まれる(溜め演出) */
@@ -294,6 +321,7 @@ export const FX = {
         color,
       });
     }
+    this._ensureLoop();
   },
 
   /* ---------- DOM系演出 ---------- */

@@ -1585,22 +1585,51 @@ function liveEmberAt(x: number, y: number): Ember | undefined {
   return (G.embers ?? []).find(e => e.x === x && e.y === y && Game.emberLive(e, plies));
 }
 
+function emberMarkKey(e: Ember): string {
+  return `${e.x},${e.y},${e.mode},${e.side},${e.src ?? ''},${e.until},${e.value}`;
+}
+
+function emberMarkClass(e: Ember): string {
+  return `ember-mark ember-${e.mode} ember-side-${e.side}`
+    + (e.src === 'umibozu' ? ' ember-whirl' : '')
+    + (e.src === 'yatagarasu' ? ' ember-sun' : '');
+}
+
 function renderEmbers() {
-  document.querySelectorAll('.ember-mark').forEach(el => el.remove());
-  if (!G?.embers) return;
-  const plies = G.plies ?? 0;
-  for (const e of G.embers) {
-    if (!Game.emberLive(e, plies)) continue;
-    const mark = document.createElement('button');
-    mark.type = 'button';
-    mark.className = `ember-mark ember-${e.mode} ember-side-${e.side}`
-      + (e.src === 'umibozu' ? ' ember-whirl' : '')
-      + (e.src === 'yatagarasu' ? ' ember-sun' : '');
-    mark.title = emberLabel(e);
-    mark.setAttribute('aria-label', emberLabel(e));
-    mark.addEventListener('click', ev => { ev.stopPropagation(); });
-    mark.addEventListener('focus', () => { showEmberInfo(e); });
-    cellEl(e.x, e.y).appendChild(mark);
+  const live = (G?.embers ?? []).filter(e => Game.emberLive(e, G?.plies ?? 0));
+  const seen = new Map<string, number>();
+  const wanted = new Map<string, Ember>();
+  for (const e of live) {
+    const base = emberMarkKey(e);
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    wanted.set(n === 0 ? base : `${base}#${n}`, e);
+  }
+  const existing = new Map<string, HTMLButtonElement>();
+  document.querySelectorAll<HTMLButtonElement>('.ember-mark').forEach(el => {
+    const key = el.dataset.ember ?? '';
+    if (!wanted.has(key) || existing.has(key)) el.remove();
+    else existing.set(key, el);
+  });
+  for (const [key, e] of wanted) {
+    const className = emberMarkClass(e);
+    const label = emberLabel(e);
+    let mark = existing.get(key);
+    if (!mark) {
+      mark = document.createElement('button');
+      mark.type = 'button';
+      mark.dataset.ember = key;
+      mark.addEventListener('click', ev => { ev.stopPropagation(); });
+      mark.addEventListener('focus', () => {
+        const cur = liveEmberAt(e.x, e.y);
+        if (cur) showEmberInfo(cur);
+      });
+    }
+    const cell = cellEl(e.x, e.y);
+    if (mark.parentElement !== cell) cell.appendChild(mark);
+    if (mark.className !== className) mark.className = className;
+    if (mark.title !== label) mark.title = label;
+    if (mark.getAttribute('aria-label') !== label) mark.setAttribute('aria-label', label);
   }
 }
 
