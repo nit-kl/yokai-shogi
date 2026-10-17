@@ -1,7 +1,7 @@
 "AppBuild"
 {
 	"AppID" "5138130"
-	"Desc" "hyakkiban online 0.1.0"
+	"Desc" "hyakkiban online 0.1.0 2026-10-17"
 	"Preview" "0"
 	"ContentRoot" "..\content\hyakkiban\"
 	"BuildOutput" "..\output\"
