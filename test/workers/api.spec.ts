@@ -880,12 +880,13 @@ describe('デモアカウント', () => {
       body: JSON.stringify({ code }),
     });
     expect(missing.status).toBe(404);
+    expect(env.ADMIN_SECRET).toBeTruthy();
 
     const unlocked = await SELF.fetch(`${BASE}/v1/admin/demo-unlock`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-admin-secret': 'test-admin',
+        'x-admin-secret': env.ADMIN_SECRET ?? '',
         'CF-Connecting-IP': freshIp(),
       },
       body: JSON.stringify({ code }),
