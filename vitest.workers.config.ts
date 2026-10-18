@@ -1,9 +1,13 @@
 /* APIのWorkersランタイムテスト(@cloudflare/vitest-pool-workers v0.16: Viteプラグイン方式)
    実行: npm run test:workers
    ローカルD1(miniflare)に server/migrations を適用してから各テストを実行する */
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers';
+
+/* テスト専用。リポジトリに固定の秘密値を置かない */
+const adminSecret = randomBytes(32).toString('base64url');
 
 export default defineConfig(async () => {
   const migrations = await readD1Migrations(path.join(process.cwd(), 'server', 'migrations'));
@@ -20,7 +24,7 @@ export default defineConfig(async () => {
             MATCH_HOUR_ENFORCE: '0',
             PARTICIPATION_MIN_ACTIONS: '1',
             ALLOW_TEST_CLOCK: '1',
-            ADMIN_SECRET: 'test-admin',
+            ADMIN_SECRET: adminSecret,
             ADS_REWARD_ENABLED: '1',
             ADS_REWARD_PROVIDER: 'mock',
           },
