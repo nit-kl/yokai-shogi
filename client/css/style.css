@@ -716,12 +716,30 @@ html[data-script="latn"] .title-sub-top {
   letter-spacing: 0.16em;
   margin-bottom: 0.7rem;
 }
-.dojo-list { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.dojo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,196,106,0.35) transparent;
+}
+.dojo-list::-webkit-scrollbar { width: 6px; }
+.dojo-list::-webkit-scrollbar-thumb { background: rgba(232,196,106,0.35); border-radius: 3px; }
 .dojo-card {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: center;
+  flex-shrink: 0;
   width: 100%;
   padding: 10px 12px;
   text-align: left;
@@ -755,7 +773,7 @@ html[data-script="latn"] .title-sub-top {
 }
 .trial-col { width: min(98vw, 560px); }
 .trial-list {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   width: 100%;
   overflow-x: hidden;
@@ -763,9 +781,16 @@ html[data-script="latn"] .title-sub-top {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,196,106,0.35) transparent;
 }
+.trial-list::-webkit-scrollbar { width: 6px; }
+.trial-list::-webkit-scrollbar-thumb { background: rgba(232,196,106,0.35); border-radius: 3px; }
+.trial-group { flex-shrink: 0; }
 .trial-group h3 {
   margin: 0 0 8px;
   color: var(--gold);
@@ -2756,6 +2781,35 @@ html[data-script="latn"] .cur-yoryoku {
   gap: clamp(8px, 1.8vh, 18px);
   width: min(96vw, 620px); height: 100%;
   padding: clamp(8px, 2vh, 20px) 10px;
+}
+/* 道場・試陣は課題数が画面を超える。列の高さを画面内に固定し、一覧だけスクロールする */
+#screen-dojo,
+#screen-trials {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+#screen-dojo .dojo-col,
+#screen-trials .trial-col {
+  flex: 1 1 auto;
+  width: min(98vw, 520px);
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+  overflow: hidden;
+  padding-top: max(8px, env(safe-area-inset-top));
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+#screen-trials .trial-col { width: min(98vw, 560px); }
+#screen-dojo .menu-head,
+#screen-dojo .dojo-note,
+#screen-dojo .dojo-progress,
+#screen-trials .menu-head,
+#screen-trials .dojo-note,
+#screen-trials #btn-trial-formation {
+  flex-shrink: 0;
 }
 .menu-head {
   display: flex; align-items: center; gap: 14px;

@@ -321,3 +321,179 @@ test('陽光: 次の取りで別マスへ移る', () => {
 test('COLS定数が壊れていないこと', () => {
   expect(COLS).toBe(5);
 });
+
+const findPieces = (s: GameState, id: string) => {
+  const out: { x: number; y: number; owner: Side; hydra?: number; uid: number }[] = [];
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    const pc = s.board[y][x];
+    if (pc?.id === id) out.push({ x, y, owner: pc.owner, hydra: pc.hydra, uid: pc.uid });
+  }
+  return out;
+};
+
+const handOf = (s: GameState, id: string) => (s.hands.p[id] ?? 0) + (s.hands.e[id] ?? 0);
+
+test('枕返しと八岐: 行き先が重なっても八岐は盤上から消えない', () => {
+  let overlaps = 0;
+  for (const attacker of ['p', 'e'] as const) {
+    const victim = attacker === 'p' ? 'e' : 'p';
+    for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) {
+      for (let fy = 0; fy < ROWS; fy++) for (let fx = 0; fx < COLS; fx++) {
+        if (fx === tx && fy === ty) continue;
+        const s = blank();
+        s.turn = attacker;
+        put(s, fx, fy, 'makuragaeshi', attacker);
+        put(s, tx, ty, 'yamata', victim);
+        if (!Game.getMoves(s, fx, fy).some(m => m.x === tx && m.y === ty && m.capture)) continue;
+        const yUid = s.board[ty][tx]!.uid;
+        const aUid = s.board[fy][fx]!.uid;
+        const events = move(s, fx, fy, tx, ty, { rng: false });
+        const yamata = findPieces(s, 'yamata');
+        const pillows = findPieces(s, 'makuragaeshi');
+        const where = `${attacker} (${fx},${fy})->(${tx},${ty})`;
+        expect(yamata.length + handOf(s, 'yamata'), where).toBe(1);
+        expect(pillows, where).toHaveLength(1);
+        expect(pillows[0]).toMatchObject({ x: fx, y: fy, uid: aUid, owner: attacker });
+        const uids = s.board.flat().filter(pc => !!pc).map(pc => pc!.uid);
+        expect(new Set(uids).size, where).toBe(uids.length);
+        if (yamata.length === 1) {
+          overlaps++;
+          expect(yamata[0].uid, where).toBe(yUid);
+          expect(yamata[0].owner, where).toBe(victim);
+          expect(yamata[0].hydra, where).toBe(1);
+          expect(yamata[0].x !== fx || yamata[0].y !== fy, where).toBe(true);
+          expect(handOf(s, 'yamata'), where).toBe(0);
+        }
+        const hydraMove = events.find(e => e.t === 'move' && e.uid === yUid);
+        if (hydraMove && hydraMove.t === 'move') {
+          expect(hydraMove.to.x === fx && hydraMove.to.y === fy, where).toBe(false);
+        }
+      }
+    }
+  }
+  expect(overlaps).toBeGreaterThan(0);
+});
+
+test('枕返し: 右上の八岐を真下から取ると帰影先を八岐に渡さない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 4, 1, 'makuragaeshi', 'p');
+  put(s, 4, 0, 'yamata', 'e');
+  move(s, 4, 1, 4, 0, { rng: false });
+  expect(s.board[1][4]?.id).toBe('makuragaeshi');
+  expect(s.board[1][3]?.id).toBe('yamata');
+  expect(s.board[1][3]?.owner).toBe('e');
+  expect(s.board[1][3]?.hydra).toBe(1);
+  expect(s.hands.p.yamata).toBeUndefined();
+});
+
+test('枕返し: 逃げ場が帰影先だけのとき八岐は捕獲マスに残る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 4, 1, 'makuragaeshi', 'p');
+  put(s, 4, 0, 'yamata', 'e');
+  put(s, 3, 0, 'nurikabe', 'e');
+  put(s, 3, 1, 'nurikabe', 'p');
+  const events = move(s, 4, 1, 4, 0, { rng: true });
+  expect(s.board[1][4]?.id).toBe('makuragaeshi');
+  expect(s.board[0][4]?.id).toBe('yamata');
+  expect(s.board[0][4]?.hydra).toBe(1);
+  expect(s.hands.p.yamata).toBeUndefined();
+  expect(events.some(e => e.t === 'capture' && e.t === 'capture' && e.procs.some(p => p.text.startsWith('その場に留まった')))).toBe(true);
+  expect(events.some(e => e.t === 'move' && e.uid === s.board[0][4]!.uid)).toBe(false);
+});
+
+test('煙々羅: 影遁先が八岐の第一候補でも両方残る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 3, 1, 'enenra', 'p');
+  put(s, 4, 0, 'yamata', 'e');
+  move(s, 3, 1, 4, 0, { rng: false, phaseTo: { x: 4, y: 1 } });
+  expect(s.board[1][4]?.id).toBe('enenra');
+  expect(s.board[1][3]?.id).toBe('yamata');
+  expect(s.hands.p.yamata).toBeUndefined();
+});
+
+test('隱神刑部: 元マスが八岐の逃げ先でも八岐を消さない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 3, 1, 'ingyo', 'p');
+  put(s, 4, 0, 'yamata', 'e');
+  put(s, 4, 1, 'nurikabe', 'e');
+  move(s, 3, 1, 4, 0, { rng: false, phaseTo: { x: 3, y: 1 } });
+  expect(s.board[1][3]?.id).toBe('ingyo');
+  expect(s.board[0][3]?.id).toBe('yamata');
+  expect(s.board[0][3]?.hydra).toBe(1);
+  expect(s.hands.p.yamata).toBeUndefined();
+});
+
+test('不知火: 送り火の指定マスを八岐が使うときは鬼火を別マスへ置く', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 3, 1, 'shiranui', 'p');
+  put(s, 4, 0, 'yamata', 'e');
+  move(s, 3, 1, 4, 0, { rng: false, spawnTo: { x: 4, y: 1 } });
+  expect(s.board[0][4]?.id).toBe('shiranui');
+  expect(s.board[1][4]?.id).toBe('onibi');
+  expect(s.board[1][4]?.owner).toBe('p');
+  expect(s.board[1][3]?.id).toBe('yamata');
+  expect(handOf(s, 'yamata')).toBe(0);
+});
+
+test('不知火: 空きが元マスだけのとき八岐を優先し鬼火は出ない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 3, 1, 'shiranui', 'p');
+  put(s, 4, 0, 'yamata', 'e');
+  put(s, 4, 1, 'nurikabe', 'e');
+  put(s, 3, 0, 'nurikabe', 'p');
+  move(s, 3, 1, 4, 0, { rng: false });
+  expect(s.board[0][4]?.id).toBe('shiranui');
+  expect(s.board[1][3]?.id).toBe('yamata');
+  expect(s.board[1][3]?.hydra).toBe(1);
+  expect(s.board.flat().some(pc => pc?.id === 'onibi')).toBe(false);
+  expect(handOf(s, 'yamata')).toBe(0);
+});
+
+test('八岐: 隣接が全部塞がっている跳び取りでは持ち駒になる', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'ingyo', 'p');
+  put(s, 3, 2, 'yamata', 'e');
+  for (const [x, y] of [[3, 1], [4, 1], [4, 2], [4, 3], [3, 3], [2, 3], [2, 2], [2, 1]] as const) {
+    put(s, x, y, 'nurikabe', x === 2 ? 'p' : 'e');
+  }
+  move(s, 2, 4, 3, 2, { rng: false, phaseTo: { x: 2, y: 4 } });
+  expect(s.board[4][2]?.id).toBe('ingyo');
+  expect(s.board.flat().some(pc => pc?.id === 'yamata')).toBe(false);
+  expect(s.hands.p.yamata).toBe(1);
+});
+
+test('玉藻前: 八岐は魅了されず逃げ、玉藻前は捕獲マスに残る', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 4, 1, 'tamamo', 'p');
+  put(s, 4, 0, 'yamata', 'e');
+  move(s, 4, 1, 4, 0, { rng: false });
+  expect(s.board[0][4]?.id).toBe('tamamo');
+  expect(s.board[1][4]?.id).toBe('yamata');
+  expect(s.board[1][4]?.owner).toBe('e');
+  expect(handOf(s, 'yamata')).toBe(0);
+});
+
+test('宿儺: 双面の追撃で八岐を取っても盤上から消えない', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'sukuna', 'p');
+  put(s, 2, 2, 'kooni', 'e');
+  put(s, 3, 2, 'yamata', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  Game.applyAction(s, {
+    kind: 'move', from: { x: 2, y: 3 }, to: { x: 2, y: 2 }, dualTo: { x: 3, y: 2 },
+  }, { rng: false });
+  expect(s.board[2][2]?.id).toBe('sukuna');
+  expect(findPieces(s, 'yamata')).toHaveLength(1);
+  expect(findPieces(s, 'yamata')[0].owner).toBe('e');
+  expect(handOf(s, 'yamata')).toBe(0);
+  expect(s.hands.p.kooni).toBe(1);
+});

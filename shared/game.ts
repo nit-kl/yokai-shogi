@@ -339,15 +339,37 @@ export const Game = {
     return dx <= 1 && dy <= 1 && (dx !== 0 || dy !== 0);
   },
 
-  /* 八岐の逃げ先(at の周囲空き。盤座標で北から時計回り) */
-  hydraEscapeAt(s: GameState, at: Pos): Pos | null {
+  /* 八岐の逃げ先(at の周囲空き。盤座標で北から時計回り)。avoid は帰影先など、あとから攻撃側が占有するマス */
+  hydraEscapeAt(s: GameState, at: Pos, avoid?: Pos | null): Pos | null {
     const dirs: readonly (readonly [number, number])[] = [
       [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1],
     ];
     for (const [dx, dy] of dirs) {
       const x = at.x + dx, y = at.y + dy;
       if (!this.inBounds(x, y)) continue;
+      if (avoid && x === avoid.x && y === avoid.y) continue;
       if (!s.board[y][x]) return { x, y };
+    }
+    return null;
+  },
+
+  /* 捕獲後に攻撃側が占有するマス。八岐の逃げ先と重ねないための予約 */
+  postCaptureReserve(s: GameState, from: Pos, to: Pos, sk: Skill, phaseTo?: Pos, spawnTo?: Pos): Pos | null {
+    if (sk.kind === 'retreat') {
+      return (from.x !== to.x || from.y !== to.y) ? { ...from } : null;
+    }
+    if ((sk.kind === 'phase' || sk.kind === 'veil') && phaseTo) {
+      const legal = this.escapeDests(s, from, to, sk.kind).some(p => p.x === phaseTo.x && p.y === phaseTo.y);
+      return legal ? { x: phaseTo.x, y: phaseTo.y } : null;
+    }
+    if (sk.kind === 'spawn') {
+      const dests = this.spawnDests(s, from, to);
+      if (spawnTo) {
+        const hit = dests.find(p => p.x === spawnTo.x && p.y === spawnTo.y);
+        if (hit) return { ...hit };
+      }
+      const home = dests.find(p => p.x === from.x && p.y === from.y);
+      return home ? { ...home } : dests[0] ? { ...dests[0] } : null;
     }
     return null;
   },
@@ -951,14 +973,30 @@ export const Game = {
     const bossCaptured = !!vDef.boss;
     const vanish = vDef.skill.kind === 'decoy' || vDef.skill.kind === 'explode';
     const recalled = !bossCaptured && vDef.skill.kind === 'recall';
+    /* 帰影・影遁・送り火がこのあと乗るマス。八岐が先に入ると上書きで盤上から消える */
+    const reserve = (!vanish && s.board[to.y][to.x] === attacker)
+      ? this.postCaptureReserve(s, from, to, sk, phaseTo, spawnTo)
+      : null;
+    const willLeave = !!reserve && (sk.kind === 'retreat' || sk.kind === 'phase' || sk.kind === 'veil');
     let hydraTo: Pos | null = null;
+    let hydraDefer = false;
     if (!bossCaptured && vDef.skill.kind === 'hydra') {
       const lives = victim.hydra ?? vDef.skill.extra;
       if (lives > 0) {
-        const dest = this.hydraEscapeAt(s, to);
+        const anywhere = this.hydraEscapeAt(s, to);
+        const dest = reserve ? this.hydraEscapeAt(s, to, reserve) : anywhere;
         if (dest) {
           victim.hydra = lives - 1;
           hydraTo = dest;
+        } else if (anywhere && willLeave) {
+          /* 空きが帰影先だけ。攻撃側が捕獲マスを空けるので、その場に残して消さない */
+          victim.hydra = lives - 1;
+          hydraTo = { ...to };
+          hydraDefer = true;
+        } else if (anywhere) {
+          /* 送り火の予定マスしか空きがない。八岐を優先し、鬼火は別マスへ回す */
+          victim.hydra = lives - 1;
+          hydraTo = anywhere;
         }
       }
     }
@@ -974,12 +1012,15 @@ export const Game = {
     }
     let hydra: CaptureEvent['hydra'] = null;
     if (hydraTo) {
-      s.board[hydraTo.y][hydraTo.x] = victim;
+      if (!hydraDefer) s.board[hydraTo.y][hydraTo.x] = victim;
       hydra = { lives: victim.hydra ?? 0 };
       if (rng) {
+        const stayed = hydraTo.x === to.x && hydraTo.y === to.y;
         procs.push({
           name: vDef.skill.name, owner: foe, img: vDef.img,
-          text: `首が逃げた! 残り${(victim.hydra ?? 0) + 1}首`,
+          text: stayed
+            ? `その場に留まった! 残り${(victim.hydra ?? 0) + 1}首`
+            : `首が逃げた! 残り${(victim.hydra ?? 0) + 1}首`,
         });
       }
     }
@@ -1035,9 +1076,13 @@ export const Game = {
     let spawnAt: Pos | null = null;
     if (occupy && !explode && sk.kind === 'spawn') {
       const dests = this.spawnDests(s, from, to);
-      const wanted = spawnTo
+      let wanted = spawnTo
         ? dests.find(p => p.x === spawnTo.x && p.y === spawnTo.y)
         : dests.find(p => p.x === from.x && p.y === from.y) ?? dests[0];
+      /* 指定マスを八岐が使ったときは、残った空きへ送り火を回す */
+      if ((!wanted || s.board[wanted.y][wanted.x]) && spawnTo) {
+        wanted = dests.find(p => !s.board[p.y][p.x]);
+      }
       if (wanted && !s.board[wanted.y][wanted.x] && YOKAI[sk.piece]) {
         spawned = this.preparePiece({ uid: ++s.nextUid, id: sk.piece, owner: side, promoted: false });
         s.board[wanted.y][wanted.x] = spawned;
@@ -1097,16 +1142,52 @@ export const Game = {
     }
 
     if (escapeTo && (escapeTo.x !== to.x || escapeTo.y !== to.y) && s.board[to.y][to.x] === attacker) {
+      const occ = s.board[escapeTo.y][escapeTo.x];
+      if (occ && occ !== attacker) {
+        if (hydraTo && occ === victim) {
+          /* 帰影先に八岐がいる。別の空きへ逃がし、無ければ捕獲マスに残す */
+          s.board[escapeTo.y][escapeTo.x] = null;
+          const alt = this.hydraEscapeAt(s, to, escapeTo);
+          if (alt) {
+            s.board[alt.y][alt.x] = victim;
+            hydraTo = alt;
+            hydraDefer = false;
+          } else {
+            hydraTo = { ...to };
+            hydraDefer = true;
+          }
+        } else {
+          escapeTo = null;
+        }
+      }
+    }
+    if (escapeTo && (escapeTo.x !== to.x || escapeTo.y !== to.y) && s.board[to.y][to.x] === attacker) {
       s.board[to.y][to.x] = null;
       s.board[escapeTo.y][escapeTo.x] = attacker;
       events.push({ t: 'move', uid: attacker.uid, from: { ...to }, to: { ...escapeTo } });
+    }
+    if (hydraDefer && hydraTo) {
+      if (!s.board[hydraTo.y][hydraTo.x]) {
+        s.board[hydraTo.y][hydraTo.x] = victim;
+      } else {
+        const alt = this.hydraEscapeAt(s, to);
+        if (alt) {
+          s.board[alt.y][alt.x] = victim;
+          hydraTo = alt;
+        } else {
+          /* 盤上に空きが無いときだけ持ち駒へ。上書きで消滅させない */
+          s.hands[side][victim.id] = (s.hands[side][victim.id] || 0) + 1;
+          hydraTo = null;
+        }
+      }
+      hydraDefer = false;
     }
     if (charmOk && !s.board[to.y][to.x]) {
       const converted: Piece = { uid: victim.uid, id: victim.id, owner: side, promoted: victim.promoted };
       if (victim.hydra !== undefined) converted.hydra = victim.hydra;
       s.board[to.y][to.x] = converted;
     }
-    if (hydraTo) {
+    if (hydraTo && (hydraTo.x !== to.x || hydraTo.y !== to.y)) {
       events.push({ t: 'move', uid: victim.uid, from: { ...to }, to: { ...hydraTo } });
     }
 
