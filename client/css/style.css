@@ -2287,6 +2287,7 @@ html[data-script="latn"] #turn-banner.show-skip .byoyomi-banner-msg {
   animation: modalFadeIn 0.18s ease-out;
 }
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal.modal-instant { animation: none; }
 .modal-box {
   width: min(92vw, 620px);
   max-height: 86vh;

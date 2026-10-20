@@ -27,7 +27,7 @@ import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
 import { FX } from './effects';
 import { AudioSys } from './audio';
-import { $, sleep, showScreen } from './util';
+import { $, initModalTransitions, sleep, showScreen } from './util';
 import { initSentry, captureException } from './sentry';
 import { fetchApiStatus } from './status';
 import { renderTitleBosses } from './title';
@@ -176,6 +176,7 @@ window.addEventListener('DOMContentLoaded', () => {
   buildBoardCells();
   buildPieceCatalog();
   wireButtons();
+  initModalTransitions();
   MenuUI.init({ enterTitle });
   AnnouncementsUI.init();
   Onboarding.init({ enterTitle });
