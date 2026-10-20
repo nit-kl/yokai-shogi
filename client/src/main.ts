@@ -27,7 +27,7 @@ import { MenuUI } from './menu';
 import { Onboarding } from './onboarding';
 import { FX } from './effects';
 import { AudioSys } from './audio';
-import { $, sleep, showScreen } from './util';
+import { $, initModalTransitions, sleep, showScreen } from './util';
 import { initSentry, captureException } from './sentry';
 import { fetchApiStatus } from './status';
 import { renderTitleBosses } from './title';
@@ -176,6 +176,7 @@ window.addEventListener('DOMContentLoaded', () => {
   buildBoardCells();
   buildPieceCatalog();
   wireButtons();
+  initModalTransitions();
   MenuUI.init({ enterTitle });
   AnnouncementsUI.init();
   Onboarding.init({ enterTitle });
@@ -652,11 +653,14 @@ function dojoText(puzzle: DojoPuzzle, field: 'title' | 'brief' | 'hint'): string
 
 async function openDojo() {
   MatchHourUI.stop();
-  const progress = await Meta.dojoProgress().catch(() => null);
-  dojoCleared = progress?.cleared ?? dojoCleared;
+  // 通信を待たずに画面を切り替える(待つ間タイトルが見えてしまうため)。進捗は取得後に描き直す
   renderDojoList();
   showScreen('screen-dojo');
   FX.setAmbient(['rgba(200,120,255,0.4)', 'rgba(232,196,106,0.3)', 'rgba(88,182,255,0.25)'], 0.04);
+  const progress = await Meta.dojoProgress().catch(() => null);
+  if (!progress) return;
+  dojoCleared = progress.cleared;
+  renderDojoList();
 }
 
 function renderDojoList() {
