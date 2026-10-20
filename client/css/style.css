@@ -2306,6 +2306,9 @@ html[data-script="latn"] #turn-banner.show-skip .byoyomi-banner-msg {
   display: flex; align-items: center; justify-content: center;
   background: rgba(5, 3, 12, 0.9);
   animation: modalFadeIn 0.18s ease-out;
+  /* 暗幕と箱を最初から専用レイヤーにする。アニメ終了時にレイヤーが作り直されると、
+     Android Chrome でタイトル画面の部品が一瞬消えてちらつく */
+  will-change: opacity;
 }
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .modal.modal-instant { animation: none; }
@@ -2320,6 +2323,7 @@ html[data-script="latn"] #turn-banner.show-skip .byoyomi-banner-msg {
   border: 1px solid rgba(232,196,106,0.4);
   box-shadow: 0 14px 60px rgba(0,0,0,0.8), 0 0 40px rgba(232,196,106,0.1);
   animation: resultIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+  will-change: transform, opacity;
 }
 .modal-box h2 {
   font-family: "Yu Mincho", serif;
