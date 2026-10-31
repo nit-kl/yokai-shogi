@@ -395,7 +395,8 @@ export const Game = {
     return this.escapeDests(s, from, to, 'phase');
   },
 
-  /* 捕獲後の影遁/隱形先(残留は含めない。残留は phaseTo 省略) */
+  /* 捕獲後の影遁/隱形先(残留は含めない。残留は phaseTo 省略)。
+     phase は捕獲マスの隣。veil は元マスだけ。 */
   escapeDests(s: GameState, from: Pos, to: Pos, kind: 'phase' | 'veil'): Pos[] {
     const out: Pos[] = [];
     const seen = new Set<string>();
@@ -406,7 +407,10 @@ export const Game = {
       seen.add(k);
       out.push(p);
     };
-    if (kind === 'veil') add({ ...from });
+    if (kind === 'veil') {
+      add({ ...from });
+      return out;
+    }
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue;

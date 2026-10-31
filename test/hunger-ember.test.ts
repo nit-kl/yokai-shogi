@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import { COLS, ROWS, YOKAI } from '../shared/data';
 import { Game, HUNGER_DRAIN, HUNGER_GRACE } from '../shared/game';
-import type { ApplyOptions, GameState, Side } from '../shared/game';
+import type { Action, ApplyOptions, GameState, Side } from '../shared/game';
 
 let uid = 900;
 
@@ -152,6 +152,7 @@ test('隱神刑部: veil で元マスへ帰影できる', () => {
   expect(dests).toContain('1,1');
   expect(dests).toContain('3,1');
   expect(dests).not.toContain('2,2');
+  expect(Game.escapeDests(s, { x: 2, y: 3 }, { x: 3, y: 2 }, 'veil')).toEqual([{ x: 2, y: 3 }]);
   move(s, 2, 3, 3, 2, { rng: false, phaseTo: { x: 2, y: 3 } });
   expect(s.board[2][3]).toBeNull();
   expect(s.board[3][2]?.id).toBe('ingyo');
@@ -467,6 +468,39 @@ test('八岐: 隣接が全部塞がっている跳び取りでは持ち駒にな
   expect(s.board[4][2]?.id).toBe('ingyo');
   expect(s.board.flat().some(pc => pc?.id === 'yamata')).toBe(false);
   expect(s.hands.p.yamata).toBe(1);
+});
+
+test('隱神刑部: 取ったあとは残留か元マスだけで、変則跳びでも戻れる', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 4, 'ingyo', 'p');
+  put(s, 3, 2, 'kooni', 'e');
+  put(s, 0, 0, 'ittan', 'e');
+  const from = { x: 2, y: 4 };
+  const to = { x: 3, y: 2 };
+  expect(Game.escapeDests(s, from, to, 'veil')).toEqual([{ x: 2, y: 4 }]);
+  const acts = Game.getAllActions(s, 'p').filter((a): a is Extract<Action, { kind: 'move' }> =>
+    a.kind === 'move' && a.to.x === 3 && a.to.y === 2);
+  expect(acts.some(a => !a.phaseTo)).toBe(true);
+  expect(acts.some(a => a.phaseTo?.x === 2 && a.phaseTo.y === 4)).toBe(true);
+  expect(acts.some(a => a.phaseTo && (a.phaseTo.x !== 2 || a.phaseTo.y !== 4))).toBe(false);
+  move(s, 2, 4, 3, 2, { rng: false, phaseTo: { x: 2, y: 2 } });
+  expect(s.board[2][3]?.id).toBe('ingyo');
+  expect(s.board[2][2]).toBeNull();
+});
+
+test('隱神刑部: 成ると変則跳びを失い全方向1マスになる', () => {
+  const s = blank();
+  s.turn = 'p';
+  put(s, 2, 3, 'ingyo', 'p');
+  s.board[3][2]!.promoted = true;
+  const dests = Game.getMoves(s, 2, 3).map(m => `${m.x},${m.y}`);
+  expect(dests).toContain('2,2');
+  expect(dests).toContain('1,3');
+  expect(dests).toContain('2,4');
+  expect(dests).not.toContain('1,1');
+  expect(dests).not.toContain('3,1');
+  expect(YOKAI.ingyo.atk).toBe(320);
 });
 
 test('玉藻前: 八岐は魅了されず逃げ、玉藻前は捕獲マスに残る', () => {

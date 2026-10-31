@@ -17,6 +17,31 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-11-01-ingyo-nerf',
+    type: 'update',
+    title: '隱神刑部の性能を調整しました',
+    titleEn: 'Inugami Gyobu Has Been Adjusted',
+    body: [
+      '隱神刑部が強すぎるという声を受け、次のとおり弱くしました。',
+      '',
+      '・取ったあとの選択は「その場に残る」か「元のマスへ戻る」の2つです。隣のマスへ逃げることはできません。',
+      '・変則跳びで取ったときも、元のマスへ戻れます。',
+      '・成ると変則跳びを失い、全方向1マスになります。',
+      '・攻撃力を 360 から 320 に下げました。',
+    ].join('\n'),
+    bodyEn: [
+      'Inugami Gyobu was too strong, so it has been weakened.',
+      '',
+      '• After a capture, the only choices are to stay or return to the original square. You can no longer slip to an adjacent square.',
+      '• A knight-leap capture can still return home.',
+      '• Promotion replaces the knight leap with one step in any direction.',
+      '• Attack was reduced from 360 to 320.',
+    ].join('\n'),
+    publishedAt: '2026-11-01T08:30:00+09:00',
+    priority: 'normal',
+    showUntil: '2026-12-01T23:59:59+09:00',
+  },
+  {
     id: '2026-09-20-yokai-dojo',
     type: 'update',
     title: '妖怪道場を開設しました',

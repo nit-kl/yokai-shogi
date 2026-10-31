@@ -10,7 +10,7 @@ export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
 export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v17'; // v17: 八咫烏は陽光
+export const RULE_VERSION = 'phase2-v18'; // v18: 隱神刑部は残留か元マス帰影の2択。成り後の変則跳びを削除し ATK を下げる
 
 export function envClockMs(raw: string | undefined, fallback: number): number {
   const n = Number(raw);

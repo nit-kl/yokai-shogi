@@ -37,7 +37,7 @@ export type Skill =
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
   | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap' | 'bolt'; value: number; span: number } // span<=0 は永久
   | { kind: 'spawn'; name: string; desc: string; piece: string }              // 取ったあと周囲の空きへ駒を1体置く
-  | { kind: 'veil'; name: string; desc: string }                              // SSR: 残留/帰影/影遁を選択
+  | { kind: 'veil'; name: string; desc: string }                              // SSR: 取ったあと残留か元マスへ帰影
   | { kind: 'charm'; name: string; desc: string }                             // 取った駒を味方にして元マスへ戻る
   | { kind: 'recall'; name: string; desc: string }                            // 取られても自軍の持ち駒に戻る
   | { kind: 'hydra'; name: string; desc: string; extra: number }              // 取られても隣接へ逃げる(extra回)
@@ -559,15 +559,15 @@ export const YOKAI: Record<string, YokaiDef> = {
     promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
   },
   ingyo: {
-    id: 'ingyo', name: '隱神刑部', atk: 360, rarity: 'SSR', gachaOnly: true,
+    id: 'ingyo', name: '隱神刑部', atk: 320, rarity: 'SSR', gachaOnly: true,
     img: img('ingyo'), imgSm: imgSm('ingyo'),
-    moveText: '斜めに1マスと前へ変則跳び(成:全方向1マス+変則跳び)',
+    moveText: '斜めに1マスと前へ変則跳び(成:全方向1マス)',
     skill: {
       kind: 'veil', name: '隱形の術',
-      desc: 'この駒で取ったあと、(1)その場に残る (2)元いたマスへ戻る (3)隣の空きマスへ逃げる、のいずれかを選べる',
+      desc: 'この駒で取ったあと、その場に残るか、元のマスへ戻る',
     },
     moves: { steps: STEPS_DIAG4, jumps: [[1,-2],[-1,-2]] },
-    promoted: { steps: STEPS_ALL8, jumps: [[1,-2],[-1,-2]] },
+    promoted: { steps: STEPS_ALL8 },
     awakenName: '真・隱形',
   },
 };
