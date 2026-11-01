@@ -1362,14 +1362,6 @@ html[data-script="latn"] .title-sub-top {
     0 0 0 4px rgba(18, 8, 8, 0.9),
     0 0 40px rgba(255, 80, 40, 0.22);
 }
-#screen-battle.world-moon .battle-moon {
-  opacity: 0.78;
-  transform: scale(1.16);
-  box-shadow:
-    0 0 60px rgba(255, 236, 190, 0.7),
-    0 0 140px rgba(180, 170, 255, 0.35);
-}
-#screen-battle.world-moon #board-wrap::before { opacity: 0.9; }
 .battle-col.shake { animation: shakeAnim 0.4s; }
 @keyframes shakeAnim {
   0%, 100% { transform: translate(0, 0); }
@@ -4267,10 +4259,6 @@ html[data-script="latn"] .battle-tools #btn-battle-status {
   background: #ff9a3c;
   box-shadow: 0 0 6px rgba(255, 140, 60, 0.8);
 }
-.battle-status-badge.alert-moon {
-  background: #ffd24a;
-  box-shadow: 0 0 6px rgba(255, 210, 74, 0.85);
-}
 .battle-status-panel {
   position: absolute;
   top: 0;
@@ -4311,13 +4299,6 @@ html[data-script="latn"] .battle-tools #btn-battle-status {
   text-align: right;
   color: #efe8ff;
 }
-#moon-hud .battle-status-val {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-}
-#moon-hud.full-moon .battle-status-val { color: #fff3c8; }
 #hunger-hud.hunger-active .battle-status-val {
   color: #ffd0a0;
   font-weight: 600;
@@ -4393,8 +4374,6 @@ html[data-script="latn"] .battle-tools #btn-battle-status {
   background: rgba(140, 170, 255, 0.22) !important;
 }
 
-/* ---------- 月齢(パネル冁E��示用) ---------- */
-#moon-icon { font-size: 1.05em; line-height: 1; filter: drop-shadow(0 0 4px rgba(185, 168, 255, 0.6)); }
 #hyakki-round-hud {
   position: absolute;
   top: 4px; left: 6px;
@@ -4415,19 +4394,6 @@ html[data-script="latn"] .battle-tools #btn-battle-status {
   color: #ffe9a0;
   font-weight: 700;
   letter-spacing: 0.06em;
-}
-
-/* 満月�E夁E 盤が月光に染まり、moon駁E九尾・玉藻剁Eが輝く */
-#board-frame.moonlit {
-  box-shadow: 0 0 34px rgba(154, 134, 255, 0.5), 0 0 90px rgba(120, 100, 230, 0.28);
-  transition: box-shadow 0.6s;
-}
-#board-frame.moonlit .moon-piece .piece-base {
-  background: radial-gradient(ellipse, rgba(242, 236, 255, 0.95) 0%, rgba(154, 134, 255, 0.5) 48%, transparent 76%);
-  animation: specialPieceAura 0.9s ease-in-out infinite alternate;
-}
-#board-frame.moonlit .moon-piece > img {
-  filter: drop-shadow(0 0 12px rgba(185, 168, 255, 0.95)) drop-shadow(0 0 5px rgba(242, 236, 255, 0.9));
 }
 
 /* ---------- 覚�Eゲージ ---------- */

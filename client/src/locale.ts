@@ -105,7 +105,7 @@ const STATIC: Record<string, string> = {
   '敵将': 'Enemy General', '自軍': 'Your Army', '覚醒': 'Awakening', '覚醒する': 'Awaken',
   '相手思考中…': 'Enemy is thinking…', '状': 'Status',
   '接続済み': 'Connected', '持ち時間': 'Time', '相手の再接続待ち': 'Waiting for opponent to reconnect',
-  '対局ステータス': 'Battle Status', '月齢': 'Moon Phase', '新月': 'New Moon', '飢餓': 'Hunger',
+  '対局ステータス': 'Battle Status', '飢餓': 'Hunger',
   '飢餓まであと8': '8 moves until Hunger', '8手取りなしで飢餓の夜。以後毎手双方-50。駒を取るとリセット。': 'After 8 moves without a capture, the Night of Hunger begins. Both sides lose 50 HP each move; a capture resets it.',
   '投了': 'Resign', '駒の説明': 'Yokai details', '再 戦': 'Rematch',
   'タイトルへ': 'Title Screen', '次の軍勢へ': 'Face the Next Army', 'もう一度挑む': 'Try Again',
@@ -203,18 +203,16 @@ const STATIC: Record<string, string> = {
   '次に切れたら負け': 'Next timeout is a loss', '次に切れれば勝ち': 'Next timeout wins',
   '時間切れ！': 'Time out!', '相手が時間切れ': "Opponent timed out", '手番を飛ばした': 'Turn skipped',
   '手番を飛ばしました': 'Your turn was skipped', '時間切れ': 'Time out',
-  '次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓や月齢も1手分進みます。':
-    'The next timeout will lose the game. Your opponent plays twice, and Hunger and the moon phase also advance one move.',
+  '次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓も1手分進みます。':
+    'The next timeout will lose the game. Your opponent plays twice, and Hunger also advances one move.',
   'わかった': 'Got it', '警告: 次の時間切れで負けです': 'Warning: the next timeout is a loss',
   'あなたの手番': 'Your turn', '相手の手番': "Opponent's turn", '敵の手番': 'Enemy turn', '対戦相手': 'Opponent',
-  '満月 ― 会心確定!': 'Full Moon — Critical guaranteed!',
-  '満月 ― 味方の取りが会心!': 'Full Moon — Allied captures are critical!',
   'SSR妖怪 見参': 'An SSR Yokai Appears',
   '覚醒 ― 真の力、解放': 'Awakening — True Power Unleashed',   'ダメージ半減! 駒は葉っぱに化けていた': 'Damage halved! The yokai was only a leaf.',
   '取った駒を道連れに爆散!': 'It explodes and takes its captor with it!', '鬼火を灯した': 'Lit an Onibi', '連勝ならず': 'No win streak',
   '自軍の持ち駒に戻った!': 'Returned to your hand!',
   'もう一つの顔が噛みついた!': 'The other face bit down!',
-  '会心・月齢を封じた': 'Sealed criticals and moon skills',
+  '会心を封じた': 'Sealed criticals',
   '勝利報酬を確認中…': 'Checking victory rewards…', '本日の勝利報酬は上限に達しました': "Today's victory reward limit has been reached.",
   '勝利報酬の付与に失敗しました(通信状態を確認)': 'Could not grant the victory reward. Check your connection.',
   '引き分け': 'Draw', '討伐成功': 'Victory', '敗北': 'Defeat', '我が大将が討ち取られた…': 'Your general was captured…',
@@ -272,7 +270,7 @@ Object.entries(STATIC).forEach(([ja, en]) => add(ja, en));
 
 type YokaiEnglish = readonly [name: string, move: string, skill: string, description: string, awaken?: string];
 const YOKAI_EN: Record<string, YokaiEnglish> = {
-  kyubi: ['Nine-Tailed Fox', '1 square in any direction', 'Lord of the Moon', 'On a full moon, allied captures deal 2× damage', 'Nine-Tails Unsealed'],
+  kyubi: ['Nine-Tailed Fox', '1 square in any direction', 'Lingering Foxfire', 'While on the board, allied captures deal +20% damage', 'Nine-Tails Unsealed'],
   shuten: ['Shuten-doji', '1 square in any direction', 'Sake Cellar', 'Restores 50 HP at the end of your turn. Your Hunger grace is +4 moves', 'Oni God Rakshasa'],
   kooni: ['Little Oni', '1 square forward (promoted: Gold General movement)', 'Demon Fire', '30% chance for a capture to deal 1.5× damage'],
   nekomata: ['Nekomata', '1 square diagonally (promoted: diagonal + forward/back)', "Bakeneko's Curse", 'Captures in enemy territory deal +120 damage'],
@@ -350,7 +348,6 @@ for (const [id, values] of Object.entries(VARIANT_EN)) {
   if (def.awakenName) add(def.awakenName, values[2]);
 }
 
-[['新月', 'New Moon'], ['三日月', 'Crescent Moon'], ['半月', 'Half Moon'], ['満月', 'Full Moon']].forEach(([ja, en]) => add(ja, en));
 const resonanceEn = [
   ['Oni Feast', 'While both are on the board, Sake Cellar healing is +25'],
     ['Foxfire Bond', "When one is captured, the other's next capture is a guaranteed critical"],
@@ -423,7 +420,7 @@ function translatePatterns(value: string): string {
       'Searching for an opponent… AI battle in about $1 seconds'],
     [/飢餓まであと(\d+)/g, '$1 moves until Hunger'], [/飢餓の夜\s*-(\d+)/g, 'Night of Hunger −$1'],
     [/酒蔵の猶予 あと(\d+)/g, 'Cellar grace: $1 left'],
-    [/満月まで(\d+)夜/g, '$1 nights until Full Moon'], [/残火 \+(\d+)/g, 'Ember +$1'],
+    [/残火 \+(\d+)/g, 'Ember +$1'],
     [/陽光 \+(\d+)（永久）/g, 'Sunlight +$1 (permanent)'], [/陽光 \+(\d+)/g, 'Sunlight +$1'],
     [/陽光の追撃 \+(\d+)!/g, 'Sunlight strike +$1!'], [/陽光を残した/g, 'Left sunlight'],
     [/燐火 \+(\d+)/g, 'Spirit Flame +$1'],
@@ -437,7 +434,7 @@ function translatePatterns(value: string): string {
     [/参加報酬:\s*ガチャチケット\s*🎟\s*\+(\d+)/g, 'Participation reward: Ticket 🎟 +$1'],
     [/通算発動\s*(\d+)回/g, 'Lifetime activations: $1'], [/(\d+)\s*\/\s*(\d+)\s*体/g, '$1 / $2 yokai'],
     [/異装:\s*性能は通常版と同じ/g, 'Alt: Same stats as the standard version'],
-    [/月の主 満月の妖気 ×([\d.]+)!/g, 'Moon Lord · Full-moon aura ×$1!'],
+    [/妖狐の残り香 \+(\d+)%/g, 'Lingering Foxfire +$1%'],
     [/骨の山 \+(\d+)%!/g, 'Mountain of Bones +$1%!'],
     [/骨が積まれた\((\d+)\)/g, 'A bone was piled ($1)'],
     [/(.+)を味方にした!/g, '$1 joined your army!'],

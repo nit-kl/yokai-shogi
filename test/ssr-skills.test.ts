@@ -1,7 +1,7 @@
-/* SSR体験改修(月齢・八岐の首・百鬼の陣・覚醒・因縁共鳴)のエンジンテスト */
+/* SSRスキル(妖狐の残り香・八岐の首・百鬼の陣)のエンジンテスト */
 import { test, expect } from 'vitest';
 import { ROWS, COLS } from '../shared/data';
-import { Game, MOON_CYCLE } from '../shared/game';
+import { Game } from '../shared/game';
 import type { ApplyOptions, GameState, Side } from '../shared/game';
 
 let uid = 900;
@@ -21,102 +21,66 @@ const capEv = (events: ReturnType<typeof cap>) => {
   if (!ev || ev.t !== 'capture') throw new Error('capture event missing');
   return ev;
 };
-/* 満月の手数(ply)に合わせる。fullMoon=falseなら新月に */
-const setMoon = (s: GameState, fullMoon: boolean) => {
-  s.plies = fullMoon ? (MOON_CYCLE - 1) * 2 : 0;
-};
+/* ---------- 妖狐の残り香(scent) ---------- */
 
-/* ---------- 月齢(moon) ---------- */
-
-test('moon: 満月以外の手番では会心が発動しない', () => {
+test('scent: 九尾が盤上なら自分の取りが+20%', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, false);
-  put(s, 2, 3, 'kyubi', 'p');
-  put(s, 2, 2, 'ittan', 'e');
-  put(s, 0, 0, 'shuten', 'e'); // 敵大将(勝敗確定を避ける)
-  put(s, 0, 5, 'ittan', 'p');
-  const ev = capEv(cap(s, 2, 3, 2, 2));
-  expect(ev.damage, '新月: 素のATK400').toBe(400);
-  expect(ev.procs).toHaveLength(0);
-});
-
-test('moon: 満月の手番は会心が確定発動する(乱数不要)', () => {
-  const s = blank();
-  s.turn = 'p';
-  setMoon(s, true);
   put(s, 2, 3, 'kyubi', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
-  const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 })); // 乱数は最悪値でも確定
-  expect(ev.damage, '満月: 400×2').toBe(800);
-  expect(ev.procs.some(p => p.name === '月の主')).toBe(true);
+  const ev = capEv(cap(s, 2, 3, 2, 2));
+  expect(ev.damage, '400×1.2').toBe(480);
+  expect(ev.procs.some(p => p.name === '妖狐の残り香' && p.text === '+20%')).toBe(true);
 });
 
-test('moon: 期待値計算(AI読み)でも満月は決定的に評価される', () => {
-  for (const fullMoon of [true, false]) {
-    const s = blank();
-    s.turn = 'p';
-    setMoon(s, fullMoon);
-    put(s, 2, 3, 'kyubi', 'p');
-    put(s, 2, 2, 'ittan', 'e');
-    put(s, 0, 0, 'shuten', 'e');
-    put(s, 0, 5, 'ittan', 'p');
-    const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-    expect(ev.damage).toBe(fullMoon ? 800 : 400);
-  }
-});
-
-test('moon: 砂かけ婆(jam)は満月会心も封じる', () => {
+test('scent: 期待値計算でも同じ+20%', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, true);
+  put(s, 2, 3, 'kyubi', 'p');
+  put(s, 2, 2, 'ittan', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
+  expect(ev.damage).toBe(480);
+  expect(ev.procs).toHaveLength(0);
+});
+
+test('scent: 砂かけ婆は残り香を封じない', () => {
+  const s = blank();
+  s.turn = 'p';
   put(s, 2, 3, 'kyubi', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 4, 0, 'sunakake', 'e');
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
   const ev = capEv(cap(s, 2, 3, 2, 2));
-  expect(ev.damage, '封じ: 素のATK').toBe(400);
+  expect(ev.damage).toBe(480);
 });
 
-test('moon: 九尾が盤上なら味方の取りにも満月会心が乗る', () => {
+test('scent: 九尾が盤上なら味方の取りにも+20%', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, true);
   put(s, 2, 5, 'kyubi', 'p');
   put(s, 2, 3, 'kooni', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'shuten', 'e');
   const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 }));
-  expect(ev.damage, '小鬼150×2').toBe(300);
-  expect(ev.procs.some(p => p.name === '月の主')).toBe(true);
+  expect(ev.damage, '小鬼150×1.2。会心は不発').toBe(180);
+  expect(ev.procs.some(p => p.name === '妖狐の残り香')).toBe(true);
 });
 
-test('moon: 九尾が盤上にいないと味方取りは満月でも素', () => {
+test('scent: 九尾が盤上にいない味方取りは素', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, true);
   put(s, 2, 3, 'kooni', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
   const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 }));
   expect(ev.damage).toBe(150);
-  expect(ev.procs.some(p => p.name === '月の主')).toBe(false);
-});
-
-test('moon: 月齢は両者共通で1夜=2手で進む', () => {
-  const s = Game.newState();
-  expect(Game.moonPhase(s)).toBe(0);
-  s.plies = 2;
-  expect(Game.moonPhase(s), '2手で次の夜').toBe(1);
-  s.plies = (MOON_CYCLE - 1) * 2;
-  expect(Game.isFullMoonPly(s.plies)).toBe(true);
-  expect(Game.nightsUntilFullMoon(s)).toBe(0);
-  s.plies = MOON_CYCLE * 2;
-  expect(Game.moonPhase(s), '満月の翌夜は新月に戻る').toBe(0);
+  expect(ev.procs.some(p => p.name === '妖狐の残り香')).toBe(false);
 });
 
 /* ---------- 八岐の首(hydra) ---------- */

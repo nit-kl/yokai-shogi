@@ -56,7 +56,7 @@ export const AI = {
     if (def.skill.kind === 'bones') v += 80 + (pc.bones ?? 0) * 40;
     if (def.skill.kind === 'dual') v += 95;
     if (def.skill.kind === 'legion') v += 70;
-    if (def.skill.kind === 'moon') v += 80;
+    if (def.skill.kind === 'scent') v += 80;
     if (def.skill.kind === 'cellar') v += 85;
     if (def.rarity === 'SSR') v += 40;
     else if (def.rarity === 'SR') v += 20;

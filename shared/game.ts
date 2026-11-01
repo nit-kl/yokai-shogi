@@ -50,7 +50,7 @@ export interface GameState {
   reason: GameOverReason | null;
   lastMove: { to: Pos } | null;
   nextUid: number; // 駒uid採番(モジュール変数ではなく状態側で持つ: 1プロセスで複数対局を扱うため)
-  plies: number;   // 適用済みの手数(月齢・覚醒期限の基準)
+  plies: number;   // 適用済みの手数(飢餓・残火期限の基準)
   awaken: Record<Side, AwakenState>; // 覚醒ゲージ(SSR必殺技: 1局1回)
   lastCapturePly: number; // 直近捕獲の手数(飢餓の夜)
   embers: Ember[];        // 残火
@@ -60,9 +60,6 @@ export interface GameState {
 export const AWAKEN_MAX = 6;   // ゲージ満タンに必要な取り合い回数
 export const AWAKEN_SPAN = 6;  // 発動から6手(自分の手番3回)有効
 export const AWAKEN_ATK = 1.5; // 覚醒中のATK倍率
-
-/* 月齢(moonスキル): 1夜=2手(両者1手ずつ)、4夜周期の4夜目が満月 */
-export const MOON_CYCLE = 4;
 
 /* 飢餓の夜: 無取りが続くと双方の魂力が削れる */
 export const HUNGER_GRACE = 8;
@@ -197,14 +194,6 @@ export const Game = {
     if (!s.awaken) s.awaken = { p: { gauge: 0, used: false }, e: { gauge: 0, used: false } };
     if (typeof s.lastCapturePly !== 'number') s.lastCapturePly = 0;
     if (!Array.isArray(s.embers)) s.embers = [];
-  },
-
-  /* ---------- 月齢(moonスキル) ---------- */
-  moonPhaseOfPly(ply: number): number { return Math.floor(ply / 2) % MOON_CYCLE; },
-  moonPhase(s: GameState): number { return this.moonPhaseOfPly(s.plies ?? 0); },
-  isFullMoonPly(ply: number): boolean { return this.moonPhaseOfPly(ply) === MOON_CYCLE - 1; },
-  nightsUntilFullMoon(s: GameState): number {
-    return (MOON_CYCLE - 1) - this.moonPhase(s);
   },
 
   /* ---------- 飢餓の夜 ---------- */
@@ -534,7 +523,7 @@ export const Game = {
         } else if (sk.kind === 'weaken') {
           effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: `敵の与ダメージ-${Math.round(sk.reduce * 100)}%` });
         } else if (sk.kind === 'jam') {
-          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: '会心・月齢を封じた' });
+          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: '会心を封じた' });
         } else if (sk.kind === 'chill') {
           effects.push({ kind: 'combo', name: sk.name, owner: side, img: def.img, text: '相手のコンボ倍率を無効化' });
         }
@@ -733,7 +722,7 @@ export const Game = {
 
       if (victim) {
         const ended = this._resolveCapture(
-          s, pc, victim, from, to, side, foe, ply, rng, rand, events, action.phaseTo, action.spawnTo,
+          s, pc, victim, from, to, side, foe, rng, rand, events, action.phaseTo, action.spawnTo,
         );
         if (ended) return events;
         const dualSk = YOKAI[pc.id].skill;
@@ -744,7 +733,7 @@ export const Game = {
           if (legal && second && second.owner === foe) {
             s.board[dt.y][dt.x] = null;
             const ended2 = this._resolveCapture(
-              s, pc, second, to, dt, side, foe, ply, rng, rand, events,
+              s, pc, second, to, dt, side, foe, rng, rand, events,
               undefined, undefined, { dmgMult: dualSk.mult, occupy: false },
             );
             if (ended2) return events;
@@ -818,7 +807,7 @@ export const Game = {
 
   _resolveCapture(
     s: GameState, attacker: Piece, victim: Piece, from: Pos, to: Pos,
-    side: Side, foe: Side, ply: number, rng: boolean, rand: () => number, events: GameEvent[],
+    side: Side, foe: Side, rng: boolean, rand: () => number, events: GameEvent[],
     phaseTo?: Pos, spawnTo?: Pos, capOpts?: CaptureOpts,
   ): boolean {
     const occupy = capOpts?.occupy !== false;
@@ -832,9 +821,9 @@ export const Game = {
     let mult = 1, bonus = 0;
     const sk = aDef.skill;
     const jammed = this.hasSkill(s, foe, 'jam');
-    const moonLord = this.findSkillOnBoard(s, side, 'moon');
+    const fox = this.findSkillOnBoard(s, side, 'scent');
     const commander = this.findSkillOnBoard(s, side, 'legion');
-    if (jammed && (sk.kind === 'crit' || sk.kind === 'heads' || !!moonLord)) {
+    if (jammed && (sk.kind === 'crit' || sk.kind === 'heads')) {
       effects.push(...this.activeSkillEffects(s, foe, ['jam']));
     }
     if (sk.kind === 'crit' && !jammed) {
@@ -880,15 +869,13 @@ export const Game = {
     }
 
     /* 大将オーラ: 取った駒ではなく盤上の九尾/ぬらりひょんが効く */
-    if (moonLord && moonLord.sk.kind === 'moon' && !jammed) {
-      if (this.isFullMoonPly(ply)) {
-        mult *= moonLord.sk.mult;
-        if (rng) {
-          procs.push({
-            name: moonLord.sk.name, owner: side, img: moonLord.def.img,
-            text: `月の主 満月の妖気 ×${moonLord.sk.mult}!`,
-          });
-        }
+    if (fox && fox.sk.kind === 'scent') {
+      mult *= 1 + fox.sk.bonus;
+      if (rng) {
+        procs.push({
+          name: fox.sk.name, owner: side, img: fox.def.img,
+          text: `+${Math.round(fox.sk.bonus * 100)}%`,
+        });
       }
     }
     if (commander && commander.sk.kind === 'legion') {

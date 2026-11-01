@@ -17,6 +17,25 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-11-01-kyubi-scent',
+    type: 'update',
+    title: '満月の夜をなくし、九尾の狐を調整しました',
+    titleEn: 'The Full Moon Is Gone, and Nine-Tailed Fox Changed',
+    body: [
+      '月の満ち欠けで強さが変わるルールをなくしました。対局中の月齢表示も出ません。',
+      '',
+      '九尾の狐の能力は「妖狐の残り香」です。盤上にいるあいだ、味方の取りダメージが+20%になります。',
+    ].join('\n'),
+    bodyEn: [
+      'Strength no longer changes with the moon, and the moon-phase display is gone.',
+      '',
+      'Nine-Tailed Fox now has Lingering Foxfire: while she is on the board, allied captures deal +20% damage.',
+    ].join('\n'),
+    publishedAt: '2026-11-01T10:11:00+09:00',
+    priority: 'normal',
+    showUntil: '2026-12-01T23:59:59+09:00',
+  },
+  {
     id: '2026-11-01-drop-awaken-resonance',
     type: 'update',
     title: '対局ルールを簡潔にしました',

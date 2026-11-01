@@ -10,7 +10,7 @@ export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
 export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v19'; // v19: 覚醒ゲージと因縁共鳴を廃止。SSRの個別スキルは残す
+export const RULE_VERSION = 'phase2-v20'; // v20: 月齢を廃止。九尾は盤上にいる間、味方の取り+20%
 
 export function envClockMs(raw: string | undefined, fallback: number): number {
   const n = Number(raw);

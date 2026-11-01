@@ -5,10 +5,9 @@
 import {
   COLS, ROWS, MAX_HP, ZONE_DEPTH, YOKAI, RARITY_INFO,
   ALL_IMAGES, ENEMY_BOSS, GACHA_POOL, SETUP,
-  MOON_PHASES,
 } from '../../shared/data';
 import type { Rarity, Side } from '../../shared/data';
-import { Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
+import { Game, HUNGER_DRAIN } from '../../shared/game';
 import type { Action, Ember, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
 import { chooseCPUAction } from './ai-client';
@@ -137,7 +136,7 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
   counter: ['#e8d0ff', '#c88aff', '#8a4aff'],
   decoy: ['#eaffd0', '#a8e063', '#4caf50'],
   explode: ['#ffd24a', '#ff9a3c', '#ff5d5d'],
-  moon: ['#f2ecff', '#b9a8ff', '#6157d6'],    // 月光の藍紫
+  scent: ['#fff6d8', '#f0c56a', '#7a4ad4'],  // 妖狐の残り香
   heads: ['#ffe2b8', '#ff8a3c', '#8d1f1f'],   // 大蛇の劫火
   legion: ['#dbe7ff', '#8ba0e8', '#d98945'],  // 百鬼夜行の宵闇
   retreat: ['#e8e0ff', '#a898e0', '#6a5acd'], // 帰影
@@ -154,9 +153,9 @@ const SKILL_KIND_FX: Record<string, readonly string[]> = {
   cellar: ['#ffe6c8', '#d4a017', '#8a1020'],  // 酒蔵
 };
 /* 会心系(発動="当たり")として扱うスキル */
-const JACKPOT_KINDS = new Set(['crit', 'rush', 'moon', 'heads', 'famine', 'bones']);
+const JACKPOT_KINDS = new Set(['crit', 'rush', 'heads', 'famine', 'bones']);
 /* 盤上オーラは味方の取りにも毎回乗るので、フルカットインは出さない */
-const BOSS_AURA_CUTIN_PROCS = new Set(['月の主', '百鬼夜行の総帥']);
+const BOSS_AURA_CUTIN_PROCS = new Set(['妖狐の残り香', '百鬼夜行の総帥']);
 
 /* レアリティ段階(演出の格): N=0, R=1, SR=2, SSR・異装=3 */
 function rarityTier(id: string): 0 | 1 | 2 | 3 {
@@ -1468,8 +1467,7 @@ function makePieceEl(pc: { uid: number; id: string; owner: Side }): HTMLElement 
   el.className = `piece owner-${pc.owner}`
     + (def?.boss ? ' boss-piece' : '')
     + (def?.variantOf ? ' special-piece' : '')
-    + (def?.rarity === 'SSR' && !def.variantOf ? ' ssr-piece' : '')
-    + (def?.skill.kind === 'moon' ? ' moon-piece' : '');
+    + (def?.rarity === 'SSR' && !def.variantOf ? ' ssr-piece' : '');
   const specialColors = def?.summonColors;
   if (specialColors) {
     el.style.setProperty('--special-light', specialColors[0]);
@@ -1621,7 +1619,6 @@ function updateHUD() {
     renderHand(side);
     updateCombo(side);
   }
-  updateMoonHUD();
   updateHungerHUD();
   updateBattleWorld();
 }
@@ -1647,8 +1644,6 @@ function updateBattleWorld(turn: Side = G?.turn === 'e' ? 'e' : 'p', hp = G?.hp)
   el.classList.toggle('world-p', turn === 'p');
   el.classList.toggle('world-e', turn === 'e');
   el.classList.toggle('world-hunger', !!(G && Game.hungerActive(G)));
-  const full = !!(G && moonSkillInvolved() && Game.moonPhase(G) === MOON_CYCLE - 1);
-  el.classList.toggle('world-moon', full);
   el.classList.toggle('world-critical', !!hp && Math.min(hp.p, hp.e) <= MAX_HP * 0.25);
   for (const side of ['p', 'e'] as const) {
     const pre = side === 'p' ? 'player' : 'enemy';
@@ -1663,19 +1658,10 @@ function setBattleStatusOpen(open: boolean) {
   $('btn-battle-status').setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
-function moonSkillInvolved(): boolean {
-  if (!G) return false;
-  return G.board.flat().some(pc => pc && YOKAI[pc.id].skill.kind === 'moon')
-    || (['p', 'e'] as const).some(side => Object.keys(G!.hands[side]).some(id => YOKAI[id].skill.kind === 'moon'));
-}
-
 function updateBattleStatusBadge() {
   const badge = $('battle-status-badge');
   if (!G) { badge.classList.add('hidden'); return; }
-  const hunger = Game.hungerActive(G);
-  const full = moonSkillInvolved() && Game.moonPhase(G) === MOON_CYCLE - 1;
-  badge.classList.toggle('hidden', !(hunger || full));
-  badge.classList.toggle('alert-moon', full && !hunger);
+  badge.classList.toggle('hidden', !Game.hungerActive(G));
 }
 
 function updateHungerHUD() {
@@ -1694,24 +1680,6 @@ function updateHungerHUD() {
     const left = Game.hungerTurnsLeft(G, 'p');
     $('hunger-label').textContent = left === 0 ? '飢餓まであと0' : `飢餓まであと${left}`;
   }
-  updateBattleStatusBadge();
-}
-
-/* 月齢表示: moonスキル持ちが対局に絡む時だけパネルに出す。満月は盤ごと月光に染める */
-const MOON_ICONS = ['🌑', '🌓', '🌔', '🌕'] as const;
-function updateMoonHUD() {
-  const hud = $('moon-hud');
-  const involved = moonSkillInvolved();
-  hud.classList.toggle('hidden', !involved);
-  const full = involved && Game.moonPhase(G!) === MOON_CYCLE - 1;
-  $('board-frame').classList.toggle('moonlit', full);
-  if (involved) {
-    const phase = Game.moonPhase(G!);
-    $('moon-icon').textContent = MOON_ICONS[phase] ?? MOON_ICONS[0];
-    const nights = Game.nightsUntilFullMoon(G!);
-    $('moon-label').textContent = full ? '満月 ― 味方の取りが会心!' : `${MOON_PHASES[phase]}(満月まで${nights}夜)`;
-  }
-  hud.classList.toggle('full-moon', full);
   updateBattleStatusBadge();
 }
 
@@ -2602,12 +2570,11 @@ async function animCapture(ev: CaptureEvent) {
   const vTier = rarityTier(ev.victim.id);
   const vScale = TIER_SCALE[vTier];
   const passiveEffects = ev.effects ?? [];
-  /* 会心系(crit/rush/moon/heads)の発動 = "当たり"。月の主は攻撃駒以外の大将オーラでも乗る */
-  const moonHit = ev.procs.some(p => p.name === '月の主');
-  const jackpot = (ev.procs.some(p => p.name === aSkill.name) && JACKPOT_KINDS.has(aSkill.kind)) || moonHit;
-  const multSub = moonHit ? '×2'
-    : !ev.procs.some(p => p.name === aSkill.name) ? undefined
-    : (aSkill.kind === 'crit' || aSkill.kind === 'rush' || aSkill.kind === 'moon') ? `×${aSkill.mult}`
+  /* 会心系(crit/rush/heads)の発動 = "当たり"。残り香は攻撃駒以外の大将オーラでも乗る */
+  const scentHit = ev.procs.some(p => p.name === '妖狐の残り香');
+  const jackpot = ev.procs.some(p => p.name === aSkill.name) && JACKPOT_KINDS.has(aSkill.kind);
+  const multSub = !ev.procs.some(p => p.name === aSkill.name) ? undefined
+    : (aSkill.kind === 'crit' || aSkill.kind === 'rush') ? `×${aSkill.mult}`
     : aSkill.kind === 'zone' ? `+${aSkill.bonus}` : undefined;
 
   /* 通算発動記録(自分のスキル・覚醒・共鳴のみ) */
@@ -2621,7 +2588,7 @@ async function animCapture(ev: CaptureEvent) {
   for (const proc of ev.procs) {
     const isSkillProc = proc.name === aSkill.name;
     if (BOSS_AURA_CUTIN_PROCS.has(proc.name)) {
-      const color = proc.name === '月の主' ? SKILL_KIND_FX.moon[1]
+      const color = proc.name === '妖狐の残り香' ? SKILL_KIND_FX.scent[1]
         : proc.name === '百鬼夜行の総帥' ? SKILL_KIND_FX.legion[1]
         : kindFx[1];
       FX.floatLabel(c.x, c.y - 36, `${proc.name} ${proc.text}`, color);
@@ -2687,21 +2654,18 @@ async function animCapture(ev: CaptureEvent) {
   if (special) FX.ring(c.x, c.y, special[2], 18, big ? 100 : 70);
   FX.shockwave(c.x, c.y, colors[0], big ? 16 : 9);
   /* 系統ごとの署名エフェクト(撃破に重ねる。量はレアリティでスケール) */
-  if (ev.procs.some(p => p.name === aSkill.name) || moonHit || ev.procs.some(p => p.name === '百鬼夜行の総帥')) {
+  if (ev.procs.some(p => p.name === aSkill.name) || scentHit || ev.procs.some(p => p.name === '百鬼夜行の総帥')) {
     if (aSkill.kind === 'crit') {
       /* 炎: 立ち昇る火柱+火の粉 */
       FX.pillar(c.x, c.y, kindFx);
       if (tier >= 2) setTimeout(() => FX.pillar(c.x, c.y, kindFx), 140);
       FX.ring(c.x, c.y, kindFx[2], Math.round(18 * scale), 110);
       setTimeout(() => FX.burst(c.x, c.y, [...kindFx], Math.round(26 * scale), 9), 120);
-    } else if (aSkill.kind === 'moon' || moonHit) {
-      /* 月光: 天から降る光柱+藍紫の月輪 */
-      const moonFx = SKILL_KIND_FX.moon;
-      FX.pillar(c.x, c.y, moonFx);
-      setTimeout(() => FX.pillar(c.x, c.y, moonFx), 140);
-      FX.ring(c.x, c.y, moonFx[0], 22, 130);
-      FX.converge(c.x, c.y, moonFx[1], Math.round(18 * scale), 120);
-      setTimeout(() => FX.burst(c.x, c.y, [...moonFx], Math.round(28 * scale), 8.5), 120);
+    } else if (aSkill.kind === 'scent' || scentHit) {
+      /* 妖狐の残り香: 金の狐火が輪になる */
+      const foxFx = SKILL_KIND_FX.scent;
+      FX.ring(c.x, c.y, foxFx[1], 22, 120);
+      FX.burst(c.x, c.y, [...foxFx], Math.round(18 * scale), 7);
     } else if (aSkill.kind === 'heads') {
       /* 八岐の首: 多段斬撃の連打 */
       FX.slash(c.x, c.y, true);
