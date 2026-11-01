@@ -8,7 +8,7 @@ import { apiError } from '../lib/errors';
 import { gameDate, gameWeek } from '../lib/time';
 import { currencyLogStmt, getProfile, isConstraintError, SOLO_WIN_DAILY_CAP, TICKETS_CAP } from '../db';
 import { authRequired } from '../middleware';
-import { HYAKKI_MIN_DURATION_MS } from '../../../shared/hyakki';
+import { HYAKKI_MIN_DURATION_MS, elapsedSincePending } from '../../../shared/hyakki';
 import type { HyakkiProgress } from '../../../shared/hyakki';
 
 export const soloRoutes = new Hono<AppEnv>();
@@ -107,9 +107,9 @@ soloRoutes.post('/solo/hyakki/result', authRequired, async c => {
 
   const now = Date.now();
   const week = gameWeek(new Date(now));
-  /* 週を跨いだ対局は新週側で0から数える。最短時間未満の勝利は負け扱い */
+  /* 週を跨いだ対局は新週側で0から数える。受理直後の連打だけ負け扱い */
   const carried = p.hyakki_week === week ? p.hyakki_streak : 0;
-  const elapsed = now - Date.parse(p.hyakki_pending_at);
+  const elapsed = elapsedSincePending(p.hyakki_pending_at, now);
   const streak = body.win && elapsed >= HYAKKI_MIN_DURATION_MS ? carried + 1 : 0;
 
   await db.batch([

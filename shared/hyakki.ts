@@ -6,8 +6,19 @@ export const HYAKKI_RANK_DIFFICULTY = 'hard';
 export const HYAKKI_RANKING_TOP = 20;
 /** 「先週の百鬼夜行」の掲載数 */
 export const HYAKKI_LAST_WEEK_TOP = 3;
-/** 開始申告からこの時間未満の勝利報告は負け扱い(スクリプト連打対策) */
-export const HYAKKI_MIN_DURATION_MS = 30_000;
+/** 開始の受理からこの時間未満の勝利報告は負け扱い(同一瞬間の連打対策)。
+ *  盤面が小さい百鬼夜行は開幕演出のあと数手で終わる。数十秒を下限にすると
+ *  正当な勝利が連勝に入らない。クライアントは受理後この時間を空けてから勝利を送る。 */
+export const HYAKKI_MIN_DURATION_MS = 2_000;
+
+/** start 申告時刻から now までの経過ミリ秒。解釈できなければ NaN。
+ *  ISO 8601 と、D1 が返すことのある SQLite datetime(空白区切り・UTC) の両方を受ける。 */
+export function elapsedSincePending(pendingAt: string, now: number): number {
+  const trimmed = pendingAt.trim();
+  const sqlite = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d+)?)$/.exec(trimmed);
+  const parsed = Date.parse(sqlite ? `${sqlite[1]}T${sqlite[2]}Z` : trimmed);
+  return Number.isFinite(parsed) ? now - parsed : Number.NaN;
+}
 /** 先週1位への限定異装報酬(通貨なし・見た目のみ: doc 21) */
 export const HYAKKI_REWARD_YOKAI_ID = 'kyubi_hasha';
 

@@ -587,7 +587,7 @@ describe('百鬼夜行 週間連勝ランキング(doc 21)', () => {
     api('/v1/solo/hyakki/start', { method: 'POST', token, body: '{}' });
   const hyakkiResult = (token: string, win: unknown) =>
     api('/v1/solo/hyakki/result', { method: 'POST', token, body: JSON.stringify({ win }) });
-  /* 最短対局時間(30秒)を満たすため、start申告を過去に戻す */
+  /* 最短対局時間(2秒)を満たすため、start申告を過去に戻す */
   const backdatePending = (userId: string, secondsAgo = 60) =>
     env.DB.prepare('UPDATE user_profiles SET hyakki_pending_at = ?2 WHERE user_id = ?1')
       .bind(userId, new Date(Date.now() - secondsAgo * 1000).toISOString()).run();
@@ -628,12 +628,34 @@ describe('百鬼夜行 週間連勝ランキング(doc 21)', () => {
     expect(start.body.currentStreak).toBe(2);
   });
 
-  it('開始から30秒未満の勝利報告は負け扱い(連打対策)', async () => {
+  it('開始直後の勝利報告は負け扱い(連打対策)', async () => {
     const g = await createGuest();
     await hyakkiStart(g.accessToken);
     const r = await hyakkiResult(g.accessToken, true);
     expect(r.status).toBe(200);
     expect(r.body.currentStreak).toBe(0);
+  });
+
+  it('数秒で終わった勝利も連勝に数える', async () => {
+    const g = await createGuest();
+    await hyakkiStart(g.accessToken);
+    await backdatePending(g.userId, 3);
+    const r = await hyakkiResult(g.accessToken, true);
+    expect(r.status).toBe(200);
+    expect(r.body.currentStreak).toBe(1);
+    expect(r.body.bestStreak).toBe(1);
+    expect(r.body.rank).toBeGreaterThan(0);
+  });
+
+  it('SQLite datetime形式の開始時刻でも経過を測って連勝に数える', async () => {
+    const g = await createGuest();
+    await hyakkiStart(g.accessToken);
+    const stamp = new Date(Date.now() - 5000).toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
+    await env.DB.prepare('UPDATE user_profiles SET hyakki_pending_at = ?2 WHERE user_id = ?1')
+      .bind(g.userId, stamp).run();
+    const r = await hyakkiResult(g.accessToken, true);
+    expect(r.status).toBe(200);
+    expect(r.body.currentStreak).toBe(1);
   });
 
   it('結果未報告のまま再開始すると前局は負け扱い(劣勢リロード対策)', async () => {
