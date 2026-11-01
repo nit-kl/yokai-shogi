@@ -79,7 +79,7 @@ const STATIC: Record<string, string> = {
   '妖怪': 'Yokai', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
   'ほかの対局': 'Other Battles', '道場・対戦・試陣': 'Dojo, matches, and trials',
   'ガチャと編成': 'Summon and formation', '言語': 'Language',
-  '連勝チャレンジ': 'Win Streak', '編成': 'Formation',
+  '連勝チャレンジ': 'Win Streak', '編成': 'Formation', 'トレーニング': 'Training',
   '猛者と競う': 'Face other players', 'オンライン対戦': 'Online Battle',
   'メニュー': 'Menu',
   '妖怪ガチャ': 'Yokai Summon', '編 成': 'Formation', '駒一覧': 'Compendium',
@@ -264,7 +264,8 @@ const STATIC: Record<string, string> = {
   '敵陣で成り、成駒で大将を討て': 'Promote in the enemy camp, then capture the general',
   '初期選択またはガチャ': 'Starter choice or summon', 'ガチャ': 'Summon',
 
-  '神妖 顕現': 'Divine Yokai Manifested', '大妖怪 降臨': 'Great Yokai Descends', '希少妖怪 出現': 'Rare Yokai Appears',
+  '神妖 顕現': 'Divine Yokai Manifested', '鬼神 顕現': 'Kishin Manifested', '大妖怪 降臨': 'Great Yokai Descends', '希少妖怪 出現': 'Rare Yokai Appears',
+  '成った': 'Promoted',
   'マス効果': 'Square effect', '永久': 'Permanent', '自軍の刻印': 'Your mark', '敵軍の刻印': 'Enemy mark',
 };
 Object.entries(STATIC).forEach(([ja, en]) => add(ja, en));
@@ -369,7 +370,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <ul>
       <li>A short tap selects and moves. <b>Press and hold</b> for details. Focus a lightning mark to see lingering lightning</li>
       <li>Capturing deals damage equal to your yokai's <b>attack</b></li>
-      <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture, summon, or awakening resets it)</li>
+      <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture or summon resets it)</li>
     </ul>
     <h3>Hand and Promotion</h3>
     <ul>
@@ -379,7 +380,6 @@ const HTML_OVERRIDES: Record<string, string> = {
     <h3>Worth Remembering</h3>
     <ul>
       <li><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP each move. A capture resets it. Check remaining moves in <b>Status</b></li>
-      <li><b>SSR Awakening:</b> Captures fill a gauge. Once full, spend a turn to empower one friendly SSR, once per battle (1.5× ATK for three of your turns)</li>
     </ul>
     <h3>Modes</h3>
     <ul>
@@ -391,7 +391,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     </ul>
     <p class="rules-more"><a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">How-to Guide</a></p>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',
-  '.pieces-note': 'Review each yokai’s movement, abilities, SSR traits, awakening, and resonances. Promotion grants 1.5× attack and stronger movement.',
+  '.pieces-note': 'Review each yokai’s movement and abilities. Promotion grants 1.5× attack and stronger movement.',
   '#modal-consent .link-desc': 'Online features store an account ID, play data, and access logs. The Steam version sends a Session Ticket to Valve to authenticate with your Steam ID. On the browser version, optional rewarded ads may send device and connection information to an ad network. The Steam version has no ads. Review the policies below before accepting.',
   '#modal-link .link-desc:nth-of-type(1)': 'Clearing browser data can erase your progress. Register a <b>passkey</b> or create a <b>transfer code</b> so you can restore it.',
   '#modal-link .link-desc:nth-of-type(2)': 'Use this code to move your data to another device or browser. <b>Store it somewhere safe.</b>',

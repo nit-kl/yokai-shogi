@@ -17,6 +17,31 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-11-01-drop-awaken-resonance',
+    type: 'update',
+    title: '対局ルールを簡潔にしました',
+    titleEn: 'Battle Rules Are Now Simpler',
+    body: [
+      '対局を読みやすくするため、次の仕組みをなくしました。',
+      '',
+      '・覚醒ゲージと、手番を使ったSSRの強化',
+      '・特定の駒を組にしたときの因縁',
+      '',
+      '駒ごとの動きとスキル、成り、コンボ、飢餓の夜はそのままです。',
+    ].join('\n'),
+    bodyEn: [
+      'These systems have been removed so battles are easier to follow.',
+      '',
+      '• The awakening gauge, and spending a turn to strengthen an SSR',
+      '• Pair bonuses between specific yokai',
+      '',
+      'Each yokai’s movement and skill, promotion, combos, and the Night of Hunger remain.',
+    ].join('\n'),
+    publishedAt: '2026-11-01T09:40:00+09:00',
+    priority: 'normal',
+    showUntil: '2026-12-01T23:59:59+09:00',
+  },
+  {
     id: '2026-11-01-ingyo-nerf',
     type: 'update',
     title: '隱神刑部の性能を調整しました',

@@ -401,11 +401,69 @@ html[data-script="latn"] .title-sub-top {
 .title-main-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   width: min(100%, 420px);
 }
 .title-main-actions > .btn { width: 100%; }
-.title-side-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.title-play-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.title-play-row > .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.7rem;
+}
+.title-training {
+  width: 100%;
+  padding: 6px 8px 8px;
+  border: 1px solid rgba(196, 160, 232, 0.32);
+  border-radius: 6px;
+  background: rgba(16, 10, 28, 0.42);
+}
+.title-training-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  color: #d4c4ee;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  line-height: 1;
+}
+.title-training-label::before,
+.title-training-label::after {
+  content: "";
+  flex: 1;
+  max-width: 3.2rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(196, 160, 232, 0.7));
+}
+.title-training-label::after { transform: scaleX(-1); }
+.title-training-actions,
+.title-side-actions {
+  display: grid;
+  gap: 8px;
+}
+.title-training-actions { grid-template-columns: 1fr 1fr; }
+.title-side-actions { grid-template-columns: 1fr 1fr 1fr; }
+.title-training-actions .btn,
+.title-side-actions .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.55rem;
+  white-space: normal;
+  line-height: 1.15;
+}
 .title-main-actions .btn {
   position: relative; min-width: 0; overflow: hidden;
   padding: 0.7em 1em;
@@ -419,15 +477,18 @@ html[data-script="latn"] .title-sub-top {
   min-height: 3.6rem;
   font-size: clamp(1.15rem, 3.6vw, 1.4rem);
 }
+.title-main-actions .title-action-quiet,
+.title-training-actions .btn {
+  letter-spacing: 0.04em;
+  text-indent: 0;
+  font-size: clamp(0.82rem, 2.4vw, 0.98rem);
+  padding: 0.5em 0.25em;
+}
 .title-main-actions .title-action-quiet {
   color: #f6efe2;
   border-color: rgba(232,196,106,0.38);
   background: linear-gradient(160deg, rgba(52, 40, 74, 0.92), rgba(22, 16, 36, 0.94));
   box-shadow: inset 0 1px rgba(255,255,255,0.08);
-  letter-spacing: 0.06em;
-  text-indent: 0;
-  font-size: clamp(0.92rem, 2.6vw, 1.05rem);
-  padding: 0.72em 0.35em;
 }
 .title-main-actions .btn small {
   margin: 0 0 0.25em; color: inherit; opacity: 0.65;
@@ -465,6 +526,27 @@ html[data-script="latn"] .title-sub-top {
   color: #e7f6ff; border-color: rgba(120,190,220,0.55);
   background: linear-gradient(150deg, #2c5464, #1a3040 58%, #101820);
   box-shadow: 0 0 20px rgba(120,190,220,0.16), inset 0 1px rgba(255,255,255,0.12);
+}
+@media (min-width: 840px) {
+  .title-center { width: min(92vw, 640px); }
+  .title-logo { width: min(100%, 460px); }
+  .title-main-actions { width: min(100%, 580px); }
+  .title-play-row:has(#btn-online:not(.hidden)) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .title-play-row:has(#btn-online:not(.hidden)) > #btn-online {
+    height: 100%;
+    min-height: 4.4rem;
+  }
+}
+@media (max-height: 760px) {
+  .title-logo { width: min(78%, 320px); margin-bottom: 0.12em; }
+  .title-center { padding-top: 12px; padding-bottom: 12px; }
+  .title-action-hero { min-height: 2.7rem; }
+  .title-training { padding: 4px 6px 6px; }
+  .title-training-label { margin-bottom: 4px; }
 }
 .title-sheet { width: min(92vw, 420px); }
 .modal-box.title-sheet { animation: sheetIn 0.2s ease-out; }
@@ -3832,8 +3914,13 @@ html[data-script="latn"] .skip-warning-box h2 {
   .title-catch { margin-bottom: 0.45em; font-size: 0.62rem; letter-spacing: 0.12em; }
   .title-lead { margin-bottom: 0.65em; font-size: 0.66rem; line-height: 1.5; }
   .title-main-actions { gap: 7px; }
-  .title-main-actions .btn { padding: 0.62em 0.35em; font-size: 0.88rem; }
-  .title-action-hero { min-height: 3.1rem; font-size: 1.05rem; }
+  .title-play-row { gap: 7px; }
+  .title-main-actions .btn { padding: 0.55em 0.25em; font-size: 0.86rem; }
+  .title-action-hero { min-height: 2.8rem; font-size: 1.02rem; }
+  .title-training { padding: 4px 6px 6px; }
+  .title-training-label { font-size: 0.62rem; letter-spacing: 0.14em; text-indent: 0.14em; }
+  .title-training-actions .btn,
+  .title-side-actions .btn { min-height: 2.35rem; font-size: 0.78rem; padding: 0.4em 0.15em; }
   .title-gear .announcement-badge { min-width: 15px; height: 15px; font-size: 0.55rem; }
   .title-profile { top: 8px; left: 8px; max-width: 38vw; padding: 4px 10px; }
   .title-currency { top: 8px; right: 8px; gap: 4px; font-size: 0.66rem; }

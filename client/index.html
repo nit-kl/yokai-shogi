@@ -103,12 +103,21 @@
       </h1>
       <div class="title-main-actions">
         <button id="btn-start" class="btn title-action-primary title-action-hero" type="button">連勝チャレンジ</button>
-        <button id="btn-online" class="btn title-action-online hidden" type="button">オンライン対戦</button>
+        <div class="title-play-row">
+          <button id="btn-online" class="btn title-action-online hidden" type="button">オンライン対戦</button>
+          <section class="title-training" aria-labelledby="title-training-label">
+            <p id="title-training-label" class="title-training-label">トレーニング</p>
+            <div class="title-training-actions">
+              <button id="btn-dojo" class="btn title-action-dojo" type="button">妖怪道場</button>
+              <button id="btn-trials" class="btn title-action-trial" type="button">試陣</button>
+            </div>
+          </section>
+        </div>
         <div class="title-side-actions">
           <button id="btn-formation" class="btn title-action-quiet" type="button">編成</button>
           <button id="btn-gacha" class="btn title-action-quiet" type="button">ガチャ</button>
+          <button id="btn-ranking" class="btn title-action-quiet" type="button">ランキング</button>
         </div>
-        <button id="btn-ranking" class="btn title-action-quiet" type="button">ランキング</button>
       </div>
     </div>
   </div>
@@ -118,8 +127,6 @@
       <h2 id="settings-sheet-title">メニュー</h2>
       <div class="title-sheet-list">
         <button id="btn-friend" class="title-sheet-item hidden" type="button">フレンドマッチ</button>
-        <button id="btn-dojo" class="title-sheet-item" type="button">妖怪道場</button>
-        <button id="btn-trials" class="title-sheet-item" type="button">試陣</button>
         <button id="btn-pieces" class="title-sheet-item" type="button">駒一覧</button>
         <button id="btn-rules" class="title-sheet-item" type="button">遊び方</button>
         <button id="btn-announcements" class="title-sheet-item" type="button">お知らせ<i class="announcement-badge hidden"></i></button>
@@ -305,7 +312,7 @@
         <h2 class="menu-title">駒一覧</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p class="pieces-note">駒ごとの動き、能力、SSR特性、覚醒技、因縁を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
+      <p class="pieces-note">駒ごとの動きと能力を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
       <div class="pieces-toolbar">
         <label class="pieces-search">
           <span>探す</span>
@@ -378,7 +385,6 @@
             <div class="hp-fill" id="enemy-hp-fill"></div>
             <div class="hp-text" id="enemy-hp-text">3000 / 3000</div>
           </div>
-          <div class="awaken-row" id="enemy-awaken-row"><span class="awaken-label">覚醒</span><span class="awaken-pips" id="enemy-awaken-pips"></span></div>
           <div class="hand-tray" id="enemy-hand"></div>
         </div>
         <div class="combo-badge" id="enemy-combo"></div>
@@ -407,10 +413,6 @@
             <div class="hp-ghost" id="player-hp-ghost"></div>
             <div class="hp-fill" id="player-hp-fill"></div>
             <div class="hp-text" id="player-hp-text">3000 / 3000</div>
-          </div>
-          <div class="awaken-row" id="player-awaken-row">
-            <span class="awaken-label">覚醒</span><span class="awaken-pips" id="player-awaken-pips"></span>
-            <button id="btn-awaken" class="btn-awaken hidden" type="button">覚醒する</button>
           </div>
           <div class="hand-tray" id="player-hand"></div>
         </div>
@@ -799,7 +801,7 @@
         <ul>
           <li>短いタップで駒を選び、動かします。説明は<b>長押し</b>。残雷は雷マークを選ぶと確認できます</li>
           <li>敵を取ると、取った自分の駒の<b>攻撃力</b>ぶん相手の魂力を削ります</li>
-          <li>連続で取ると<b>コンボ</b>になり、ダメージが最大2倍まで上がります（取らない手・召喚・覚醒でリセット）</li>
+          <li>連続で取ると<b>コンボ</b>になり、ダメージが最大2倍まで上がります（取らない手・召喚でリセット）</li>
         </ul>
         <h3>持ち駒と成り</h3>
         <ul>
@@ -809,7 +811,6 @@
         <h3>覚えておくこと</h3>
         <ul>
           <li><b>飢餓の夜:</b> 双方あわせて8手取らないと始まり、以後毎手お互いの魂力が50減ります。駒を取るとリセット。残りは対局中の<b>状</b>で確認できます</li>
-          <li><b>SSR覚醒:</b> 取り合いでゲージが溜まります。満タンなら手番を使って盤上の自軍SSRを1局1回強化（自分の手番3回のあいだATK×1.5）</li>
         </ul>
         <h3>遊べるモード</h3>
         <ul>

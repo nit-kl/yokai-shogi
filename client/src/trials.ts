@@ -49,10 +49,10 @@ export const TRIALS: Trial[] = [
   {
     id: 'trial.oni-feast',
     kind: 'archetype',
-    name: '鬼の宴',
-    nameEn: 'Oni Feast',
-    watch: '酒呑童子と茨木童子の共鳴、斬られても戻る腕',
-    watchEn: 'Shuten-doji and Ibaraki-doji resonate. The severed arm still returns',
+    name: '鬼の軍勢',
+    nameEn: 'Oni Host',
+    watch: '酒呑童子の回復と、茨木童子の戻る腕',
+    watchEn: 'Shuten-doji heals, and Ibaraki-doji’s arm returns',
     bossId: 'shuten',
     enemyRows: [
       ['tengu', 'ibaraki', 'shuten', 'aooni', 'raiju'],
@@ -62,10 +62,10 @@ export const TRIALS: Trial[] = [
   {
     id: 'trial.fox-bond',
     kind: 'archetype',
-    name: '妖狐相伝',
-    nameEn: 'Fox Bond',
-    watch: '九尾と玉藻前。片方が落ちたあとの確定会心と、誘いのテンポ',
-    watchEn: 'Nine-Tails and Tamamo-no-Mae. A guaranteed critical after one falls, and the tempo of Charm',
+    name: '妖狐',
+    nameEn: 'Foxfire',
+    watch: '九尾の満月と、玉藻前の誘い',
+    watchEn: 'Nine-Tails under the full moon, and Tamamo-no-Mae’s charm',
     bossId: 'kyubi',
     enemyRows: [
       ['nekomata', 'tamamo', 'kyubi', 'inugami', 'kamaitachi'],

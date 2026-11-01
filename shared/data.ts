@@ -593,7 +593,7 @@ YOKAI.shuten_kishin = {
   img: img('shuten-kishin'),
   imgSm: imgSm('shuten-kishin'),
   variantOf: 'shuten',
-  summonTitle: '鬼神 覚醒',
+  summonTitle: '鬼神 顕現',
   summonColors: ['#ffdbc2', '#c51c2b', '#8d47d6'],
   awakenName: '鬼神羅刹・極',
 };
@@ -652,18 +652,7 @@ export interface Resonance {
   effect: 'oniFeast' | 'foxBond';
   colors: readonly [string, string, string];
 }
-export const RESONANCES: readonly Resonance[] = [
-  {
-    pair: ['shuten', 'ibaraki'], name: '鬼の宴', effect: 'oniFeast',
-    desc: '両者が盤上にいると、酒蔵の回復+25',
-    colors: ['#ffdbc2', '#ff4d4d', '#8d47d6'],
-  },
-  {
-    pair: ['kyubi', 'tamamo'], name: '妖狐相伝', effect: 'foxBond',
-    desc: '片方が取られると、残った方の次の取りが確定会心',
-    colors: ['#fff8df', '#ff9d3c', '#b21f32'],
-  },
-];
+export const RESONANCES: readonly Resonance[] = [];
 /* 異装を通常版に正規化(共鳴・図鑑グルーピング用) */
 export const baseIdOf = (id: string): string => YOKAI[id]?.variantOf ?? id;
 

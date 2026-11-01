@@ -5,10 +5,10 @@
 import {
   COLS, ROWS, MAX_HP, ZONE_DEPTH, YOKAI, RARITY_INFO,
   ALL_IMAGES, ENEMY_BOSS, GACHA_POOL, SETUP,
-  RESONANCES, MOON_PHASES, baseIdOf,
+  MOON_PHASES,
 } from '../../shared/data';
 import type { Rarity, Side } from '../../shared/data';
-import { AWAKEN_ATK, AWAKEN_MAX, Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
+import { Game, HUNGER_DRAIN, MOON_CYCLE } from '../../shared/game';
 import type { Action, Ember, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
 import { chooseCPUAction } from './ai-client';
@@ -578,19 +578,6 @@ function wireButtons() {
   $('btn-mute').onclick = () => {
     AudioSys.init();
     MenuUI.openAudioSettings();
-  };
-  $('btn-awaken').onclick = () => {
-    if (!G || G.winner || busy || G.turn !== 'p' || !Game.awakenReady(G, 'p')) return;
-    if (sel && sel.kind === 'awaken') { clearSel(); return; } // 再押下でキャンセル
-    const targets = Game.awakenTargets(G, 'p');
-    if (targets.length === 0) return;
-    clearSel();
-    /* 対象が1体だけなら即発動、複数なら対象選択モード */
-    if (targets.length === 1) { doAction({ kind: 'awaken', to: targets[0] }); return; }
-    sel = { kind: 'awaken', targets };
-    AudioSys.play('select');
-    for (const t of targets) cellEl(t.x, t.y).classList.add('hl-awaken');
-    syncMoveMarks();
   };
     $('btn-resign').onclick = () => {
     if (!G || G.winner || (!onlineSide && busy)) return;
@@ -1540,17 +1527,6 @@ function setHydraBadge(el: HTMLElement, pc: { id: string; hydra?: number }) {
 /* 状態とDOMを同期 */
 function renderAll() {
   const seen = new Set<number>();
-  /* 因縁共鳴中の駒uid(両者が盤上に揃っているペア) */
-  const resonating = new Set<number>();
-  for (const side of ['p', 'e'] as const) {
-    for (const rs of RESONANCES) {
-      const members = G!.board.flat().filter(
-        (pc): pc is NonNullable<typeof pc> => !!pc && pc.owner === side && rs.pair.includes(baseIdOf(pc.id)));
-      if (new Set(members.map(pc => baseIdOf(pc.id))).size === 2) {
-        members.forEach(pc => resonating.add(pc.uid));
-      }
-    }
-  }
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       const pc = G!.board[y][x];
@@ -1559,9 +1535,6 @@ function renderAll() {
       const el = pieceEls.get(pc.uid) || makePieceEl(pc);
       positionPiece(el, x, y);
       if (pc.promoted) setPromoted(el);
-      el.classList.toggle('awakened', Game.isAwakened(pc, G!.plies ?? 0));
-      el.classList.toggle('enraged', pc.enraged === true);
-      el.classList.toggle('resonating', resonating.has(pc.uid));
       el.classList.toggle('owner-p', pc.owner === 'p');
       el.classList.toggle('owner-e', pc.owner === 'e');
       setHydraBadge(el, pc);
@@ -1649,7 +1622,6 @@ function updateHUD() {
     updateCombo(side);
   }
   updateMoonHUD();
-  updateAwakenHUD();
   updateHungerHUD();
   updateBattleWorld();
 }
@@ -1741,24 +1713,6 @@ function updateMoonHUD() {
   }
   hud.classList.toggle('full-moon', full);
   updateBattleStatusBadge();
-}
-
-/* 覚醒ゲージ: 取り合いで両陣営に溜まる。自分は満タンでボタン点灯 */
-function updateAwakenHUD() {
-  for (const side of ['p', 'e'] as const) {
-    const st = G!.awaken?.[side] ?? { gauge: 0, used: false };
-    const pips = $(`${side === 'p' ? 'player' : 'enemy'}-awaken-pips`);
-    pips.innerHTML = '';
-    for (let i = 0; i < AWAKEN_MAX; i++) {
-      const pip = document.createElement('span');
-      pip.className = 'awaken-pip' + (st.used ? ' pip-used' : i < st.gauge ? ' pip-filled' : '');
-      pips.appendChild(pip);
-    }
-    $(`${side === 'p' ? 'player' : 'enemy'}-awaken-row`).classList.toggle('awaken-used', st.used);
-  }
-  const btn = $('btn-awaken');
-  const ready = Game.awakenReady(G!, 'p') && Game.awakenTargets(G!, 'p').length > 0 && !G!.winner;
-  btn.classList.toggle('hidden', !ready);
 }
 
 function renderHand(side: Side) {
@@ -2172,27 +2126,7 @@ const summonAnnounced = new Set<string>();
 /* 因縁共鳴の成立アナウンス(1対局につき陣営×ペアごとに1回) */
 const resonanceAnnounced = new Set<string>();
 async function announceResonances() {
-  if (!G || G.winner) return;
-  for (const side of ['p', 'e'] as const) {
-    for (const rs of RESONANCES) {
-      const members = G.board.flat().filter(
-        (pc): pc is NonNullable<typeof pc> => !!pc && pc.owner === side && rs.pair.includes(baseIdOf(pc.id)));
-      if (new Set(members.map(pc => baseIdOf(pc.id))).size < 2) continue;
-      const key = `${side}:${rs.name}`;
-      if (resonanceAnnounced.has(key)) continue;
-      resonanceAnnounced.add(key);
-      const lead = members[0];
-      AudioSys.play('summon');
-      FX.flash(`color-mix(in srgb, ${rs.colors[1]} 30%, transparent)`, 240);
-      await FX.cutin(yokaiOf(lead.id)?.img ?? '', `共鳴【${rs.name}】`, rs.desc, 'summon', [...rs.colors], 3);
-      for (const pc of members) {
-        const el = pieceEls.get(pc.uid);
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        FX.ring(rect.left + rect.width / 2, rect.top + rect.height / 2, rs.colors[1], 16, 70);
-      }
-    }
-  }
+  void resonanceAnnounced;
 }
 
 async function summonCutin(id: string, at?: Pos) {
@@ -2572,7 +2506,7 @@ async function animEvent(ev: GameEvent) {
       el?.classList.add('awakening');
       await sleep(420);
       AudioSys.play('summon');
-      await FX.cutin(def?.img ?? '', `覚醒【${ev.name}】`, `${yokaiDisplayName(ev.id)} ― 魂力解放 ATK×${AWAKEN_ATK}`, 'summon', colors, 3);
+      await FX.cutin(def?.img ?? '', ev.name, yokaiDisplayName(ev.id), 'summon', colors, 3);
       AudioSys.play('bighit');
       FX.flash(`color-mix(in srgb, ${colors[0]} 40%, transparent)`, 260);
       FX.pillar(c.x, c.y, colors);
@@ -2604,7 +2538,7 @@ async function animEvent(ev: GameEvent) {
       /* SSR・異装は覚醒カットインを挟む */
       if (special && pc) {
         const def = yokaiOf(pc.id);
-        if (def) await FX.cutin(def.img, `${def.name}【成】`, '覚醒 ― 真の力、解放', 'summon', special, 3);
+        if (def) await FX.cutin(def.img, `${def.name}【成】`, '成った', 'summon', special, 3);
       }
       /* 金屏風の帯が横一閃 → 閃光とともに覚醒 */
       FX.promoteBand(c.y);
@@ -2857,25 +2791,6 @@ async function animCapture(ev: CaptureEvent) {
     AudioSys.play('bighit');
     await sleep(760);
   }
-
-  /* 妖狐相伝: 相方を取られた狐の激怒(次の一撃 確定会心) */
-  if (ev.enrage) {
-    const eDef = YOKAI[ev.enrage.id];
-    const rs = RESONANCES.find(r => r.name === ev.enrage!.name);
-    const colors = rs ? [...rs.colors] : [...SSR_FX_COLORS];
-    const el = pieceEls.get(ev.enrage.uid);
-    FX.flash(`color-mix(in srgb, ${colors[1]} 35%, transparent)`, 220);
-    await FX.cutin(eDef.img, `共鳴【${ev.enrage.name}】`, `${eDef.name}が激怒 ― 次の一撃は確定会心!`, 'skill',
-      colors, 3);
-    if (el) {
-      el.classList.add('enraged');
-      const rect = el.getBoundingClientRect();
-      FX.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, colors, 30, 6);
-      FX.ring(rect.left + rect.width / 2, rect.top + rect.height / 2, colors[1], 16, 70);
-    }
-    if (ev.enrage.owner === 'p') Records.bump(`共鳴【${ev.enrage.name}】`);
-    await sleep(300);
-  }
 }
 
 function updateHP(hp: Record<Side, number>) {
@@ -3115,14 +3030,11 @@ function bossChip(): HTMLSpanElement {
   return type;
 }
 
-/* スキル本文と重ならない追加情報だけ。異装・覚醒・因縁 */
+/* スキル本文と重ならない追加情報。異装だけ */
 function catalogExtraLines(id: string): string[] {
   const def = YOKAI[id];
   const lines: string[] = [];
   if (def.variantOf) lines.push('異装: 性能は通常版と同じ');
-  if (def.awakenName) lines.push(`覚醒: ${def.awakenName}（自ターン3回 ATK×${AWAKEN_ATK}）`);
-  const rs = RESONANCES.find(r => r.pair.includes(baseIdOf(id)));
-  if (rs) lines.push(`因縁【${rs.name}】${rs.desc}`);
   return lines;
 }
 

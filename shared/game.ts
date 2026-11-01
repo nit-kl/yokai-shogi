@@ -228,12 +228,11 @@ export const Game = {
   },
 
   /* ---------- 覚醒(SSR必殺技) ---------- */
-  awakenReady(s: GameState, side: Side): boolean {
-    const st = s.awaken?.[side];
-    return !!st && !st.used && st.gauge >= AWAKEN_MAX;
+  awakenReady(_s: GameState, _side: Side): boolean {
+    return false;
   },
-  isAwakened(pc: Piece, ply: number): boolean {
-    return pc.awakenUntil !== undefined && ply <= pc.awakenUntil;
+  isAwakened(_pc: Piece, _ply: number): boolean {
+    return false;
   },
   awakenTargets(s: GameState, side: Side): Pos[] {
     const out: Pos[] = [];
@@ -596,8 +595,7 @@ export const Game = {
   applyCellar(s: GameState, side: Side, events: GameEvent[]): void {
     const found = this.findSkillOnBoard(s, side, 'cellar');
     if (!found || found.sk.kind !== 'cellar') return;
-    let amount = found.sk.heal;
-    if (this.activeResonance(s, side, found.pc.id)?.effect === 'oniFeast') amount += found.sk.feastHeal;
+    const amount = found.sk.heal;
     const heal = Math.min(MAX_HP - s.hp[side], amount);
     if (heal <= 0) return;
     s.hp[side] += heal;
@@ -830,14 +828,7 @@ export const Game = {
     const procs: SkillProc[] = [];
     const effects: SkillEffect[] = [];
 
-    let base = this.atkOf(attacker);
-    if (this.isAwakened(attacker, ply)) {
-      base = Math.round(base * AWAKEN_ATK);
-      procs.push({
-        name: aDef.awakenName || '覚醒', owner: side, img: aDef.img,
-        text: `覚醒の力 ATK×${AWAKEN_ATK}!`,
-      });
-    }
+    const base = this.atkOf(attacker);
     let mult = 1, bonus = 0;
     const sk = aDef.skill;
     const jammed = this.hasSkill(s, foe, 'jam');
@@ -846,18 +837,15 @@ export const Game = {
     if (jammed && (sk.kind === 'crit' || sk.kind === 'heads' || !!moonLord)) {
       effects.push(...this.activeSkillEffects(s, foe, ['jam']));
     }
-    const enraged = attacker.enraged === true;
-    if (attacker.enraged) delete attacker.enraged;
-
     if (sk.kind === 'crit' && !jammed) {
       const chance = sk.chance;
       if (rng) {
-        if (enraged || rand() < chance) {
+        if (rand() < chance) {
           mult *= sk.mult;
           procs.push({ name: sk.name, owner: side, img: aDef.img, text: `ダメージ${sk.mult}倍!` });
         }
       } else {
-        mult *= enraged ? sk.mult : 1 + chance * (sk.mult - 1);
+        mult *= 1 + chance * (sk.mult - 1);
       }
     } else if (sk.kind === 'heads') {
       const lvl = Math.min(attacker.kills ?? 0, sk.max);
@@ -866,7 +854,7 @@ export const Game = {
         mult *= headsMult;
         if (rng) {
           const label = ['', '二の首', '三の首', '四の首'][lvl] || `${lvl + 1}の首`;
-          procs.push({ name: sk.name, owner: side, img: aDef.img, text: `${label} 覚醒 ×${headsMult.toFixed(1)}!` });
+          procs.push({ name: sk.name, owner: side, img: aDef.img, text: `${label} ×${headsMult.toFixed(1)}!` });
         }
       }
       attacker.kills = (attacker.kills ?? 0) + 1;
@@ -893,13 +881,12 @@ export const Game = {
 
     /* 大将オーラ: 取った駒ではなく盤上の九尾/ぬらりひょんが効く */
     if (moonLord && moonLord.sk.kind === 'moon' && !jammed) {
-      const moonOn = this.isFullMoonPly(ply) || enraged;
-      if (moonOn) {
+      if (this.isFullMoonPly(ply)) {
         mult *= moonLord.sk.mult;
         if (rng) {
           procs.push({
             name: moonLord.sk.name, owner: side, img: moonLord.def.img,
-            text: enraged && !this.isFullMoonPly(ply) ? `相伝の怒り 確定会心 ×${moonLord.sk.mult}!` : `月の主 満月の妖気 ×${moonLord.sk.mult}!`,
+            text: `月の主 満月の妖気 ×${moonLord.sk.mult}!`,
           });
         }
       }
@@ -1070,21 +1057,7 @@ export const Game = {
       explode = { name: vDef.skill.name, img: vDef.img, uid: attacker.uid };
     }
 
-    for (const sd of ['p', 'e'] as const) {
-      const st = s.awaken[sd];
-      if (!st.used) st.gauge = Math.min(AWAKEN_MAX, st.gauge + 1);
-    }
-
-    let enrage: CaptureEvent['enrage'] = null;
-    const vBase = baseIdOf(victim.id);
-    for (const rs of RESONANCES) {
-      if (rs.effect !== 'foxBond' || !rs.pair.includes(vBase)) continue;
-      const partner = this.findPartnerPiece(s, foe, rs, vBase);
-      if (partner && !partner.pc.enraged) {
-        partner.pc.enraged = true;
-        enrage = { uid: partner.pc.uid, id: partner.pc.id, owner: foe, name: rs.name };
-      }
-    }
+    const enrage = null;
 
     s.lastCapturePly = s.plies;
 
