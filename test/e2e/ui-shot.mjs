@@ -61,15 +61,15 @@ if (await page.locator('#vs-label-p').textContent() !== '九尾使い') errors.p
 await waitForBattleInput(page);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 
-// 小鬼(x=1,y=4)を短タップで選択 → 移動ハイライト確認
+// 小鬼は大将の真正面(x=2,y=4)。短タップで選択 → 移動ハイライト確認
 // #board-frame の boardFloat でセルが常に動くため、Playwright の stable 判定を force で迂回する
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
-await cell(1, 4).click({ force: true });
-if (!await cell(1, 4).evaluate(el => el.classList.contains('hl-selected'))) {
+await cell(2, 4).click({ force: true });
+if (!await cell(2, 4).evaluate(el => el.classList.contains('hl-selected'))) {
   errors.push('自駒選択のハイライトが付いていない');
 }
 // 駒説明は長押しで表示（短タップは選択・移動専用）
-await cell(1, 4).click({ force: true, delay: 600 });
+await cell(2, 4).click({ force: true, delay: 600 });
 if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
 if (await page.locator('#piece-info').evaluate(el => el.classList.contains('hidden'))) {
   errors.push('長押しで駒説明パネルが開いていない');
@@ -103,8 +103,8 @@ if (!enemyPos) {
   await page.screenshot({ path: path.join(dir, 'shot-3b-enemy-range.png') });
 }
 
-// (1,3)へ移動 → AIの応手まで待つ
-await cell(1, 3).click({ force: true });
+// 前へ1マス(2,3)へ移動 → AIの応手まで待つ
+await cell(2, 3).click({ force: true });
 await page.waitForTimeout(3500);
 await page.screenshot({ path: path.join(dir, 'shot-4-after-ai.png') });
 
