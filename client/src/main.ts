@@ -339,22 +339,12 @@ function wireButtons() {
     AudioSys.play('click');
     openSolo();
   };
-  $('btn-modes').onclick = () => {
-    AudioSys.play('click');
-    $('modal-modes').classList.remove('hidden');
-  };
-  $('btn-yokai').onclick = () => {
-    AudioSys.play('click');
-    $('modal-yokai').classList.remove('hidden');
-  };
   $('btn-settings').onclick = () => {
     AudioSys.play('click');
     $('modal-settings').classList.remove('hidden');
   };
-  $('btn-modes-close').onclick = () => { AudioSys.play('click'); $('modal-modes').classList.add('hidden'); };
-  $('btn-yokai-close').onclick = () => { AudioSys.play('click'); $('modal-yokai').classList.add('hidden'); };
   $('btn-settings-close').onclick = () => { AudioSys.play('click'); $('modal-settings').classList.add('hidden'); };
-  for (const id of ['modal-modes', 'modal-yokai', 'modal-settings']) {
+  for (const id of ['modal-settings']) {
     const sheet = $(id);
     sheet.addEventListener('click', ev => {
       if (ev.target === sheet) {
@@ -571,7 +561,7 @@ function wireButtons() {
       hideInfo();
       return;
     }
-    for (const id of ['modal-yokai', 'modal-modes', 'modal-settings']) {
+    for (const id of ['modal-settings']) {
       if (!$(id).classList.contains('hidden')) {
         $(id).classList.add('hidden');
         return;
@@ -812,7 +802,7 @@ function renderHyakkiReward() {
   applyYokaiImage($<HTMLImageElement>('hyakki-reward-img'), HYAKKI_REWARD_YOKAI_ID);
   $('hyakki-reward-name').textContent = yokaiDisplayName(HYAKKI_REWARD_YOKAI_ID);
   $('hyakki-reward-desc').textContent =
-    `限定異装（性能は${baseName}と同じ）。月曜リセット後、先週1位へ自動授与。タップで詳細。`;
+    `限定異装（性能は${baseName}と同じ）`;
   if (def?.summonColors) {
     card.style.setProperty('--reward-light', def.summonColors[0]);
     card.style.setProperty('--reward-primary', def.summonColors[1]);

@@ -102,37 +102,14 @@
         <img src="/assets/ui/title-logo.webp" alt="百鬼盤" width="986" height="483" draggable="false">
       </h1>
       <div class="title-main-actions">
-        <button id="btn-start" class="btn title-action-primary title-action-hero">連勝チャレンジ</button>
+        <button id="btn-start" class="btn title-action-primary title-action-hero" type="button">連勝チャレンジ</button>
+        <button id="btn-online" class="btn title-action-online hidden" type="button">オンライン対戦</button>
         <div class="title-side-actions">
-          <button id="btn-modes" class="btn title-action-quiet" type="button">ほかの対局</button>
-          <button id="btn-yokai" class="btn title-action-quiet" type="button">ガチャと編成</button>
+          <button id="btn-formation" class="btn title-action-quiet" type="button">編成</button>
+          <button id="btn-gacha" class="btn title-action-quiet" type="button">ガチャ</button>
         </div>
+        <button id="btn-ranking" class="btn title-action-quiet" type="button">ランキング</button>
       </div>
-    </div>
-  </div>
-
-  <div id="modal-modes" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modes-sheet-title">
-    <div class="modal-box title-sheet">
-      <h2 id="modes-sheet-title">ほかの対局</h2>
-      <div class="title-sheet-actions">
-        <button id="btn-online" class="btn title-sheet-mode title-action-online hidden" type="button"><small>知らない相手と</small>ランダムマッチ</button>
-        <button id="btn-friend" class="btn title-sheet-mode title-action-friend hidden" type="button"><small>コードで誘う</small>フレンドマッチ</button>
-        <button id="btn-dojo" class="btn title-sheet-mode title-action-dojo" type="button"><small>一手で覚える</small>妖怪道場</button>
-        <button id="btn-trials" class="btn title-sheet-mode title-action-trial" type="button"><small>型と戦う</small>試陣</button>
-      </div>
-      <button id="btn-modes-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
-    </div>
-  </div>
-
-  <div id="modal-yokai" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="yokai-sheet-title">
-    <div class="modal-box title-sheet">
-      <h2 id="yokai-sheet-title">妖怪</h2>
-      <div class="yokai-tabs" role="tablist" aria-label="妖怪">
-        <button id="btn-gacha" class="yokai-tab" type="button" role="tab">妖怪ガチャ</button>
-        <button id="btn-formation" class="yokai-tab" type="button" role="tab">編 成</button>
-      </div>
-      <button id="btn-pieces" class="yokai-pieces-link" type="button">駒一覧</button>
-      <button id="btn-yokai-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
     </div>
   </div>
 
@@ -140,7 +117,10 @@
     <div class="modal-box title-sheet">
       <h2 id="settings-sheet-title">メニュー</h2>
       <div class="title-sheet-list">
-        <button id="btn-ranking" class="title-sheet-item" type="button">ランキング</button>
+        <button id="btn-friend" class="title-sheet-item hidden" type="button">フレンドマッチ</button>
+        <button id="btn-dojo" class="title-sheet-item" type="button">妖怪道場</button>
+        <button id="btn-trials" class="title-sheet-item" type="button">試陣</button>
+        <button id="btn-pieces" class="title-sheet-item" type="button">駒一覧</button>
         <button id="btn-rules" class="title-sheet-item" type="button">遊び方</button>
         <button id="btn-announcements" class="title-sheet-item" type="button">お知らせ<i class="announcement-badge hidden"></i></button>
         <button id="btn-audio" class="title-sheet-item" type="button"><span class="audio-icon" aria-hidden="true">🔊</span><span>音量設定</span></button>
@@ -164,7 +144,7 @@
     <div class="menu-col solo-col">
       <div class="menu-head">
         <button id="btn-solo-back" class="tool-btn" title="戻る">←</button>
-        <h2 class="menu-title">百鬼夜行</h2>
+        <h2 class="menu-title">連勝チャレンジ</h2>
         <div class="menu-head-spacer"></div>
       </div>
       <div class="solo-hyakki-lobby">
@@ -177,7 +157,6 @@
           <div class="solo-standing-item">今週ベスト<b id="solo-best-streak">—</b></div>
           <div class="solo-standing-item">今週順位<b id="solo-rank">—</b></div>
         </div>
-        <p class="solo-note">挑戦するたびに対戦相手が変化する百鬼夜行<br>負けると連勝はリセット<br>連勝を重ねて週間ランキングを目指そう。</p>
         <button id="btn-solo-battle" class="btn btn-gold">挑戦する</button>
         <div class="solo-lobby-links">
           <button type="button" id="btn-solo-formation" class="btn btn-dark btn-sub">編成を整える</button>
@@ -214,7 +193,7 @@
         <h2 class="menu-title">ランキング</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p class="ranking-note">百鬼夜行で記録した、今週のベスト連勝数です。</p>
+      <p class="ranking-note">連勝チャレンジで記録した、今週のベスト連勝数です。</p>
       <button type="button" id="hyakki-reward" class="hyakki-reward">
         <img id="hyakki-reward-img" class="hyakki-reward-img" alt="" width="96" height="96">
         <span class="hyakki-reward-body">
@@ -278,7 +257,6 @@
       </div>
       <div class="gacha-center">
         <div class="gacha-orb"><span>召</span><i></i></div>
-        <div class="gacha-note">チケットはログインボーナス、道場、対戦報酬、任意の広告視聴などで手に入ります。</div>
         <div class="title-buttons">
           <button id="btn-pull1" class="btn btn-gold">1回召喚<small>チケット1枚</small></button>
           <button id="btn-pull10" class="btn btn-gold">10連召喚<small>10枚・SR以上確定</small></button>

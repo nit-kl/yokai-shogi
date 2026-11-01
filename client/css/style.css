@@ -404,6 +404,7 @@ html[data-script="latn"] .title-sub-top {
   gap: 10px;
   width: min(100%, 420px);
 }
+.title-main-actions > .btn { width: 100%; }
 .title-side-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .title-main-actions .btn {
   position: relative; min-width: 0; overflow: hidden;
@@ -415,8 +416,8 @@ html[data-script="latn"] .title-sub-top {
 .title-action-hero {
   width: 100%;
   height: auto;
-  min-height: 4.8rem;
-  font-size: clamp(1.25rem, 4vw, 1.55rem);
+  min-height: 3.6rem;
+  font-size: clamp(1.15rem, 3.6vw, 1.4rem);
 }
 .title-main-actions .title-action-quiet {
   color: #f6efe2;
@@ -447,6 +448,8 @@ html[data-script="latn"] .title-sub-top {
   color: #e7f6ff; border-color: rgba(88,182,255,0.7);
   background: linear-gradient(150deg, #315f8c, #203452 58%, #15152b);
   box-shadow: 0 0 20px rgba(88,182,255,0.2), inset 0 1px rgba(255,255,255,0.15);
+  letter-spacing: 0.08em;
+  text-indent: 0.08em;
 }
 .title-action-friend {
   color: #fff1e4; border-color: rgba(232, 154, 96, 0.72);
@@ -3830,7 +3833,7 @@ html[data-script="latn"] .skip-warning-box h2 {
   .title-lead { margin-bottom: 0.65em; font-size: 0.66rem; line-height: 1.5; }
   .title-main-actions { gap: 7px; }
   .title-main-actions .btn { padding: 0.62em 0.35em; font-size: 0.88rem; }
-  .title-action-hero { min-height: 4.2rem; font-size: 1.15rem; }
+  .title-action-hero { min-height: 3.1rem; font-size: 1.05rem; }
   .title-gear .announcement-badge { min-width: 15px; height: 15px; font-size: 0.55rem; }
   .title-profile { top: 8px; left: 8px; max-width: 38vw; padding: 4px 10px; }
   .title-currency { top: 8px; right: 8px; gap: 4px; font-size: 0.66rem; }
