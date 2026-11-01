@@ -102,37 +102,23 @@
         <img src="/assets/ui/title-logo.webp" alt="百鬼盤" width="986" height="483" draggable="false">
       </h1>
       <div class="title-main-actions">
-        <button id="btn-start" class="btn title-action-primary title-action-hero"><small>連勝に挑む</small>百鬼夜行</button>
+        <button id="btn-start" class="btn title-action-primary title-action-hero" type="button">連勝チャレンジ</button>
+        <div class="title-play-row">
+          <button id="btn-online" class="btn title-action-online hidden" type="button">オンライン対戦</button>
+          <section class="title-training" aria-labelledby="title-training-label">
+            <p id="title-training-label" class="title-training-label">トレーニング</p>
+            <div class="title-training-actions">
+              <button id="btn-dojo" class="btn title-action-dojo" type="button">妖怪道場</button>
+              <button id="btn-trials" class="btn title-action-trial" type="button">試陣</button>
+            </div>
+          </section>
+        </div>
         <div class="title-side-actions">
-          <button id="btn-modes" class="btn title-action-quiet" type="button"><small>道場・対戦・試陣</small>ほかの対局</button>
-          <button id="btn-yokai" class="btn title-action-quiet" type="button"><small>ガチャと編成</small>妖怪</button>
+          <button id="btn-formation" class="btn title-action-quiet" type="button">編成</button>
+          <button id="btn-gacha" class="btn title-action-quiet" type="button">ガチャ</button>
+          <button id="btn-ranking" class="btn title-action-quiet" type="button">ランキング</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <div id="modal-modes" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modes-sheet-title">
-    <div class="modal-box title-sheet">
-      <h2 id="modes-sheet-title">ほかの対局</h2>
-      <div class="title-sheet-actions">
-        <button id="btn-online" class="btn title-sheet-mode title-action-online hidden" type="button"><small>知らない相手と</small>ランダムマッチ</button>
-        <button id="btn-friend" class="btn title-sheet-mode title-action-friend hidden" type="button"><small>コードで誘う</small>フレンドマッチ</button>
-        <button id="btn-dojo" class="btn title-sheet-mode title-action-dojo" type="button"><small>一手で覚える</small>妖怪道場</button>
-        <button id="btn-trials" class="btn title-sheet-mode title-action-trial" type="button"><small>型と戦う</small>試陣</button>
-      </div>
-      <button id="btn-modes-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
-    </div>
-  </div>
-
-  <div id="modal-yokai" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="yokai-sheet-title">
-    <div class="modal-box title-sheet">
-      <h2 id="yokai-sheet-title">妖怪</h2>
-      <div class="yokai-tabs" role="tablist" aria-label="妖怪">
-        <button id="btn-gacha" class="yokai-tab" type="button" role="tab">妖怪ガチャ</button>
-        <button id="btn-formation" class="yokai-tab" type="button" role="tab">編 成</button>
-      </div>
-      <button id="btn-pieces" class="yokai-pieces-link" type="button">駒一覧</button>
-      <button id="btn-yokai-close" class="btn btn-dark btn-sub" type="button">閉じる</button>
     </div>
   </div>
 
@@ -140,7 +126,8 @@
     <div class="modal-box title-sheet">
       <h2 id="settings-sheet-title">メニュー</h2>
       <div class="title-sheet-list">
-        <button id="btn-ranking" class="title-sheet-item" type="button">ランキング</button>
+        <button id="btn-friend" class="title-sheet-item hidden" type="button">フレンドマッチ</button>
+        <button id="btn-pieces" class="title-sheet-item" type="button">駒一覧</button>
         <button id="btn-rules" class="title-sheet-item" type="button">遊び方</button>
         <button id="btn-announcements" class="title-sheet-item" type="button">お知らせ<i class="announcement-badge hidden"></i></button>
         <button id="btn-audio" class="title-sheet-item" type="button"><span class="audio-icon" aria-hidden="true">🔊</span><span>音量設定</span></button>
@@ -164,7 +151,7 @@
     <div class="menu-col solo-col">
       <div class="menu-head">
         <button id="btn-solo-back" class="tool-btn" title="戻る">←</button>
-        <h2 class="menu-title">百鬼夜行</h2>
+        <h2 class="menu-title">連勝チャレンジ</h2>
         <div class="menu-head-spacer"></div>
       </div>
       <div class="solo-hyakki-lobby">
@@ -177,7 +164,6 @@
           <div class="solo-standing-item">今週ベスト<b id="solo-best-streak">—</b></div>
           <div class="solo-standing-item">今週順位<b id="solo-rank">—</b></div>
         </div>
-        <p class="solo-note">挑戦するたびに対戦相手が変化する百鬼夜行<br>負けると連勝はリセット<br>連勝を重ねて週間ランキングを目指そう。</p>
         <button id="btn-solo-battle" class="btn btn-gold">挑戦する</button>
         <div class="solo-lobby-links">
           <button type="button" id="btn-solo-formation" class="btn btn-dark btn-sub">編成を整える</button>
@@ -214,7 +200,7 @@
         <h2 class="menu-title">ランキング</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p class="ranking-note">百鬼夜行で記録した、今週のベスト連勝数です。</p>
+      <p class="ranking-note">連勝チャレンジで記録した、今週のベスト連勝数です。</p>
       <button type="button" id="hyakki-reward" class="hyakki-reward">
         <img id="hyakki-reward-img" class="hyakki-reward-img" alt="" width="96" height="96">
         <span class="hyakki-reward-body">
@@ -278,7 +264,6 @@
       </div>
       <div class="gacha-center">
         <div class="gacha-orb"><span>召</span><i></i></div>
-        <div class="gacha-note">チケットはログインボーナス、道場、対戦報酬、任意の広告視聴などで手に入ります。</div>
         <div class="title-buttons">
           <button id="btn-pull1" class="btn btn-gold">1回召喚<small>チケット1枚</small></button>
           <button id="btn-pull10" class="btn btn-gold">10連召喚<small>10枚・SR以上確定</small></button>
@@ -313,6 +298,7 @@
       </div>
       <div class="form-zone-label">⬆ 敵陣方向</div>
       <div id="form-grid"></div>
+      <p id="form-cost" class="form-cost">編成コスト 0 / 20</p>
       <div id="form-info" class="form-info"></div>
       <div id="form-bench"></div>
       <div id="form-error"></div>
@@ -327,7 +313,7 @@
         <h2 class="menu-title">駒一覧</h2>
         <div class="menu-head-spacer"></div>
       </div>
-      <p class="pieces-note">駒ごとの動き、能力、SSR特性、覚醒技、因縁を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
+      <p class="pieces-note">駒ごとの動きと能力を確認できます。成ると攻撃力が1.5倍になり、動きが強化されます。</p>
       <div class="pieces-toolbar">
         <label class="pieces-search">
           <span>探す</span>
@@ -400,7 +386,6 @@
             <div class="hp-fill" id="enemy-hp-fill"></div>
             <div class="hp-text" id="enemy-hp-text">3000 / 3000</div>
           </div>
-          <div class="awaken-row" id="enemy-awaken-row"><span class="awaken-label">覚醒</span><span class="awaken-pips" id="enemy-awaken-pips"></span></div>
           <div class="hand-tray" id="enemy-hand"></div>
         </div>
         <div class="combo-badge" id="enemy-combo"></div>
@@ -411,6 +396,7 @@
           <div class="board-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
           <div id="board-cells"></div>
           <div id="board-pieces"></div>
+          <div id="board-marks" aria-hidden="true"></div>
         </div>
         <div id="hyakki-round-hud" class="hidden"><span id="battle-mode-tag">百鬼夜行</span><b id="hyakki-round-label">1戦目</b></div>
         <div id="dojo-brief" class="dojo-brief hidden"></div>
@@ -428,10 +414,6 @@
             <div class="hp-ghost" id="player-hp-ghost"></div>
             <div class="hp-fill" id="player-hp-fill"></div>
             <div class="hp-text" id="player-hp-text">3000 / 3000</div>
-          </div>
-          <div class="awaken-row" id="player-awaken-row">
-            <span class="awaken-label">覚醒</span><span class="awaken-pips" id="player-awaken-pips"></span>
-            <button id="btn-awaken" class="btn-awaken hidden" type="button">覚醒する</button>
           </div>
           <div class="hand-tray" id="player-hand"></div>
         </div>
@@ -468,10 +450,6 @@
           </button>
           <div id="battle-status-panel" class="battle-status-panel hidden" role="dialog" aria-label="対局ステータス">
             <div class="battle-status-title">対局ステータス</div>
-            <div id="moon-hud" class="battle-status-row hidden">
-              <span class="battle-status-key">月齢</span>
-              <span class="battle-status-val"><span id="moon-icon">🌑</span><span id="moon-label">新月</span></span>
-            </div>
             <div id="hunger-hud" class="battle-status-row">
               <span class="battle-status-key">飢餓</span>
               <span class="battle-status-val" id="hunger-label">飢餓まであと8</span>
@@ -787,7 +765,7 @@
     <div class="modal-box skip-warning-box">
       <p class="skip-warning-kicker">時間切れ</p>
       <h2 id="skip-warning-title">手番を飛ばしました</h2>
-      <p id="skip-warning-message" class="skip-warning-message">次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓や月齢も1手分進みます。</p>
+      <p id="skip-warning-message" class="skip-warning-message">次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓も1手分進みます。</p>
       <button id="btn-skip-warning-ok" class="btn btn-gold" type="button">わかった</button>
     </div>
   </div>
@@ -818,29 +796,20 @@
         </ul>
         <h3>動かし方</h3>
         <ul>
-          <li>短いタップで駒を選び、動かします。説明は<b>長押し</b>。残雷は雷マークを選ぶと確認できます</li>
-          <li>敵を取ると、取った自分の駒の<b>攻撃力</b>ぶん相手の魂力を削ります</li>
-          <li>連続で取ると<b>コンボ</b>になり、ダメージが最大2倍まで上がります（取らない手・召喚・覚醒でリセット）</li>
+          <li>短いタップで駒を選び、動かします。説明は<b>長押し</b></li>
+          <li>敵を取ると、取った自分の駒の<b>攻撃力</b>ぶん相手のHPを削ります</li>
+          <li>連続で取ると<b>コンボ</b>になり、ダメージが最大2倍まで上がります（取らない手・召喚でリセット）</li>
         </ul>
         <h3>持ち駒と成り</h3>
         <ul>
-          <li>取った敵は自分の持ち駒になり、空きマスへ召喚できます（一部は最奥に打てません）</li>
+          <li>取った敵は自分の持ち駒になり、空きマスへ召喚できます</li>
           <li>大将以外が敵陣（奥2段）に入ると自動で<b>成り</b>、攻撃力1.5倍＆動きが強くなります</li>
         </ul>
         <h3>覚えておくこと</h3>
         <ul>
           <li><b>飢餓の夜:</b> 双方あわせて8手取らないと始まり、以後毎手お互いの魂力が50減ります。駒を取るとリセット。残りは対局中の<b>状</b>で確認できます</li>
-          <li><b>SSR覚醒:</b> 取り合いでゲージが溜まります。満タンなら手番を使って盤上の自軍SSRを1局1回強化（自分の手番3回のあいだATK×1.5）</li>
+          <li><b>編成コスト:</b> N1、R2、SR3、SSR4。合計20まで。空きマスは入りません。超えている編成では対戦を始められません</li>
         </ul>
-        <h3>遊べるモード</h3>
-        <ul>
-          <li><b>百鬼夜行:</b> ソロ連戦。連勝は週間ランキングになり、先週1位には限定異装「覇者・九尾」（初回のみ）</li>
-          <li><b>妖怪道場:</b> 1〜2手の詰問。初回クリアごとにガチャチケット🎟を1枚</li>
-          <li><b>試陣:</b> 固定された敵軍とのCPU対戦。報酬・連勝・ランキングには入りません</li>
-          <li><b>オンライン:</b> ランダムマッチはいつでも。集まりやすい時間は毎日20:00〜22:00。1手60秒＋秒読み30秒。時間切れは手番スキップ、連続2回で負け。フレンドルームは6桁コードで待ち受け、両方の準備完了で開戦します</li>
-          <li><b>ガチャと編成:</b> チケットで召喚（10連はSR以上1枠確定）。被りは妖力になり、300でチケット1枚。編成は大将1体必須</li>
-        </ul>
-        <p class="rules-more"><a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">遊び方ガイド</a></p>
       </div>
       <button id="btn-close-rules" class="btn btn-gold">閉じる</button>
     </div>

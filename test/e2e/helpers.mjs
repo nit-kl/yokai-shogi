@@ -73,6 +73,18 @@ export async function dismissLegacyLoginModal(page) {
   }
 }
 
+/** 高優先のお知らせはタイトル復帰のたびに被さる。出ていれば閉じる */
+export async function dismissAnnouncements(page, timeout = 1500) {
+  const modal = page.locator('#modal-announcements:not(.hidden)');
+  try {
+    await modal.waitFor({ state: 'visible', timeout });
+  } catch {
+    return;
+  }
+  await page.locator('#btn-announcements-close').click();
+  await modal.waitFor({ state: 'hidden' });
+}
+
 /** リリース記念など起動時モーダルを閉じる */
 export async function dismissStartupModals(page) {
   if (await page.locator('#modal-release-gift:not(.hidden)').count()) {
@@ -84,6 +96,7 @@ export async function dismissStartupModals(page) {
     await page.click('#btn-nudge-later');
     await page.waitForTimeout(200);
   }
+  await dismissAnnouncements(page);
 }
 
 /** 対局の入力ロック(開幕VS・共鳴カットイン等)が解除されるまで待つ */
@@ -115,6 +128,7 @@ export async function skipOnboarding(page) {
 
 /** 百鬼夜行: ロビー → プレビュー → 開戦 */
 export async function startSoloBattle(page) {
+  await dismissAnnouncements(page);
   await page.click('#btn-start');
   await page.waitForSelector('#screen-solo.active');
   await page.click('#btn-solo-battle');

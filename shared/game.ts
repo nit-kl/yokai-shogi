@@ -50,7 +50,7 @@ export interface GameState {
   reason: GameOverReason | null;
   lastMove: { to: Pos } | null;
   nextUid: number; // 駒uid採番(モジュール変数ではなく状態側で持つ: 1プロセスで複数対局を扱うため)
-  plies: number;   // 適用済みの手数(月齢・覚醒期限の基準)
+  plies: number;   // 適用済みの手数(飢餓・残火期限の基準)
   awaken: Record<Side, AwakenState>; // 覚醒ゲージ(SSR必殺技: 1局1回)
   lastCapturePly: number; // 直近捕獲の手数(飢餓の夜)
   embers: Ember[];        // 残火
@@ -60,9 +60,6 @@ export interface GameState {
 export const AWAKEN_MAX = 6;   // ゲージ満タンに必要な取り合い回数
 export const AWAKEN_SPAN = 6;  // 発動から6手(自分の手番3回)有効
 export const AWAKEN_ATK = 1.5; // 覚醒中のATK倍率
-
-/* 月齢(moonスキル): 1夜=2手(両者1手ずつ)、4夜周期の4夜目が満月 */
-export const MOON_CYCLE = 4;
 
 /* 飢餓の夜: 無取りが続くと双方の魂力が削れる */
 export const HUNGER_GRACE = 8;
@@ -199,14 +196,6 @@ export const Game = {
     if (!Array.isArray(s.embers)) s.embers = [];
   },
 
-  /* ---------- 月齢(moonスキル) ---------- */
-  moonPhaseOfPly(ply: number): number { return Math.floor(ply / 2) % MOON_CYCLE; },
-  moonPhase(s: GameState): number { return this.moonPhaseOfPly(s.plies ?? 0); },
-  isFullMoonPly(ply: number): boolean { return this.moonPhaseOfPly(ply) === MOON_CYCLE - 1; },
-  nightsUntilFullMoon(s: GameState): number {
-    return (MOON_CYCLE - 1) - this.moonPhase(s);
-  },
-
   /* ---------- 飢餓の夜 ---------- */
   hungerIdle(s: GameState): number {
     this.ensureMeta(s);
@@ -228,12 +217,11 @@ export const Game = {
   },
 
   /* ---------- 覚醒(SSR必殺技) ---------- */
-  awakenReady(s: GameState, side: Side): boolean {
-    const st = s.awaken?.[side];
-    return !!st && !st.used && st.gauge >= AWAKEN_MAX;
+  awakenReady(_s: GameState, _side: Side): boolean {
+    return false;
   },
-  isAwakened(pc: Piece, ply: number): boolean {
-    return pc.awakenUntil !== undefined && ply <= pc.awakenUntil;
+  isAwakened(_pc: Piece, _ply: number): boolean {
+    return false;
   },
   awakenTargets(s: GameState, side: Side): Pos[] {
     const out: Pos[] = [];
@@ -285,31 +273,57 @@ export const Game = {
     return owner === 'p' ? y < ZONE_DEPTH : y >= ROWS - ZONE_DEPTH;
   },
 
-  getMoves(s: GameState, x: number, y: number): MoveTarget[] {
+  /* 合法手、味方が止めるマス、その奥で飛びが届かないマス */
+  scanMoves(s: GameState, x: number, y: number): { moves: MoveTarget[]; blocks: Pos[]; shadow: Pos[] } {
     const pc = s.board[y][x];
-    if (!pc) return [];
+    if (!pc) return { moves: [], blocks: [], shadow: [] };
     const def = YOKAI[pc.id];
     const mv = (pc.promoted && def.promoted) ? def.promoted : def.moves;
     const sign = pc.owner === 'p' ? 1 : -1;
-    const out: MoveTarget[] = [];
+    const moves: MoveTarget[] = [];
+    const blocks: Pos[] = [];
+    const shadow: Pos[] = [];
     const tryAdd = (nx: number, ny: number): boolean => {
       if (!this.inBounds(nx, ny)) return false;
       const occ = s.board[ny][nx];
-      if (occ && occ.owner === pc.owner) return false;
+      if (occ && occ.owner === pc.owner) {
+        blocks.push({ x: nx, y: ny });
+        return false;
+      }
       if (occ && def.skill.kind === 'hydra' && YOKAI[occ.id].boss) return false;
-      out.push({ x: nx, y: ny, capture: !!occ });
+      moves.push({ x: nx, y: ny, capture: !!occ });
       return !occ;
     };
     if (mv.steps) for (const [dx, dy] of mv.steps) tryAdd(x + dx, y + dy * sign);
     if (mv.jumps) for (const [dx, dy] of mv.jumps) tryAdd(x + dx, y + dy * sign);
     if (mv.slides) for (const [dx, dy] of mv.slides) {
       let nx = x + dx, ny = y + dy * sign;
+      let passedAlly = false;
       while (this.inBounds(nx, ny)) {
-        if (!tryAdd(nx, ny)) break;
+        if (passedAlly) shadow.push({ x: nx, y: ny });
+        else if (!tryAdd(nx, ny)) {
+          const occ = s.board[ny][nx];
+          if (occ && occ.owner === pc.owner) passedAlly = true;
+          else break;
+        }
         nx += dx; ny += dy * sign;
       }
     }
-    return out;
+    return { moves, blocks, shadow };
+  },
+
+  getMoves(s: GameState, x: number, y: number): MoveTarget[] {
+    return this.scanMoves(s, x, y).moves;
+  },
+
+  /* 移動先に味方がいるマス。合法手には入らない */
+  allyBlocks(s: GameState, x: number, y: number): Pos[] {
+    return this.scanMoves(s, x, y).blocks;
+  },
+
+  /* 飛び駒が味方で止まったあと、その奥のマス。合法手には入らない */
+  slideShadow(s: GameState, x: number, y: number): Pos[] {
+    return this.scanMoves(s, x, y).shadow;
   },
 
   getDrops(s: GameState, owner: Side, id: string): Pos[] {
@@ -395,7 +409,8 @@ export const Game = {
     return this.escapeDests(s, from, to, 'phase');
   },
 
-  /* 捕獲後の影遁/隱形先(残留は含めない。残留は phaseTo 省略) */
+  /* 捕獲後の影遁/隱形先(残留は含めない。残留は phaseTo 省略)。
+     phase は捕獲マスの隣。veil は元マスだけ。 */
   escapeDests(s: GameState, from: Pos, to: Pos, kind: 'phase' | 'veil'): Pos[] {
     const out: Pos[] = [];
     const seen = new Set<string>();
@@ -406,7 +421,10 @@ export const Game = {
       seen.add(k);
       out.push(p);
     };
-    if (kind === 'veil') add({ ...from });
+    if (kind === 'veil') {
+      add({ ...from });
+      return out;
+    }
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue;
@@ -505,7 +523,7 @@ export const Game = {
         } else if (sk.kind === 'weaken') {
           effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: `敵の与ダメージ-${Math.round(sk.reduce * 100)}%` });
         } else if (sk.kind === 'jam') {
-          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: '会心・月齢を封じた' });
+          effects.push({ kind: 'debuff', name: sk.name, owner: side, img: def.img, text: '会心を封じた' });
         } else if (sk.kind === 'chill') {
           effects.push({ kind: 'combo', name: sk.name, owner: side, img: def.img, text: '相手のコンボ倍率を無効化' });
         }
@@ -566,8 +584,7 @@ export const Game = {
   applyCellar(s: GameState, side: Side, events: GameEvent[]): void {
     const found = this.findSkillOnBoard(s, side, 'cellar');
     if (!found || found.sk.kind !== 'cellar') return;
-    let amount = found.sk.heal;
-    if (this.activeResonance(s, side, found.pc.id)?.effect === 'oniFeast') amount += found.sk.feastHeal;
+    const amount = found.sk.heal;
     const heal = Math.min(MAX_HP - s.hp[side], amount);
     if (heal <= 0) return;
     s.hp[side] += heal;
@@ -705,7 +722,7 @@ export const Game = {
 
       if (victim) {
         const ended = this._resolveCapture(
-          s, pc, victim, from, to, side, foe, ply, rng, rand, events, action.phaseTo, action.spawnTo,
+          s, pc, victim, from, to, side, foe, rng, rand, events, action.phaseTo, action.spawnTo,
         );
         if (ended) return events;
         const dualSk = YOKAI[pc.id].skill;
@@ -716,7 +733,7 @@ export const Game = {
           if (legal && second && second.owner === foe) {
             s.board[dt.y][dt.x] = null;
             const ended2 = this._resolveCapture(
-              s, pc, second, to, dt, side, foe, ply, rng, rand, events,
+              s, pc, second, to, dt, side, foe, rng, rand, events,
               undefined, undefined, { dmgMult: dualSk.mult, occupy: false },
             );
             if (ended2) return events;
@@ -790,7 +807,7 @@ export const Game = {
 
   _resolveCapture(
     s: GameState, attacker: Piece, victim: Piece, from: Pos, to: Pos,
-    side: Side, foe: Side, ply: number, rng: boolean, rand: () => number, events: GameEvent[],
+    side: Side, foe: Side, rng: boolean, rand: () => number, events: GameEvent[],
     phaseTo?: Pos, spawnTo?: Pos, capOpts?: CaptureOpts,
   ): boolean {
     const occupy = capOpts?.occupy !== false;
@@ -800,34 +817,24 @@ export const Game = {
     const procs: SkillProc[] = [];
     const effects: SkillEffect[] = [];
 
-    let base = this.atkOf(attacker);
-    if (this.isAwakened(attacker, ply)) {
-      base = Math.round(base * AWAKEN_ATK);
-      procs.push({
-        name: aDef.awakenName || '覚醒', owner: side, img: aDef.img,
-        text: `覚醒の力 ATK×${AWAKEN_ATK}!`,
-      });
-    }
+    const base = this.atkOf(attacker);
     let mult = 1, bonus = 0;
     const sk = aDef.skill;
     const jammed = this.hasSkill(s, foe, 'jam');
-    const moonLord = this.findSkillOnBoard(s, side, 'moon');
+    const fox = this.findSkillOnBoard(s, side, 'scent');
     const commander = this.findSkillOnBoard(s, side, 'legion');
-    if (jammed && (sk.kind === 'crit' || sk.kind === 'heads' || !!moonLord)) {
+    if (jammed && (sk.kind === 'crit' || sk.kind === 'heads')) {
       effects.push(...this.activeSkillEffects(s, foe, ['jam']));
     }
-    const enraged = attacker.enraged === true;
-    if (attacker.enraged) delete attacker.enraged;
-
     if (sk.kind === 'crit' && !jammed) {
       const chance = sk.chance;
       if (rng) {
-        if (enraged || rand() < chance) {
+        if (rand() < chance) {
           mult *= sk.mult;
           procs.push({ name: sk.name, owner: side, img: aDef.img, text: `ダメージ${sk.mult}倍!` });
         }
       } else {
-        mult *= enraged ? sk.mult : 1 + chance * (sk.mult - 1);
+        mult *= 1 + chance * (sk.mult - 1);
       }
     } else if (sk.kind === 'heads') {
       const lvl = Math.min(attacker.kills ?? 0, sk.max);
@@ -836,7 +843,7 @@ export const Game = {
         mult *= headsMult;
         if (rng) {
           const label = ['', '二の首', '三の首', '四の首'][lvl] || `${lvl + 1}の首`;
-          procs.push({ name: sk.name, owner: side, img: aDef.img, text: `${label} 覚醒 ×${headsMult.toFixed(1)}!` });
+          procs.push({ name: sk.name, owner: side, img: aDef.img, text: `${label} ×${headsMult.toFixed(1)}!` });
         }
       }
       attacker.kills = (attacker.kills ?? 0) + 1;
@@ -862,16 +869,13 @@ export const Game = {
     }
 
     /* 大将オーラ: 取った駒ではなく盤上の九尾/ぬらりひょんが効く */
-    if (moonLord && moonLord.sk.kind === 'moon' && !jammed) {
-      const moonOn = this.isFullMoonPly(ply) || enraged;
-      if (moonOn) {
-        mult *= moonLord.sk.mult;
-        if (rng) {
-          procs.push({
-            name: moonLord.sk.name, owner: side, img: moonLord.def.img,
-            text: enraged && !this.isFullMoonPly(ply) ? `相伝の怒り 確定会心 ×${moonLord.sk.mult}!` : `月の主 満月の妖気 ×${moonLord.sk.mult}!`,
-          });
-        }
+    if (fox && fox.sk.kind === 'scent') {
+      mult *= 1 + fox.sk.bonus;
+      if (rng) {
+        procs.push({
+          name: fox.sk.name, owner: side, img: fox.def.img,
+          text: `+${Math.round(fox.sk.bonus * 100)}%`,
+        });
       }
     }
     if (commander && commander.sk.kind === 'legion') {
@@ -1040,21 +1044,7 @@ export const Game = {
       explode = { name: vDef.skill.name, img: vDef.img, uid: attacker.uid };
     }
 
-    for (const sd of ['p', 'e'] as const) {
-      const st = s.awaken[sd];
-      if (!st.used) st.gauge = Math.min(AWAKEN_MAX, st.gauge + 1);
-    }
-
-    let enrage: CaptureEvent['enrage'] = null;
-    const vBase = baseIdOf(victim.id);
-    for (const rs of RESONANCES) {
-      if (rs.effect !== 'foxBond' || !rs.pair.includes(vBase)) continue;
-      const partner = this.findPartnerPiece(s, foe, rs, vBase);
-      if (partner && !partner.pc.enraged) {
-        partner.pc.enraged = true;
-        enrage = { uid: partner.pc.uid, id: partner.pc.id, owner: foe, name: rs.name };
-      }
-    }
+    const enrage = null;
 
     s.lastCapturePly = s.plies;
 

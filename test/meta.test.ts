@@ -193,6 +193,20 @@ test('LocalMeta: 編成保存・所持外/大将なしは拒否', async () => {
   expect(m.data.formation[0][1]).toBe('tengu');
 });
 
+test('LocalMeta: コスト超過の保存済み編成は残し、保存と対戦では拒否する', () => {
+  const m = new LocalMeta();
+  const rows = [
+    ['tamamo', 'ibaraki', 'yamata', 'sukuna', 'gashadokuro'],
+    [null, null, 'kyubi', null, null],
+  ];
+  m.data.formation = rows;
+  for (const id of rows.flat()) if (id) m.data.owned[id] = 1;
+  m.save();
+  const loaded = new LocalMeta();
+  expect(loaded.data.formation).toEqual(rows);
+  expect(validateFormation(rows, new Set(Object.keys(loaded.data.owned)))).not.toBeNull();
+});
+
 test('LocalMeta: セーブ・ロード往復(localStorage経由)', () => {
   const m = new LocalMeta();
   m.claimLoginBonus(new Date(2026, 5, 1));
@@ -216,8 +230,8 @@ test('ガチャ妖怪入りの編成で対局が回る(エンジン統合)', () 
   for (const id of GACHA_POOL) m.data.owned[id] = 1;
   m.data.owned.nurarihyon = 1;
   const rows = [
-    ['onibi', 'yukionna', 'tanuki', 'zashiki', 'ibaraki'],
-    ['tsuchigumo', 'sunakake', 'nurarihyon', 'oonyudo', 'raiju'],
+    ['onibi', 'tanuki', 'sunakake', null, 'kooni'],
+    ['tsuchigumo', 'yukionna', 'nurarihyon', null, 'raiju'],
   ];
   expect(validateFormation(rows, new Set(Object.keys(m.data.owned)))).toBeNull();
 

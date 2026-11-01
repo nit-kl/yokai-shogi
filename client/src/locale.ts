@@ -79,6 +79,7 @@ const STATIC: Record<string, string> = {
   '妖怪': 'Yokai', '連勝に挑む': 'Build a win streak', '百鬼夜行': 'Night Parade',
   'ほかの対局': 'Other Battles', '道場・対戦・試陣': 'Dojo, matches, and trials',
   'ガチャと編成': 'Summon and formation', '言語': 'Language',
+  '連勝チャレンジ': 'Win Streak', '編成': 'Formation', 'トレーニング': 'Training',
   '猛者と競う': 'Face other players', 'オンライン対戦': 'Online Battle',
   'メニュー': 'Menu',
   '妖怪ガチャ': 'Yokai Summon', '編 成': 'Formation', '駒一覧': 'Compendium',
@@ -87,9 +88,10 @@ const STATIC: Record<string, string> = {
   'プライバシー': 'Privacy', 'お問い合わせ': 'Support', 'DMで報告': 'Report via DM',
   'データ引き継ぎ': 'Transfer Data', '戻る': 'Back', '現在の連勝': 'Current Streak',
   '今週ベスト': 'Weekly Best', '今週順位': 'Weekly Rank', '挑戦する': 'Start Challenge',
-  '編成を整える': 'Edit Formation', '週間ランキング': 'Weekly Rankings', '次の軍勢': 'Next Army',
+  '編成を整える': 'Edit Formation', '編成を整えてください': 'Adjust your formation',
+  '週間ランキング': 'Weekly Rankings', '次の軍勢': 'Next Army',
   '敵軍の編成': 'Enemy Formation', '開戦': 'Battle',
-  '百鬼夜行で記録した、今週のベスト連勝数です。': 'Your best Night Parade win streak this week.',
+  '連勝チャレンジで記録した、今週のベスト連勝数です。': 'Your best win streak this week.',
   '今週の1位報酬': 'Weekly #1 Reward', '今週の百鬼夜行': "This Week's Night Parade",
   '連勝ランキング(月曜リセット)': 'Win Streak Rankings (resets Monday)',
   '名前を設定して名乗りを上げる': 'Set a name to enter the rankings', '先週の百鬼夜行': "Last Week's Night Parade",
@@ -104,7 +106,7 @@ const STATIC: Record<string, string> = {
   '敵将': 'Enemy General', '自軍': 'Your Army', '覚醒': 'Awakening', '覚醒する': 'Awaken',
   '相手思考中…': 'Enemy is thinking…', '状': 'Status',
   '接続済み': 'Connected', '持ち時間': 'Time', '相手の再接続待ち': 'Waiting for opponent to reconnect',
-  '対局ステータス': 'Battle Status', '月齢': 'Moon Phase', '新月': 'New Moon', '飢餓': 'Hunger',
+  '対局ステータス': 'Battle Status', '飢餓': 'Hunger',
   '飢餓まであと8': '8 moves until Hunger', '8手取りなしで飢餓の夜。以後毎手双方-50。駒を取るとリセット。': 'After 8 moves without a capture, the Night of Hunger begins. Both sides lose 50 HP each move; a capture resets it.',
   '投了': 'Resign', '駒の説明': 'Yokai details', '再 戦': 'Rematch',
   'タイトルへ': 'Title Screen', '次の軍勢へ': 'Face the Next Army', 'もう一度挑む': 'Try Again',
@@ -193,6 +195,7 @@ const STATIC: Record<string, string> = {
   '指定された機能は利用できません': 'That feature is not available.',
   '大将を選べませんでした': 'Could not choose that general.',
   '編成を保存できませんでした': 'Could not save the formation.',
+  '編成データが不正です': 'The formation data is invalid.',
   '名前を変更できませんでした': 'Could not change the name.',
   'まだ相手が見つかりません。待機を続けるか、すぐにAIと対戦できます。': 'No opponent yet. Keep waiting or battle the AI now.',
   '秒読み！': 'Final countdown!', '秒読み': 'Countdown', '相手の秒読み': "Opponent's countdown",
@@ -201,18 +204,16 @@ const STATIC: Record<string, string> = {
   '次に切れたら負け': 'Next timeout is a loss', '次に切れれば勝ち': 'Next timeout wins',
   '時間切れ！': 'Time out!', '相手が時間切れ': "Opponent timed out", '手番を飛ばした': 'Turn skipped',
   '手番を飛ばしました': 'Your turn was skipped', '時間切れ': 'Time out',
-  '次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓や月齢も1手分進みます。':
-    'The next timeout will lose the game. Your opponent plays twice, and Hunger and the moon phase also advance one move.',
+  '次に時間切れになると負けです。相手に続けて指されます。盤面の飢餓も1手分進みます。':
+    'The next timeout will lose the game. Your opponent plays twice, and Hunger also advances one move.',
   'わかった': 'Got it', '警告: 次の時間切れで負けです': 'Warning: the next timeout is a loss',
   'あなたの手番': 'Your turn', '相手の手番': "Opponent's turn", '敵の手番': 'Enemy turn', '対戦相手': 'Opponent',
-  '満月 ― 会心確定!': 'Full Moon — Critical guaranteed!',
-  '満月 ― 味方の取りが会心!': 'Full Moon — Allied captures are critical!',
   'SSR妖怪 見参': 'An SSR Yokai Appears',
   '覚醒 ― 真の力、解放': 'Awakening — True Power Unleashed',   'ダメージ半減! 駒は葉っぱに化けていた': 'Damage halved! The yokai was only a leaf.',
   '取った駒を道連れに爆散!': 'It explodes and takes its captor with it!', '鬼火を灯した': 'Lit an Onibi', '連勝ならず': 'No win streak',
   '自軍の持ち駒に戻った!': 'Returned to your hand!',
   'もう一つの顔が噛みついた!': 'The other face bit down!',
-  '会心・月齢を封じた': 'Sealed criticals and moon skills',
+  '会心を封じた': 'Sealed criticals',
   '勝利報酬を確認中…': 'Checking victory rewards…', '本日の勝利報酬は上限に達しました': "Today's victory reward limit has been reached.",
   '勝利報酬の付与に失敗しました(通信状態を確認)': 'Could not grant the victory reward. Check your connection.',
   '引き分け': 'Draw', '討伐成功': 'Victory', '敗北': 'Defeat', '我が大将が討ち取られた…': 'Your general was captured…',
@@ -262,14 +263,15 @@ const STATIC: Record<string, string> = {
   '敵陣で成り、成駒で大将を討て': 'Promote in the enemy camp, then capture the general',
   '初期選択またはガチャ': 'Starter choice or summon', 'ガチャ': 'Summon',
 
-  '神妖 顕現': 'Divine Yokai Manifested', '大妖怪 降臨': 'Great Yokai Descends', '希少妖怪 出現': 'Rare Yokai Appears',
+  '神妖 顕現': 'Divine Yokai Manifested', '鬼神 顕現': 'Kishin Manifested', '大妖怪 降臨': 'Great Yokai Descends', '希少妖怪 出現': 'Rare Yokai Appears',
+  '成った': 'Promoted',
   'マス効果': 'Square effect', '永久': 'Permanent', '自軍の刻印': 'Your mark', '敵軍の刻印': 'Enemy mark',
 };
 Object.entries(STATIC).forEach(([ja, en]) => add(ja, en));
 
 type YokaiEnglish = readonly [name: string, move: string, skill: string, description: string, awaken?: string];
 const YOKAI_EN: Record<string, YokaiEnglish> = {
-  kyubi: ['Nine-Tailed Fox', '1 square in any direction', 'Lord of the Moon', 'On a full moon, allied captures deal 2× damage', 'Nine-Tails Unsealed'],
+  kyubi: ['Nine-Tailed Fox', '1 square in any direction', 'Lingering Foxfire', 'While on the board, allied captures deal +20% damage', 'Nine-Tails Unsealed'],
   shuten: ['Shuten-doji', '1 square in any direction', 'Sake Cellar', 'Restores 50 HP at the end of your turn. Your Hunger grace is +4 moves', 'Oni God Rakshasa'],
   kooni: ['Little Oni', '1 square forward (promoted: Gold General movement)', 'Demon Fire', '30% chance for a capture to deal 1.5× damage'],
   nekomata: ['Nekomata', '1 square diagonally (promoted: diagonal + forward/back)', "Bakeneko's Curse", 'Captures in enemy territory deal +120 damage'],
@@ -318,7 +320,7 @@ const YOKAI_EN: Record<string, YokaiEnglish> = {
   tsurube: ['Tsurube-otoshi', 'Any distance forward (promoted: +1 sideways/back)', 'Pit to Darkness', 'Leaves a pit on the captured square. An enemy entering it takes 80 HP damage'],
   shiranui: ['Shiranui', '1 square diagonally (promoted: diagonal + forward/back)', 'Sending Fire', 'After a capture, place an allied Onibi on an adjacent empty square'],
   enenra: ['Enenra', '1 square diagonally (promoted: +1 forward/back)', 'Smoke Shadow-Step', 'After a capture, may escape to an adjacent empty square or stay put'],
-  ingyo: ['Inugami Gyobu', '1 diagonally and a forward knight leap (promoted: 1 in any direction + knight leap)', 'Art of Concealment', 'After a capture, choose to stay, return to the original square, or escape to an adjacent empty square', 'True Concealment'],
+  ingyo: ['Inugami Gyobu', '1 diagonally and a forward knight leap (promoted: 1 in any direction)', 'Art of Concealment', 'After a capture, stay or return to the original square', 'True Concealment'],
 };
 
 for (const [id, values] of Object.entries(YOKAI_EN)) {
@@ -347,7 +349,6 @@ for (const [id, values] of Object.entries(VARIANT_EN)) {
   if (def.awakenName) add(def.awakenName, values[2]);
 }
 
-[['新月', 'New Moon'], ['三日月', 'Crescent Moon'], ['半月', 'Half Moon'], ['満月', 'Full Moon']].forEach(([ja, en]) => add(ja, en));
 const resonanceEn = [
   ['Oni Feast', 'While both are on the board, Sake Cellar healing is +25'],
     ['Foxfire Bond', "When one is captured, the other's next capture is a guaranteed critical"],
@@ -367,7 +368,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <ul>
       <li>A short tap selects and moves. <b>Press and hold</b> for details. Focus a lightning mark to see lingering lightning</li>
       <li>Capturing deals damage equal to your yokai's <b>attack</b></li>
-      <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture, summon, or awakening resets it)</li>
+      <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture or summon resets it)</li>
     </ul>
     <h3>Hand and Promotion</h3>
     <ul>
@@ -377,7 +378,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <h3>Worth Remembering</h3>
     <ul>
       <li><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP each move. A capture resets it. Check remaining moves in <b>Status</b></li>
-      <li><b>SSR Awakening:</b> Captures fill a gauge. Once full, spend a turn to empower one friendly SSR, once per battle (1.5× ATK for three of your turns)</li>
+      <li><b>Formation cost:</b> N1, R2, SR3, SSR4, up to 20 total. Empty squares are free. A formation over the limit cannot enter battle</li>
     </ul>
     <h3>Modes</h3>
     <ul>
@@ -385,11 +386,11 @@ const HTML_OVERRIDES: Record<string, string> = {
       <li><b>Yokai Dojo:</b> 1–2 move puzzles. Each first clear grants one summon ticket</li>
       <li><b>Trial Armies:</b> CPU battles against a fixed enemy lineup. They do not grant rewards, streaks, or ranking</li>
       <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code and start when both players are ready</li>
-      <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
+      <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General, and its cost must be 20 or less</li>
     </ul>
     <p class="rules-more"><a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">How-to Guide</a></p>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',
-  '.pieces-note': 'Review each yokai’s movement, abilities, SSR traits, awakening, and resonances. Promotion grants 1.5× attack and stronger movement.',
+  '.pieces-note': 'Review each yokai’s movement and abilities. Promotion grants 1.5× attack and stronger movement.',
   '#modal-consent .link-desc': 'Online features store an account ID, play data, and access logs. The Steam version sends a Session Ticket to Valve to authenticate with your Steam ID. On the browser version, optional rewarded ads may send device and connection information to an ad network. The Steam version has no ads. Review the policies below before accepting.',
   '#modal-link .link-desc:nth-of-type(1)': 'Clearing browser data can erase your progress. Register a <b>passkey</b> or create a <b>transfer code</b> so you can restore it.',
   '#modal-link .link-desc:nth-of-type(2)': 'Use this code to move your data to another device or browser. <b>Store it somewhere safe.</b>',
@@ -421,7 +422,13 @@ function translatePatterns(value: string): string {
       'Searching for an opponent… AI battle in about $1 seconds'],
     [/飢餓まであと(\d+)/g, '$1 moves until Hunger'], [/飢餓の夜\s*-(\d+)/g, 'Night of Hunger −$1'],
     [/酒蔵の猶予 あと(\d+)/g, 'Cellar grace: $1 left'],
-    [/満月まで(\d+)夜/g, '$1 nights until Full Moon'], [/残火 \+(\d+)/g, 'Ember +$1'],
+    [/いまの編成コストは(\d+)です。上限は(\d+)です。編成を整えてから対戦してください/g,
+      'This formation costs $1. The limit is $2. Adjust it before entering a battle'],
+    [/編成コストが上限の(\d+)を超えています/g, 'Formation cost is over the limit of $1'],
+    [/編成コスト (\d+) \/ (\d+)/g, 'Formation cost $1 / $2'],
+    [/コスト (\d+)/g, 'Cost $1'],
+    [/ATK (\d+)\s*コスト (\d+)/g, 'ATK $1 · Cost $2'],
+    [/残火 \+(\d+)/g, 'Ember +$1'],
     [/陽光 \+(\d+)（永久）/g, 'Sunlight +$1 (permanent)'], [/陽光 \+(\d+)/g, 'Sunlight +$1'],
     [/陽光の追撃 \+(\d+)!/g, 'Sunlight strike +$1!'], [/陽光を残した/g, 'Left sunlight'],
     [/燐火 \+(\d+)/g, 'Spirit Flame +$1'],
@@ -435,7 +442,7 @@ function translatePatterns(value: string): string {
     [/参加報酬:\s*ガチャチケット\s*🎟\s*\+(\d+)/g, 'Participation reward: Ticket 🎟 +$1'],
     [/通算発動\s*(\d+)回/g, 'Lifetime activations: $1'], [/(\d+)\s*\/\s*(\d+)\s*体/g, '$1 / $2 yokai'],
     [/異装:\s*性能は通常版と同じ/g, 'Alt: Same stats as the standard version'],
-    [/月の主 満月の妖気 ×([\d.]+)!/g, 'Moon Lord · Full-moon aura ×$1!'],
+    [/妖狐の残り香 \+(\d+)%/g, 'Lingering Foxfire +$1%'],
     [/骨の山 \+(\d+)%!/g, 'Mountain of Bones +$1%!'],
     [/骨が積まれた\((\d+)\)/g, 'A bone was piled ($1)'],
     [/(.+)を味方にした!/g, '$1 joined your army!'],

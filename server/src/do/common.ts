@@ -1,5 +1,6 @@
 import { ROWS, YOKAI } from '../../../shared/data';
 import type { Side } from '../../../shared/data';
+import { formationBattleBlock } from '../../../shared/validate';
 import { Game } from '../../../shared/game';
 import type { Action, GameState } from '../../../shared/game';
 import {
@@ -10,7 +11,7 @@ export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
 export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v17'; // v17: 八咫烏は陽光
+export const RULE_VERSION = 'phase2-v21'; // v21: 編成コスト上限20。超過した保存済み編成では対戦を開始しない
 
 export function envClockMs(raw: string | undefined, fallback: number): number {
   const n = Number(raw);
@@ -55,33 +56,35 @@ export function isLegalAction(state: GameState, side: Side, candidate: unknown):
 function playableFormation(raw: string): (string | null)[][] | null {
   try {
     const formation = JSON.parse(raw) as (string | null)[][];
-    if (formation.flat().some(id => id && YOKAI[id]?.boss)) return formation;
+    if (!formationBattleBlock(formation)) return formation;
   } catch { /* invalid */ }
   return null;
 }
 
 export async function loadShadowOpponent(db: D1Database, humanId: string): Promise<BattlePlayer> {
-  const row = await db.prepare(
+  const listed = await db.prepare(
     `SELECT p.name, p.rating, p.formation FROM user_profiles p
      JOIN users u ON u.id = p.user_id AND u.status = 'active'
      WHERE p.user_id != ?1 AND p.user_id != ?2
-     ORDER BY RANDOM() LIMIT 1`,
-  ).bind(humanId, SHADOW_USER_ID).first<{ name: string; rating: number; formation: string }>();
-  let formation = SHADOW_FALLBACK_FORMATION;
-  let name = 'AIの対戦相手';
-  let rating = 1500;
-  const source = row ?? await db.prepare(
+     ORDER BY RANDOM() LIMIT 12`,
+  ).bind(humanId, SHADOW_USER_ID).all<{ name: string; rating: number; formation: string }>();
+  const candidates = listed.results ?? [];
+  const self = await db.prepare(
     'SELECT name, rating, formation FROM user_profiles WHERE user_id = ?1',
   ).bind(humanId).first<{ name: string; rating: number; formation: string }>();
-  const parsed = source ? playableFormation(source.formation) : null;
-  if (source && parsed) {
-    formation = parsed;
-    name = source.name;
-    rating = source.rating;
+  if (self) candidates.push(self);
+  for (const source of candidates) {
+    const parsed = playableFormation(source.formation);
+    if (!parsed) continue;
+    return {
+      userId: SHADOW_USER_ID, name: source.name, rating: source.rating, formation: parsed,
+      bossId: bossId(parsed), reconnectToken: crypto.randomUUID(),
+    };
   }
   return {
-    userId: SHADOW_USER_ID, name, rating, formation,
-    bossId: bossId(formation), reconnectToken: crypto.randomUUID(),
+    userId: SHADOW_USER_ID, name: 'AIの対戦相手', rating: 1500,
+    formation: SHADOW_FALLBACK_FORMATION,
+    bossId: bossId(SHADOW_FALLBACK_FORMATION), reconnectToken: crypto.randomUUID(),
   };
 }
 

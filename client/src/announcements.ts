@@ -60,13 +60,23 @@ function appendLinkedText(parent: HTMLElement, text: string): void {
   }
 }
 
+/** 配信前のAPIに無い告知も、手元の一覧から足す */
+function withBundledAnnouncements(remote: Announcement[]): Announcement[] {
+  const seen = new Set(remote.map(item => item.id));
+  const merged = [...remote];
+  for (const item of currentAnnouncements()) {
+    if (!seen.has(item.id)) merged.push(item);
+  }
+  return merged.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+}
+
 async function fetchAnnouncements(): Promise<Announcement[]> {
   if (!__API_URL__) return currentAnnouncements();
   try {
     const res = await fetch(`${__API_URL__}/v1/announcements`, { cache: 'no-store' });
     const data = await res.json().catch(() => null) as { announcements?: Announcement[] } | null;
     if (!res.ok || !Array.isArray(data?.announcements)) return currentAnnouncements();
-    return data.announcements;
+    return withBundledAnnouncements(data.announcements);
   } catch {
     return currentAnnouncements();
   }
@@ -95,7 +105,7 @@ export const AnnouncementsUI = {
   async refresh(opts: { popup?: boolean } = {}): Promise<void> {
     this.items = await fetchAnnouncements();
     this.renderBadge();
-    if (opts.popup && __API_URL__) this.openFirstUnreadPopup();
+    if (opts.popup) this.openFirstUnreadPopup();
   },
 
   unreadItems(): Announcement[] {

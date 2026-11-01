@@ -28,7 +28,7 @@ export type Skill =
   | { kind: 'decoy'; name: string; desc: string }
   | { kind: 'explode'; name: string; desc: string }
   /* SSR専用スキル(会心の「運任せ」を「狙って出す」に置き換える: doc 08) */
-  | { kind: 'moon'; name: string; desc: string; mult: number }                // 盤上にいる間、満月の味方取りが会心確定
+  | { kind: 'scent'; name: string; desc: string; bonus: number }              // 盤上にいる間、味方の取りダメージを底上げ
   | { kind: 'heads'; name: string; desc: string; step: number; max: number }  // この駒の撃破数だけ与ダメ成長
   | { kind: 'legion'; name: string; desc: string; per: number; cap: number } // 盤上にいる間、味方の取りが軍勢で増幅
   | { kind: 'cellar'; name: string; desc: string; heal: number; hungerExtra: number; feastHeal: number } // 毎自ターン回復+飢餓猶予
@@ -37,7 +37,7 @@ export type Skill =
   | { kind: 'phase'; name: string; desc: string }                             // 取ったあと隣接空きへ退避(任意)
   | { kind: 'ember'; name: string; desc: string; mode: 'atk' | 'heal' | 'trap' | 'bolt'; value: number; span: number } // span<=0 は永久
   | { kind: 'spawn'; name: string; desc: string; piece: string }              // 取ったあと周囲の空きへ駒を1体置く
-  | { kind: 'veil'; name: string; desc: string }                              // SSR: 残留/帰影/影遁を選択
+  | { kind: 'veil'; name: string; desc: string }                              // SSR: 取ったあと残留か元マスへ帰影
   | { kind: 'charm'; name: string; desc: string }                             // 取った駒を味方にして元マスへ戻る
   | { kind: 'recall'; name: string; desc: string }                            // 取られても自軍の持ち駒に戻る
   | { kind: 'hydra'; name: string; desc: string; extra: number }              // 取られても隣接へ逃げる(extra回)
@@ -77,12 +77,26 @@ const STEPS_DIAG4: readonly XY[] = [[1,-1],[-1,-1],[1,1],[-1,1]];
 const STEPS_ORTHO4: readonly XY[] = [[0,-1],[1,0],[-1,0],[0,1]];
 
 /* レアリティ: weight=ガチャ排出比, yoryoku=被り時の妖力変換量 */
-export const RARITY_INFO: Record<Rarity, { label: string; cls: string; color: string; weight: number; yoryoku: number }> = {
-  N:   { label: 'N',   cls: 'r-n',   color: '#9aa0b5', weight: 40, yoryoku: 20 },
-  R:   { label: 'R',   cls: 'r-r',   color: '#58b6ff', weight: 40, yoryoku: 50 },
-  SR:  { label: 'SR',  cls: 'r-sr',  color: '#c88aff', weight: 16, yoryoku: 150 },
-  SSR: { label: 'SSR', cls: 'r-ssr', color: '#ffd24a', weight: 4,  yoryoku: 400 },
+export const RARITY_INFO: Record<Rarity, { label: string; cls: string; color: string; weight: number; yoryoku: number; cost: number }> = {
+  N:   { label: 'N',   cls: 'r-n',   color: '#9aa0b5', weight: 40, yoryoku: 20,  cost: 1 },
+  R:   { label: 'R',   cls: 'r-r',   color: '#58b6ff', weight: 40, yoryoku: 50,  cost: 2 },
+  SR:  { label: 'SR',  cls: 'r-sr',  color: '#c88aff', weight: 16, yoryoku: 150, cost: 3 },
+  SSR: { label: 'SSR', cls: 'r-ssr', color: '#ffd24a', weight: 4,  yoryoku: 400, cost: 4 },
 };
+
+/** 編成に置けるコストの合計。空きマスは0。異装は元のレアリティと同じ */
+export const FORMATION_COST_CAP = 20;
+
+export function yokaiCost(id: string): number {
+  const def = YOKAI[id];
+  return def ? RARITY_INFO[def.rarity].cost : 0;
+}
+
+export function formationCost(rows: readonly (readonly (string | null)[])[]): number {
+  let total = 0;
+  for (const id of rows.flat()) if (id) total += yokaiCost(id);
+  return total;
+}
 
 const img = (name: string) => `assets/pieces/${name}.webp`;
 const imgSm = (name: string) => `assets/pieces/sm/${name}.webp`;
@@ -94,9 +108,9 @@ export const YOKAI: Record<string, YokaiDef> = {
     img: img('kyubi'), imgSm: imgSm('kyubi'),
     moveText: '全方向に1マス',
     skill: {
-      kind: 'moon', name: '月の主',
-      desc: '満月の夜、味方の取りがダメージ2倍',
-      mult: 2,
+      kind: 'scent', name: '妖狐の残り香',
+      desc: '盤上にいる間、味方の取りダメージ+20%',
+      bonus: 0.2,
     },
     moves: { steps: STEPS_ALL8 },
     awakenName: '九尾開眼',
@@ -107,7 +121,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     moveText: '全方向に1マス',
     skill: {
       kind: 'cellar', name: '酒蔵',
-      desc: '自ターン終了時に魂力+50。自軍の飢餓猶予+4手',
+      desc: '自ターン終了時に魂力+50',
       heal: 50, hungerExtra: 4, feastHeal: 25,
     },
     moves: { steps: STEPS_ALL8 },
@@ -119,7 +133,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'kooni', name: '小鬼', atk: 150, rarity: 'N',
     img: img('kooni'), imgSm: imgSm('kooni'),
     moveText: '前に1マス(成:金の動き)',
-    skill: { kind: 'crit', name: '鬼火', desc: '駒を取った時、30%で鬼火が爆ぜダメージ1.5倍', chance: 0.3, mult: 1.5 },
+    skill: { kind: 'crit', name: '鬼火', desc: '駒を取った時、30%でダメージ1.5倍', chance: 0.3, mult: 1.5 },
     moves: { steps: [[0,-1]] },
     promoted: { steps: STEPS_GOLD },
     dropLimit: 1, // 最奥1段には打てない
@@ -192,7 +206,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'aooni', name: '青鬼', atk: 190, rarity: 'R', gachaOnly: true,
     img: img('aooni'), imgSm: imgSm('aooni'),
     moveText: '前と斜め前に1マス(成:金の動き)',
-    skill: { kind: 'crit', name: '青碧の剛撃', desc: '駒を取った時、25%で剛撃が走りダメージ1.6倍', chance: 0.25, mult: 1.6 },
+    skill: { kind: 'crit', name: '青碧の剛撃', desc: '駒を取った時、25%でダメージ1.6倍', chance: 0.25, mult: 1.6 },
     moves: { steps: [[0,-1],[1,-1],[-1,-1]] },
     promoted: { steps: STEPS_GOLD },
     dropLimit: 1,
@@ -201,7 +215,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'kasha', name: '火車', atk: 230, rarity: 'R', gachaOnly: true,
     img: img('kasha'), imgSm: imgSm('kasha'),
     moveText: '斜めに1マス(成:斜め+前後)',
-    skill: { kind: 'zone', name: '獄炎の車輪', desc: '敵陣で駒を取ると炎車の轟きでダメージ+150', bonus: 150 },
+    skill: { kind: 'zone', name: '獄炎の車輪', desc: '敵陣で駒を取るとダメージ+150', bonus: 150 },
     moves: { steps: STEPS_DIAG4 },
     promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
   },
@@ -218,7 +232,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'hitouban', name: '飛頭蛮', atk: 200, rarity: 'R', gachaOnly: true,
     img: img('hitouban'), imgSm: imgSm('hitouban'),
     moveText: '横にどこまでも+前1マス(成:+後ろ・斜め前)',
-    skill: { kind: 'counter', name: '宙飛ぶ怨嗟', desc: '取られた時、飛んだ首が怨嗟を放ち、取った相手に300の反撃ダメージ!', dmg: 300 },
+    skill: { kind: 'counter', name: '宙飛ぶ怨嗟', desc: '取られた時に300の反撃ダメージ!', dmg: 300 },
     moves: { slides: [[1,0],[-1,0]], steps: [[0,-1]] },
     promoted: { slides: [[1,0],[-1,0]], steps: [[0,-1],[0,1],[1,-1],[-1,-1]] },
   },
@@ -243,7 +257,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'daitengu', name: '大天狗', atk: 260, rarity: 'SR', gachaOnly: true,
     img: img('daitengu'), imgSm: imgSm('daitengu'),
     moveText: '斜めに1〜2マス飛行・駒を飛び越す(成:+前後1マス)',
-    skill: { kind: 'rush', name: '天狗颪', desc: '斜めに2マス飛んで駒を取ると、羽団扇の烈風でダメージ2倍', minDist: 2, mult: 2 },
+    skill: { kind: 'rush', name: '天狗颪', desc: '斜めに2マス飛んで駒を取ると、ダメージ2倍', minDist: 2, mult: 2 },
     moves: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]] },
     promoted: { jumps: [[1,-1],[2,-2],[-1,-1],[-2,-2],[1,1],[2,2],[-1,1],[-2,2]], steps: [[0,-1],[0,1]] },
   },
@@ -264,7 +278,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'ibaraki', name: '茨木童子', atk: 320, rarity: 'SSR', gachaOnly: true,
     img: img('ibaraki'), imgSm: imgSm('ibaraki'),
     moveText: '金の動き(成:全方向1マス)',
-    skill: { kind: 'recall', name: '腕の回帰', desc: '取られても相手の持ち駒にならず、自分の持ち駒に戻る。何度斬られても羅生門へ帰り来る' },
+    skill: { kind: 'recall', name: '腕の回帰', desc: '取られても相手の持ち駒にならず、自分の持ち駒に戻る' },
     moves: { steps: STEPS_GOLD },
     promoted: { steps: STEPS_ALL8 },
     awakenName: '羅生門の腕',
@@ -283,7 +297,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'sunakake', name: '砂かけ婆', atk: 120, rarity: 'N', gachaOnly: true,
     img: img('sunakake'), imgSm: imgSm('sunakake'),
     moveText: '前と斜め前に1マス(成:金の動き)',
-    skill: { kind: 'jam', name: '目つぶしの砂', desc: '盤上にいる間、敵の会心系スキル(確率会心・満月会心)を封じる' },
+    skill: { kind: 'jam', name: '目つぶしの砂', desc: '盤上にいる間、敵の会心を封じる' },
     moves: { steps: [[0,-1],[1,-1],[-1,-1]] },
     promoted: { steps: STEPS_GOLD },
   },
@@ -319,7 +333,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'tanuki', name: '化け狸', atk: 160, rarity: 'R', gachaOnly: true,
     img: img('tanuki'), imgSm: imgSm('tanuki'),
     moveText: '前3方向と後ろに1マス(成:金の動き)',
-    skill: { kind: 'decoy', name: '葉隠れの術', desc: '取られた時、正体は葉っぱだった! ダメージ半減&相手の持ち駒にならない' },
+    skill: { kind: 'decoy', name: '葉隠れの術', desc: '取られた時、ダメージ半減&相手の持ち駒にならない' },
     moves: { steps: [[0,-1],[1,-1],[-1,-1],[0,1]] },
     promoted: { steps: STEPS_GOLD },
   },
@@ -353,7 +367,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'karakasa', name: 'からかさ小僧', atk: 110, rarity: 'N', gachaOnly: true,
     img: img('karakasa'), imgSm: imgSm('karakasa'),
     moveText: '前と斜め後ろに1マス(成:全方向1マス)',
-    skill: { kind: 'aura', name: '唐傘の守り', desc: '盤上にいる間、唐傘の守りで自軍の受けるダメージ-12%', reduce: 0.12 },
+    skill: { kind: 'aura', name: '唐傘の守り', desc: '盤上にいる間、自軍の受けるダメージ-12%', reduce: 0.12 },
     moves: { steps: [[0,-1], [1,1], [-1,1]] },
     promoted: { steps: STEPS_ALL8 },
   },
@@ -369,7 +383,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'baku', name: '獏', atk: 200, rarity: 'SR', gachaOnly: true,
     img: img('baku'), imgSm: imgSm('baku'),
     moveText: '前後1マス、横にどこまでも(成:縦横+斜め前)',
-    skill: { kind: 'weaken', name: '悪夢喰らい', desc: '盤上にいる間、悪夢喰らいの霧で敵軍の与えるダメージ-15%', reduce: 0.15 },
+    skill: { kind: 'weaken', name: '悪夢喰らい', desc: '盤上にいる間、敵軍の与えるダメージ-15%', reduce: 0.15 },
     moves: { steps: [[0,-1], [0,1]], slides: [[1,0], [-1,0]] },
     promoted: { steps: [[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1]] },
   },
@@ -387,7 +401,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'bakezouri', name: '化け草履', atk: 100, rarity: 'N', gachaOnly: true,
     img: img('bakezouri'), imgSm: imgSm('bakezouri'),
     moveText: '前と斜め前に1マス(成:金の動き)',
-    skill: { kind: 'decoy', name: '空蝉の草履', desc: '取られた時、正体はただの草履だった! ダメージ半減&相手の持ち駒にならない' },
+    skill: { kind: 'decoy', name: '空蝉の草履', desc: '取られた時、ダメージ半減&相手の持ち駒にならない' },
     moves: { steps: [[0,-1],[1,-1],[-1,-1]] },
     promoted: { steps: STEPS_GOLD },
     dropLimit: 1,
@@ -396,7 +410,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'sunekosuri', name: 'すねこすり', atk: 115, rarity: 'N', gachaOnly: true,
     img: img('sunekosuri'), imgSm: imgSm('sunekosuri'),
     moveText: '前と横に1マス(成:縦横+斜め前)',
-    skill: { kind: 'jam', name: '脛擦りの呪い', desc: '盤上にいる間、敵の会心系スキル(確率会心・満月会心)を封じる' },
+    skill: { kind: 'jam', name: '脛擦りの呪い', desc: '盤上にいる間、敵の会心を封じる' },
     moves: { steps: [[0,-1],[1,0],[-1,0]] },
     promoted: { steps: [[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1]] },
   },
@@ -412,7 +426,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'nopperabo', name: 'のっぺらぼう', atk: 165, rarity: 'R', gachaOnly: true,
     img: img('nopperabo'), imgSm: imgSm('nopperabo'),
     moveText: '前3方向と後ろに1マス(成:金の動き)',
-    skill: { kind: 'decoy', name: '無貌の化かし', desc: '取られた時、顔のない幻影だった! ダメージ半減&相手の持ち駒にならない' },
+    skill: { kind: 'decoy', name: '無貌の化かし', desc: '取られた時、ダメージ半減&相手の持ち駒にならない' },
     moves: { steps: [[0,-1],[1,-1],[-1,-1],[0,1]] },
     promoted: { steps: STEPS_GOLD },
   },
@@ -420,7 +434,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'tenome', name: '手の目', atk: 195, rarity: 'R', gachaOnly: true,
     img: img('tenome'), imgSm: imgSm('tenome'),
     moveText: '横にどこまでも+前1マス(成:+後ろ・斜め前)',
-    skill: { kind: 'counter', name: '手の目の睨み', desc: '取られた時、掌の目が睨み返し、取った相手に280の反撃ダメージ!', dmg: 280 },
+    skill: { kind: 'counter', name: '手の目の睨み', desc: '取られた時、取った相手に280の反撃ダメージ!', dmg: 280 },
     moves: { slides: [[1,0],[-1,0]], steps: [[0,-1]] },
     promoted: { slides: [[1,0],[-1,0]], steps: [[0,-1],[0,1],[1,-1],[-1,-1]] },
   },
@@ -478,7 +492,7 @@ export const YOKAI: Record<string, YokaiDef> = {
     id: 'oomyukade', name: '大百足', atk: 205, rarity: 'SR', gachaOnly: true,
     img: img('oomyukade'), imgSm: imgSm('oomyukade'),
     moveText: '斜めに1マス+前へ2マス跳び(成:+縦横1マス)',
-    skill: { kind: 'weaken', name: '百足の毒', desc: '盤上にいる間、百足の毒で敵軍の与えるダメージ-14%', reduce: 0.14 },
+    skill: { kind: 'weaken', name: '百足の毒', desc: '盤上にいる間、敵軍の与えるダメージ-14%', reduce: 0.14 },
     moves: { steps: STEPS_DIAG4, jumps: [[0,-2]] },
     promoted: { steps: [...STEPS_DIAG4, ...STEPS_ORTHO4], jumps: [[0,-2]] },
   },
@@ -559,15 +573,15 @@ export const YOKAI: Record<string, YokaiDef> = {
     promoted: { steps: [...STEPS_DIAG4, [0,-1], [0,1]] },
   },
   ingyo: {
-    id: 'ingyo', name: '隱神刑部', atk: 360, rarity: 'SSR', gachaOnly: true,
+    id: 'ingyo', name: '隱神刑部', atk: 320, rarity: 'SSR', gachaOnly: true,
     img: img('ingyo'), imgSm: imgSm('ingyo'),
-    moveText: '斜めに1マスと前へ変則跳び(成:全方向1マス+変則跳び)',
+    moveText: '斜めに1マスと前へ変則跳び(成:全方向1マス)',
     skill: {
       kind: 'veil', name: '隱形の術',
-      desc: 'この駒で取ったあと、(1)その場に残る (2)元いたマスへ戻る (3)隣の空きマスへ逃げる、のいずれかを選べる',
+      desc: 'この駒で取ったあと、その場に残るか、元のマスへ戻る',
     },
     moves: { steps: STEPS_DIAG4, jumps: [[1,-2],[-1,-2]] },
-    promoted: { steps: STEPS_ALL8, jumps: [[1,-2],[-1,-2]] },
+    promoted: { steps: STEPS_ALL8 },
     awakenName: '真・隱形',
   },
 };
@@ -593,7 +607,7 @@ YOKAI.shuten_kishin = {
   img: img('shuten-kishin'),
   imgSm: imgSm('shuten-kishin'),
   variantOf: 'shuten',
-  summonTitle: '鬼神 覚醒',
+  summonTitle: '鬼神 顕現',
   summonColors: ['#ffdbc2', '#c51c2b', '#8d47d6'],
   awakenName: '鬼神羅刹・極',
 };
@@ -652,23 +666,9 @@ export interface Resonance {
   effect: 'oniFeast' | 'foxBond';
   colors: readonly [string, string, string];
 }
-export const RESONANCES: readonly Resonance[] = [
-  {
-    pair: ['shuten', 'ibaraki'], name: '鬼の宴', effect: 'oniFeast',
-    desc: '両者が盤上にいると、酒蔵の回復+25',
-    colors: ['#ffdbc2', '#ff4d4d', '#8d47d6'],
-  },
-  {
-    pair: ['kyubi', 'tamamo'], name: '妖狐相伝', effect: 'foxBond',
-    desc: '片方が取られると、残った方の次の取りが確定会心',
-    colors: ['#fff8df', '#ff9d3c', '#b21f32'],
-  },
-];
+export const RESONANCES: readonly Resonance[] = [];
 /* 異装を通常版に正規化(共鳴・図鑑グルーピング用) */
 export const baseIdOf = (id: string): string => YOKAI[id]?.variantOf ?? id;
-
-/* 月齢(moonスキル): 1夜=1往復(2手)、4夜周期で満月が巡る */
-export const MOON_PHASES = ['新月', '三日月', '半月', '満月'] as const;
 
 /* ガチャ排出対象(limited=イベント限定を除く全妖怪) */
 export const GACHA_POOL: string[] = Object.keys(YOKAI).filter(id => !YOKAI[id].limited);

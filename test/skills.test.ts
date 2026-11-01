@@ -154,6 +154,29 @@ test('道連れで消えた駒は成れない', () => {
   expect(events.some(e => e.t === 'promote'), '消滅した駒の成りイベントが出ない').toBe(false);
 });
 
+test('味方のいるマスは合法手に入らず、止めたマスだけを返す', () => {
+  const s = blank();
+  put(s, 2, 4, 'ittan', 'p');
+  put(s, 2, 2, 'kappa', 'p');
+  put(s, 2, 1, 'kooni', 'e');
+  expect(Game.getMoves(s, 2, 4).map(m => `${m.x},${m.y}`)).toEqual(['2,3']);
+  expect(Game.allyBlocks(s, 2, 4)).toEqual([{ x: 2, y: 2 }]);
+  expect(Game.slideShadow(s, 2, 4)).toEqual([{ x: 2, y: 1 }, { x: 2, y: 0 }]);
+  expect(Game.getMoves(s, 2, 4).some(m => m.y < 2)).toBe(false);
+  expect(Game.getAllActions(s, 'p').some(a =>
+    a.kind === 'move' && a.from.x === 2 && a.from.y === 4 && a.to.x === 2 && a.to.y <= 2,
+  )).toBe(false);
+
+  const step = blank();
+  put(step, 2, 3, 'kappa', 'p');
+  put(step, 2, 2, 'nurikabe', 'p');
+  put(step, 3, 3, 'kooni', 'e');
+  expect(Game.getMoves(step, 2, 3).some(m => m.x === 2 && m.y === 2)).toBe(false);
+  expect(Game.allyBlocks(step, 2, 3)).toContainEqual({ x: 2, y: 2 });
+  expect(Game.slideShadow(step, 2, 3)).toEqual([]);
+  expect(Game.getMoves(step, 2, 3).some(m => m.x === 3 && m.y === 3 && m.capture)).toBe(true);
+});
+
 test('大天狗: 斜め2マスの取りは2倍、1マスでは倍化しない', () => {
   const far = blank();
   far.turn = 'p';

@@ -1,7 +1,7 @@
-/* SSR体験改修(月齢・八岐の首・百鬼の陣・覚醒・因縁共鳴)のエンジンテスト */
+/* SSRスキル(妖狐の残り香・八岐の首・百鬼の陣)のエンジンテスト */
 import { test, expect } from 'vitest';
-import { ROWS, COLS, YOKAI } from '../shared/data';
-import { AWAKEN_MAX, AWAKEN_SPAN, Game, MOON_CYCLE } from '../shared/game';
+import { ROWS, COLS } from '../shared/data';
+import { Game } from '../shared/game';
 import type { ApplyOptions, GameState, Side } from '../shared/game';
 
 let uid = 900;
@@ -21,102 +21,66 @@ const capEv = (events: ReturnType<typeof cap>) => {
   if (!ev || ev.t !== 'capture') throw new Error('capture event missing');
   return ev;
 };
-/* 満月の手数(ply)に合わせる。fullMoon=falseなら新月に */
-const setMoon = (s: GameState, fullMoon: boolean) => {
-  s.plies = fullMoon ? (MOON_CYCLE - 1) * 2 : 0;
-};
+/* ---------- 妖狐の残り香(scent) ---------- */
 
-/* ---------- 月齢(moon) ---------- */
-
-test('moon: 満月以外の手番では会心が発動しない', () => {
+test('scent: 九尾が盤上なら自分の取りが+20%', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, false);
-  put(s, 2, 3, 'kyubi', 'p');
-  put(s, 2, 2, 'ittan', 'e');
-  put(s, 0, 0, 'shuten', 'e'); // 敵大将(勝敗確定を避ける)
-  put(s, 0, 5, 'ittan', 'p');
-  const ev = capEv(cap(s, 2, 3, 2, 2));
-  expect(ev.damage, '新月: 素のATK400').toBe(400);
-  expect(ev.procs).toHaveLength(0);
-});
-
-test('moon: 満月の手番は会心が確定発動する(乱数不要)', () => {
-  const s = blank();
-  s.turn = 'p';
-  setMoon(s, true);
   put(s, 2, 3, 'kyubi', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
-  const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 })); // 乱数は最悪値でも確定
-  expect(ev.damage, '満月: 400×2').toBe(800);
-  expect(ev.procs.some(p => p.name === '月の主')).toBe(true);
+  const ev = capEv(cap(s, 2, 3, 2, 2));
+  expect(ev.damage, '400×1.2').toBe(480);
+  expect(ev.procs.some(p => p.name === '妖狐の残り香' && p.text === '+20%')).toBe(true);
 });
 
-test('moon: 期待値計算(AI読み)でも満月は決定的に評価される', () => {
-  for (const fullMoon of [true, false]) {
-    const s = blank();
-    s.turn = 'p';
-    setMoon(s, fullMoon);
-    put(s, 2, 3, 'kyubi', 'p');
-    put(s, 2, 2, 'ittan', 'e');
-    put(s, 0, 0, 'shuten', 'e');
-    put(s, 0, 5, 'ittan', 'p');
-    const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
-    expect(ev.damage).toBe(fullMoon ? 800 : 400);
-  }
-});
-
-test('moon: 砂かけ婆(jam)は満月会心も封じる', () => {
+test('scent: 期待値計算でも同じ+20%', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, true);
+  put(s, 2, 3, 'kyubi', 'p');
+  put(s, 2, 2, 'ittan', 'e');
+  put(s, 0, 0, 'shuten', 'e');
+  put(s, 0, 5, 'ittan', 'p');
+  const ev = capEv(cap(s, 2, 3, 2, 2, { rng: false }));
+  expect(ev.damage).toBe(480);
+  expect(ev.procs).toHaveLength(0);
+});
+
+test('scent: 砂かけ婆は残り香を封じない', () => {
+  const s = blank();
+  s.turn = 'p';
   put(s, 2, 3, 'kyubi', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 4, 0, 'sunakake', 'e');
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
   const ev = capEv(cap(s, 2, 3, 2, 2));
-  expect(ev.damage, '封じ: 素のATK').toBe(400);
+  expect(ev.damage).toBe(480);
 });
 
-test('moon: 九尾が盤上なら味方の取りにも満月会心が乗る', () => {
+test('scent: 九尾が盤上なら味方の取りにも+20%', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, true);
   put(s, 2, 5, 'kyubi', 'p');
   put(s, 2, 3, 'kooni', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'shuten', 'e');
   const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 }));
-  expect(ev.damage, '小鬼150×2').toBe(300);
-  expect(ev.procs.some(p => p.name === '月の主')).toBe(true);
+  expect(ev.damage, '小鬼150×1.2。会心は不発').toBe(180);
+  expect(ev.procs.some(p => p.name === '妖狐の残り香')).toBe(true);
 });
 
-test('moon: 九尾が盤上にいないと味方取りは満月でも素', () => {
+test('scent: 九尾が盤上にいない味方取りは素', () => {
   const s = blank();
   s.turn = 'p';
-  setMoon(s, true);
   put(s, 2, 3, 'kooni', 'p');
   put(s, 2, 2, 'ittan', 'e');
   put(s, 0, 0, 'shuten', 'e');
   put(s, 0, 5, 'ittan', 'p');
   const ev = capEv(cap(s, 2, 3, 2, 2, { rand: () => 0.99 }));
   expect(ev.damage).toBe(150);
-  expect(ev.procs.some(p => p.name === '月の主')).toBe(false);
-});
-
-test('moon: 月齢は両者共通で1夜=2手で進む', () => {
-  const s = Game.newState();
-  expect(Game.moonPhase(s)).toBe(0);
-  s.plies = 2;
-  expect(Game.moonPhase(s), '2手で次の夜').toBe(1);
-  s.plies = (MOON_CYCLE - 1) * 2;
-  expect(Game.isFullMoonPly(s.plies)).toBe(true);
-  expect(Game.nightsUntilFullMoon(s)).toBe(0);
-  s.plies = MOON_CYCLE * 2;
-  expect(Game.moonPhase(s), '満月の翌夜は新月に戻る').toBe(0);
+  expect(ev.procs.some(p => p.name === '妖狐の残り香')).toBe(false);
 });
 
 /* ---------- 八岐の首(hydra) ---------- */
@@ -245,126 +209,6 @@ test('cellar: 飢餓の猶予が自軍だけ+4手', () => {
   Game.applyAction(s, { kind: 'move', from: { x: 2, y: 1 }, to: { x: 3, y: 1 } }, { rng: false });
   expect(s.hp.e).toBe(3000 - 50);
   expect(s.hp.p).toBe(3000);
-});
-
-/* ---------- 覚醒(awaken) ---------- */
-
-test('awaken: 取り合いで両陣営のゲージが+1ずつ溜まる', () => {
-  const s = blank();
-  s.turn = 'p';
-  put(s, 2, 3, 'kooni', 'p');
-  put(s, 2, 2, 'ittan', 'e');
-  put(s, 0, 0, 'shuten', 'e');
-  put(s, 0, 5, 'kyubi', 'p');
-  cap(s, 2, 3, 2, 2);
-  expect(s.awaken.p.gauge).toBe(1);
-  expect(s.awaken.e.gauge).toBe(1);
-});
-
-test('awaken: ゲージ満タンで自軍SSRへの覚醒アクションが合法手に加わる', () => {
-  const s = blank();
-  s.turn = 'p';
-  put(s, 2, 5, 'kyubi', 'p');
-  put(s, 0, 3, 'kooni', 'p'); // SSRでない駒は対象外
-  put(s, 2, 0, 'shuten', 'e');
-  const before = Game.getAllActions(s, 'p').filter(a => a.kind === 'awaken');
-  expect(before, 'ゲージ不足では出ない').toHaveLength(0);
-  s.awaken.p.gauge = AWAKEN_MAX;
-  const acts = Game.getAllActions(s, 'p').filter(a => a.kind === 'awaken');
-  expect(acts).toHaveLength(1);
-  expect(acts[0].to).toEqual({ x: 2, y: 5 });
-});
-
-test('awaken: 発動でATK1.5倍が自分の3手番続き、その後切れる。1局1回のみ', () => {
-  const s = blank();
-  s.turn = 'p';
-  put(s, 2, 4, 'kyubi', 'p');
-  put(s, 0, 0, 'shuten', 'e');
-  put(s, 0, 5, 'ittan', 'p');
-  s.awaken.p.gauge = AWAKEN_MAX;
-  setMoon(s, false); // 満月会心を混ぜない
-
-  const events = Game.applyAction(s, { kind: 'awaken', to: { x: 2, y: 4 } });
-  expect(events[0].t).toBe('awaken');
-  expect(s.awaken.p.used).toBe(true);
-  expect(s.turn, '手番を消費する').toBe('e');
-  expect(Game.getAllActions(s, 'p').some(a => a.kind === 'awaken'), '再発動不可').toBe(false);
-
-  /* 覚醒中の攻撃はATK1.5倍(発動がply0 → 有効はply6まで=自分の3手番) */
-  const kyubi = s.board[4][2]!;
-  expect(Game.isAwakened(kyubi, s.plies)).toBe(true);
-  put(s, 2, 3, 'ittan', 'e');
-  s.turn = 'p';
-  s.plies = 2; // 自分の1手番目
-  const ev = capEv(cap(s, 2, 4, 2, 3));
-  expect(ev.damage).toBe(Math.round(400 * 1.5));
-  expect(ev.procs.some(p => p.name === '九尾開眼')).toBe(true);
-
-  /* 期限切れ後は素に戻る */
-  s.turn = 'p';
-  s.combo.p = 0;
-  s.plies = AWAKEN_SPAN + 2; // 発動ply0 + SPAN を超えた
-  put(s, 2, 2, 'ittan', 'e');
-  const ev2 = capEv(cap(s, 2, 3, 2, 2));
-  expect(ev2.damage, '覚醒切れ: 素のATK').toBe(400);
-});
-
-/* ---------- 因縁共鳴 ---------- */
-
-test('oniFeast(鬼の宴): 茨木が盤上にいると酒蔵の回復が+25', () => {
-  const mk = (withPartner: boolean) => {
-    const s = blank();
-    s.turn = 'p';
-    s.hp.p = 2000;
-    put(s, 2, 4, 'shuten', 'p');
-    if (withPartner) put(s, 4, 5, 'ibaraki', 'p');
-    else put(s, 4, 5, 'kyubi', 'p');
-    put(s, 0, 0, 'nurarihyon', 'e');
-    const evs = Game.applyAction(s, { kind: 'move', from: { x: 2, y: 4 }, to: { x: 3, y: 4 } }, { rng: false });
-    return { heal: evs.find(e => e.t === 'cellar'), hp: s.hp.p };
-  };
-  const alone = mk(false);
-  expect(alone.heal && alone.heal.t === 'cellar' ? alone.heal.heal : 0).toBe(50);
-  expect(alone.hp).toBe(2050);
-  const paired = mk(true);
-  expect(paired.heal && paired.heal.t === 'cellar' ? paired.heal.heal : 0).toBe(75);
-  expect(paired.hp).toBe(2075);
-});
-
-test('oniFeast: 異装(鬼神・酒呑童子)でも酒蔵が共鳴する', () => {
-  const s = blank();
-  s.turn = 'p';
-  s.hp.p = 2000;
-  put(s, 2, 4, 'shuten_kishin', 'p');
-  put(s, 4, 5, 'ibaraki_rashomon', 'p');
-  put(s, 0, 0, 'nurarihyon', 'e');
-  const evs = Game.applyAction(s, { kind: 'move', from: { x: 2, y: 4 }, to: { x: 3, y: 4 } }, { rng: false });
-  const cellar = evs.find(e => e.t === 'cellar');
-  expect(cellar && cellar.t === 'cellar' ? cellar.heal : 0).toBe(75);
-});
-
-test('foxBond(妖狐相伝): 玉藻前を取られると九尾が激怒し、次の攻撃が確定会心', () => {
-  const s = blank();
-  s.turn = 'e';
-  setMoon(s, false); // 満月ではない状況で確定会心を検証
-  put(s, 2, 3, 'tamamo', 'p');
-  put(s, 1, 2, 'nekomata', 'e');
-  put(s, 2, 5, 'kyubi', 'p');
-  put(s, 0, 0, 'shuten', 'e');
-  put(s, 0, 5, 'ittan', 'p');
-
-  const ev = capEv(cap(s, 1, 2, 2, 3)); // 猫又が玉藻前を取る
-  expect(ev.enrage?.id, '九尾が激怒').toBe('kyubi');
-  const kyubi = s.board[5][2]!;
-  expect(kyubi.enraged).toBe(true);
-
-  /* 激怒中の攻撃は月齢に関係なく確定会心。一撃で解除される */
-  s.turn = 'p';
-  s.plies = 0;
-  put(s, 2, 4, 'ittan', 'e');
-  const ev2 = capEv(cap(s, 2, 5, 2, 4, { rand: () => 0.99 }));
-  expect(ev2.damage).toBe(800); // 400×2 確定
-  expect(s.board[4][2]?.enraged, '激怒は消費される').toBeUndefined();
 });
 
 test('charm: 玉藻前は取った駒を味方にし、自身は元マスへ戻る', () => {
@@ -524,12 +368,4 @@ test('互換: plies/awaken を持たない旧状態でも applyAction が動く'
   expect(() => Game.applyAction(s, acts[0])).not.toThrow();
   expect(s.plies).toBe(1);
   expect(s.awaken.p.gauge).toBe(0);
-});
-
-test('全SSRに覚醒技名が定義されている', () => {
-  for (const id in YOKAI) {
-    if (YOKAI[id].rarity === 'SSR') {
-      expect(YOKAI[id].awakenName, `${id} の awakenName`).toBeTruthy();
-    }
-  }
 });

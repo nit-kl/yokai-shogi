@@ -46,11 +46,26 @@ await page.screenshot({ path: path.join(dir, 'shot-g4-formation.png') });
 
 await page.evaluate(() => {
   const { yk } = window;
-  const owned = Object.keys(yk.Meta.data.owned).filter(id => !yk.YOKAI[id].boss);
-  yk.MenuUI.rows = [
-    [owned[0] || null, owned[1] || null, owned[2] || null, owned[3] || null, owned[4] || null],
-    [owned[5] || null, owned[6] || null, 'nurarihyon', owned[7] || null, owned[8] || null],
-  ];
+  const costOf = { N: 1, R: 2, SR: 3, SSR: 4 };
+  const cap = 20;
+  const owned = Object.keys(yk.Meta.data.owned)
+    .filter(id => !yk.YOKAI[id].boss)
+    .sort((a, b) => costOf[yk.YOKAI[a].rarity] - costOf[yk.YOKAI[b].rarity]);
+  const picked = [];
+  let spent = costOf[yk.YOKAI.nurarihyon.rarity];
+  for (const id of owned) {
+    const cost = costOf[yk.YOKAI[id].rarity];
+    if (picked.length >= 9 || spent + cost > cap) continue;
+    picked.push(id);
+    spent += cost;
+  }
+  const slots = Array(10).fill(null);
+  slots[7] = 'nurarihyon';
+  picked.forEach((id, index) => {
+    const at = index < 7 ? index : index + 1;
+    slots[at] = id;
+  });
+  yk.MenuUI.rows = [slots.slice(0, 5), slots.slice(5)];
   yk.MenuUI.renderFormation();
 });
 await page.waitForTimeout(300);

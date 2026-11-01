@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-import { attachPageErrorCollectors, skipOnboarding, waitForBattleInput } from './helpers.mjs';
+import { attachPageErrorCollectors, dismissAnnouncements, skipOnboarding, waitForBattleInput } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
@@ -27,9 +27,9 @@ await page.click('#btn-profile-save');
 await page.locator('#modal-profile').waitFor({ state: 'hidden' });
 if (await page.locator('#title-player-name').textContent() !== '九尾使い') errors.push('タイトルにプレイヤーネームが反映されていない');
 
-// 駒一覧（ホームの「妖怪」から開く）
-await page.click('#btn-yokai');
-await page.locator('#modal-yokai').waitFor({ state: 'visible' });
+// 駒一覧（メニューから開く）
+await page.click('#btn-settings');
+await page.locator('#modal-settings').waitFor({ state: 'visible' });
 await page.click('#btn-pieces');
 await page.waitForSelector('#screen-pieces.active');
 const pieceCount = await page.locator('#pieces-list .piece-card').count();
@@ -38,6 +38,7 @@ if (pieceCount !== expectedPieceCount) errors.push(`駒一覧の件数が不正:
 if (await page.locator('#pieces-list').getByText('ガチャ限定').count()) errors.push('駒一覧に不要なガチャ限定表記がある');
 await page.click('#btn-pieces-back');
 await page.waitForSelector('#screen-title.active');
+await dismissAnnouncements(page);
 
 // 百鬼夜行(ソロ連戦)
 await page.click('#btn-start');
