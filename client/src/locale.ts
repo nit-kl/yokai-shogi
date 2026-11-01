@@ -91,7 +91,7 @@ const STATIC: Record<string, string> = {
   '編成を整える': 'Edit Formation', '編成を整えてください': 'Adjust your formation',
   '週間ランキング': 'Weekly Rankings', '次の軍勢': 'Next Army',
   '敵軍の編成': 'Enemy Formation', '開戦': 'Battle',
-  '百鬼夜行で記録した、今週のベスト連勝数です。': 'Your best Night Parade win streak this week.',
+  '連勝チャレンジで記録した、今週のベスト連勝数です。': 'Your best win streak this week.',
   '今週の1位報酬': 'Weekly #1 Reward', '今週の百鬼夜行': "This Week's Night Parade",
   '連勝ランキング(月曜リセット)': 'Win Streak Rankings (resets Monday)',
   '名前を設定して名乗りを上げる': 'Set a name to enter the rankings', '先週の百鬼夜行': "Last Week's Night Parade",

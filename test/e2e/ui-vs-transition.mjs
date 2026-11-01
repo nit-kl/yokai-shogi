@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
-import { skipOnboarding, waitForBattleInput } from './helpers.mjs';
+import { dismissAnnouncements, skipOnboarding, waitForBattleInput } from './helpers.mjs';
 
 const browser = await chromium.launch();
 try {
@@ -11,6 +11,7 @@ try {
     await page.goto(process.env.E2E_BASE_URL || 'http://localhost:5173/');
     await page.waitForSelector('#screen-title.active, #modal-onboarding-boss:not(.hidden)');
     await skipOnboarding(page);
+    await dismissAnnouncements(page);
     await page.click('#btn-start');
     await page.click('#btn-solo-battle');
     // Freeze the very first VS frame: transparent entrance animations must not expose the board.

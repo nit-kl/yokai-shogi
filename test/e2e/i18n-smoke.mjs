@@ -73,7 +73,7 @@ await page.locator('#btn-settings').click();
 await page.locator('#locale-select').selectOption('ja');
 await page.waitForFunction(() => document.documentElement.lang === 'ja' && document.documentElement.dataset.script === 'jpan');
 if (await page.title() !== '百鬼盤｜妖怪を集めて、取って、HPを削る対戦ゲーム') errors.push('Japanese title was not restored');
-if ((await page.locator('#btn-start').textContent())?.includes('百鬼夜行') !== true) errors.push('Japanese UI was not restored');
+if ((await page.locator('#btn-start').textContent())?.includes('連勝チャレンジ') !== true) errors.push('Japanese UI was not restored');
 if (!(await page.locator('a[href="/legal/terms.html"]').count())) errors.push('Japanese terms link was not restored');
 
 await browser.close();

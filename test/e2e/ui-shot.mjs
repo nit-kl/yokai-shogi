@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-import { attachPageErrorCollectors, skipOnboarding, waitForBattleInput } from './helpers.mjs';
+import { attachPageErrorCollectors, dismissAnnouncements, skipOnboarding, waitForBattleInput } from './helpers.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:4173/';
@@ -38,6 +38,7 @@ if (pieceCount !== expectedPieceCount) errors.push(`駒一覧の件数が不正:
 if (await page.locator('#pieces-list').getByText('ガチャ限定').count()) errors.push('駒一覧に不要なガチャ限定表記がある');
 await page.click('#btn-pieces-back');
 await page.waitForSelector('#screen-title.active');
+await dismissAnnouncements(page);
 
 // 百鬼夜行(ソロ連戦)
 await page.click('#btn-start');
