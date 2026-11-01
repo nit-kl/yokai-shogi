@@ -85,7 +85,7 @@ export const RARITY_INFO: Record<Rarity, { label: string; cls: string; color: st
 };
 
 /** 編成に置けるコストの合計。空きマスは0。異装は元のレアリティと同じ */
-export const FORMATION_COST_CAP = 20;
+export const FORMATION_COST_CAP = 25;
 
 export function yokaiCost(id: string): number {
   const def = YOKAI[id];

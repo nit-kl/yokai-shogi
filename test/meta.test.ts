@@ -214,7 +214,7 @@ test('LocalMeta: コスト超過の保存済み編成は残し、保存と対戦
   const m = new LocalMeta();
   const rows = [
     ['tamamo', 'ibaraki', 'yamata', 'sukuna', 'gashadokuro'],
-    [null, null, 'kyubi', null, null],
+    [null, 'tengu', 'kyubi', null, null],
   ];
   m.data.formation = rows;
   for (const id of rows.flat()) if (id) m.data.owned[id] = 1;

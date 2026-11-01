@@ -24,8 +24,8 @@ export const HYAKKI_STAGE: SoloStage = {
   ],
 };
 
-/** 目標コスト。上限20だけでなく、空きを残す並びも出す */
-const SOLO_BUDGETS = [14, 16, 18, 20] as const;
+/** 目標コスト。上限だけでなく、空きを残す並びも出す */
+const SOLO_BUDGETS = [19, 21, 23, 25] as const;
 
 /** 百鬼夜行のランダム敵編成を生成する。異装は出さない。コストは目標で打ち切る */
 export function soloBattleStage(rand: () => number = Math.random): SoloStage {
