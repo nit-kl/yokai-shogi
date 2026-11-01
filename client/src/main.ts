@@ -20,7 +20,7 @@ import type { Trial } from './trials';
 import { Meta } from './meta';
 import type { HyakkiRanking } from './meta';
 import { SessionExpiredError } from './meta';
-import { HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
+import { HYAKKI_MIN_DURATION_MS, HYAKKI_RANK_DIFFICULTY, HYAKKI_REWARD_YOKAI_ID } from '../../shared/hyakki';
 import { DOJO_PUZZLES, buildDojoState, evaluateDojo, isDojoUnlocked } from '../../shared/dojo';
 import type { DojoPuzzle } from '../../shared/dojo';
 import { MenuUI } from './menu';
@@ -93,6 +93,11 @@ let soloStreak = 0;
 let soloBestStreak = 0;
 let soloRank: number | null = null;
 let soloWinCounted = false;
+/* start → result → 次の start を直列にする。未解決の start を次局が負け扱いにすると連勝が消える */
+let hyakkiChain: Promise<void> = Promise.resolve();
+let hyakkiRoundId = 0;
+let hyakkiStartAckAt = 0;
+let battleLaunching = false;
 let hyakkiRanking: HyakkiRanking | null = null;
 let hyakkiRankingAt = 0; // 最終取得時刻(60秒キャッシュ)
 let rankingReturn: 'title' | 'solo' = 'title';
@@ -767,17 +772,24 @@ function applyHyakkiStanding(p: { currentStreak: number; bestStreak: number; ran
   soloRank = p.rank;
 }
 
-function renderHyakkiLobby() {
+function paintHyakkiLobby() {
   $('solo-current-streak').textContent = String(soloStreak);
   $('solo-best-streak').textContent = soloBestStreak > 0 ? String(soloBestStreak) : '—';
   $('solo-rank').textContent = soloRank ? `${soloRank}位` : '—';
+}
+
+function enqueueHyakki(task: () => Promise<void>): void {
+  hyakkiChain = hyakkiChain.then(task, task).then(() => undefined, () => undefined);
+}
+
+function renderHyakkiLobby() {
+  paintHyakkiLobby();
   if (!Meta.online) return;
-  Meta.hyakkiStatus().then(p => {
+  /* 未送信の勝利申告を status が上書きすると、勝った直後の連勝が 0 に戻る */
+  void hyakkiChain.then(() => Meta.hyakkiStatus()).then(p => {
     if (!p) return;
     applyHyakkiStanding(p);
-    $('solo-current-streak').textContent = String(soloStreak);
-    $('solo-best-streak').textContent = soloBestStreak > 0 ? String(soloBestStreak) : '—';
-    $('solo-rank').textContent = soloRank ? `${soloRank}位` : '—';
+    paintHyakkiLobby();
   }).catch(() => { /* オフライン表示のまま */ });
 }
 
@@ -2181,6 +2193,16 @@ async function playVsIntro(
 }
 
 async function startBattle() {
+  if (battleLaunching) return;
+  battleLaunching = true;
+  try {
+    await launchSoloBattle();
+  } finally {
+    battleLaunching = false;
+  }
+}
+
+async function launchSoloBattle() {
   if (!(await ensureFormationReady(() => openSolo()))) return;
   dojoPuzzle = null;
   dojoActions = [];
@@ -2198,13 +2220,16 @@ async function startBattle() {
   activeSoloStage = stage;
   soloWinCounted = false;
   if (hyakkiRankEligible()) {
-    /* 開始申告(doc 21)。サーバーが正本の連勝数を返す(リロード後の継続もここで復元)。
-       失敗してもローカル表示で対局は続行 */
-    Meta.hyakkiStart().then(p => {
-      if (!p) return;
+    /* 開始申告(doc 21)。前局の結果申告が終わるまで送らない。
+       対局終了後に届いた応答で、すでに増えた連勝は巻き戻さない。 */
+    const round = ++hyakkiRoundId;
+    enqueueHyakki(async () => {
+      const p = await Meta.hyakkiStart();
+      hyakkiStartAckAt = Date.now();
+      if (!p || round !== hyakkiRoundId || soloWinCounted) return;
       applyHyakkiStanding(p);
       $('hyakki-round-label').textContent = `${soloStreak + 1}戦目`;
-    }).catch(() => {});
+    });
   }
   onlineSide = null;
   onlineEndReason = null;
@@ -2933,11 +2958,21 @@ function showResult() {
     }
 
     if (hyakkiRankEligible()) {
+      const round = hyakkiRoundId;
+      const won = win;
       hyakkiRankingAt = 0;
-      Meta.hyakkiResult(win).then(p => {
-        if (!p) return;
+      enqueueHyakki(async () => {
+        /* 受理が対局終了間際だと経過が短く、サーバーが勝利を捨てる。差分だけ待つ */
+        if (won && hyakkiStartAckAt > 0) {
+          const remain = HYAKKI_MIN_DURATION_MS + 100 - (Date.now() - hyakkiStartAckAt);
+          if (remain > 0) await sleep(remain);
+        }
+        const p = await Meta.hyakkiResult(won);
+        if (!p || round !== hyakkiRoundId) return;
+        /* 勝利なのに 0 が返ったときは、画面上の連勝を消さない */
+        if (won && p.currentStreak <= 0) return;
         applyHyakkiStanding(p);
-        if (win) {
+        if (won) {
           streakEl.textContent = `${p.currentStreak}連勝`
             + (p.rank ? `（今週${p.rank}位）` : '');
         } else {
@@ -2945,12 +2980,12 @@ function showResult() {
             ? `連勝はここで途切れた（${brokenStreak}連勝）`
             : '連勝ならず';
           if (p.bestStreak > 0) {
-            $('result-sub').textContent = reasonsFor(win, enemyBossName)
+            $('result-sub').textContent = reasonsFor(won, enemyBossName)
               + `　今週ベスト ${p.bestStreak}`
               + (p.rank ? `（${p.rank}位）` : '');
           }
         }
-      }).catch(() => { /* 通信断でもローカル表示は維持 */ });
+      });
     }
     if (!win) soloStreak = 0;
   } else {
