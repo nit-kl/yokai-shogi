@@ -39,7 +39,7 @@ class Inbox {
 async function createPlayer(name: string): Promise<BattlePlayer> {
   const userId = crypto.randomUUID();
   const formation = [
-    ['ittan', 'kooni', null, 'nekomata', 'nue'],
+    ['ittan', null, 'kooni', 'nekomata', 'nue'],
     ['tengu', 'kappa', 'kyubi', 'nurikabe', 'rokuro'],
   ];
   await env.DB.batch([

@@ -692,10 +692,10 @@ export function formationWithBoss(bossId: string): (string | null)[][] {
 /* 初期配置(y=0 が敵陣最奥、y=5 が自陣最奥) */
 export const SETUP: (string | null)[][] = [
   ['rokuro', 'nurikabe', 'shuten', 'kappa', 'tengu'],   // y0 敵・奥
-  ['nue', 'nekomata', null, 'kooni', 'ittan'],          // y1 敵・前
+  ['nue', 'nekomata', 'kooni', null, 'ittan'],          // y1 敵・前（大将の真正面）
   [null, null, null, null, null],                       // y2
   [null, null, null, null, null],                       // y3
-  ['ittan', 'kooni', null, 'nekomata', 'nue'],          // y4 自・前
+  ['ittan', null, 'kooni', 'nekomata', 'nue'],          // y4 自・前（大将の真正面）
   ['tengu', 'kappa', 'kyubi', 'nurikabe', 'rokuro'],    // y5 自・奥
 ];
 

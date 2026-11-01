@@ -28,10 +28,39 @@ export function validateFormationShape(rows: unknown, owned: ReadonlySet<string>
   return null;
 }
 
+/* 開戦前の配置。対局が始まったあとの移動は縛らない。
+   player は [前段, 最奥段]、enemy は [最奥段, 前段]。
+   大将は自陣の奥の段、その真正面（敵側の隣マス）に味方が1体。 */
+export function bossFrontGuardIssue(
+  rows: readonly (readonly (string | null)[])[],
+  side: 'player' | 'enemy',
+): string | null {
+  if (rows.length !== 2) return '編成データが不正です';
+  const rear = side === 'player' ? 1 : 0;
+  const front = side === 'player' ? 0 : 1;
+  const rearRow = rows[rear];
+  const frontRow = rows[front];
+  if (!rearRow || !frontRow) return '編成データが不正です';
+  let bossX = -1;
+  for (let x = 0; x < rearRow.length; x++) {
+    const id = rearRow[x];
+    if (id && YOKAI[id]?.boss) bossX = x;
+  }
+  for (let x = 0; x < frontRow.length; x++) {
+    const id = frontRow[x];
+    if (id && YOKAI[id]?.boss) return '大将は奥の段に配置してください';
+  }
+  if (bossX < 0) return '大将は奥の段に配置してください';
+  if (!frontRow[bossX]) return '大将の真正面に味方を1体配置してください';
+  return null;
+}
+
 /* 正常なら null、問題があればエラーメッセージを返す */
 export function validateFormation(rows: unknown, owned: ReadonlySet<string>): string | null {
   const shape = validateFormationShape(rows, owned);
   if (shape) return shape;
+  const guard = bossFrontGuardIssue(rows as FormationRows, 'player');
+  if (guard) return guard;
   if (formationCost(rows as FormationRows) > FORMATION_COST_CAP) {
     return `編成コストが上限の${FORMATION_COST_CAP}を超えています`;
   }
@@ -51,6 +80,8 @@ export function formationBattleBlock(rows: unknown): string | null {
     if (def.boss) bosses++;
   }
   if (bosses !== 1) return '大将を1体配置してください';
+  const guard = bossFrontGuardIssue(grid, 'player');
+  if (guard) return guard;
   const cost = formationCost(grid);
   if (cost > FORMATION_COST_CAP) {
     return `いまの編成コストは${cost}です。上限は${FORMATION_COST_CAP}です。編成を整えてから対戦してください`;
