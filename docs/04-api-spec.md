@@ -64,7 +64,7 @@ REST(メタ系: 認証・ガチャ・編成 — Workers/Hono)+ WebSocket(対戦 
 ```json
 { "rows": [["raiju", null, "...", "ibaraki"], ["daitengu", "...", "hitouban"]] }
 ```
-PUT時のサーバー検証(`shared/validate.ts` と同一ロジック): 2×5構造 / 全駒所持済み / 種別重複なし / 大将ちょうど1体。違反は `INVALID_FORMATION`。
+PUT時のサーバー検証(`shared/validate.ts` と同一ロジック): 2×5構造 / 全駒所持済み / 種別重複なし / 大将ちょうど1体 / 編成コスト合計20以内(N1・R2・SR3・SSR4、空きは0)。違反は `INVALID_FORMATION`。保存済みで上限を超える編成は削除せず、対戦開始時に拒否する。
 
 #### PUT /me/name
 表示名を更新する。検証は `shared/validate.ts` が正本。

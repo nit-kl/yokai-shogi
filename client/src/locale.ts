@@ -88,7 +88,8 @@ const STATIC: Record<string, string> = {
   'プライバシー': 'Privacy', 'お問い合わせ': 'Support', 'DMで報告': 'Report via DM',
   'データ引き継ぎ': 'Transfer Data', '戻る': 'Back', '現在の連勝': 'Current Streak',
   '今週ベスト': 'Weekly Best', '今週順位': 'Weekly Rank', '挑戦する': 'Start Challenge',
-  '編成を整える': 'Edit Formation', '週間ランキング': 'Weekly Rankings', '次の軍勢': 'Next Army',
+  '編成を整える': 'Edit Formation', '編成を整えてください': 'Adjust your formation',
+  '週間ランキング': 'Weekly Rankings', '次の軍勢': 'Next Army',
   '敵軍の編成': 'Enemy Formation', '開戦': 'Battle',
   '百鬼夜行で記録した、今週のベスト連勝数です。': 'Your best Night Parade win streak this week.',
   '今週の1位報酬': 'Weekly #1 Reward', '今週の百鬼夜行': "This Week's Night Parade",
@@ -377,6 +378,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <h3>Worth Remembering</h3>
     <ul>
       <li><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP each move. A capture resets it. Check remaining moves in <b>Status</b></li>
+      <li><b>Formation cost:</b> N1, R2, SR3, SSR4, up to 20 total. Empty squares are free. A formation over the limit cannot enter battle</li>
     </ul>
     <h3>Modes</h3>
     <ul>
@@ -384,7 +386,7 @@ const HTML_OVERRIDES: Record<string, string> = {
       <li><b>Yokai Dojo:</b> 1–2 move puzzles. Each first clear grants one summon ticket</li>
       <li><b>Trial Armies:</b> CPU battles against a fixed enemy lineup. They do not grant rewards, streaks, or ranking</li>
       <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code and start when both players are ready</li>
-      <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General</li>
+      <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General, and its cost must be 20 or less</li>
     </ul>
     <p class="rules-more"><a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">How-to Guide</a></p>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',
@@ -420,6 +422,12 @@ function translatePatterns(value: string): string {
       'Searching for an opponent… AI battle in about $1 seconds'],
     [/飢餓まであと(\d+)/g, '$1 moves until Hunger'], [/飢餓の夜\s*-(\d+)/g, 'Night of Hunger −$1'],
     [/酒蔵の猶予 あと(\d+)/g, 'Cellar grace: $1 left'],
+    [/いまの編成コストは(\d+)です。上限は(\d+)です。編成を整えてから対戦してください/g,
+      'This formation costs $1. The limit is $2. Adjust it before entering a battle'],
+    [/編成コストが上限の(\d+)を超えています/g, 'Formation cost is over the limit of $1'],
+    [/編成コスト (\d+) \/ (\d+)/g, 'Formation cost $1 / $2'],
+    [/コスト (\d+)/g, 'Cost $1'],
+    [/ATK (\d+)\s*コスト (\d+)/g, 'ATK $1 · Cost $2'],
     [/残火 \+(\d+)/g, 'Ember +$1'],
     [/陽光 \+(\d+)（永久）/g, 'Sunlight +$1 (permanent)'], [/陽光 \+(\d+)/g, 'Sunlight +$1'],
     [/陽光の追撃 \+(\d+)!/g, 'Sunlight strike +$1!'], [/陽光を残した/g, 'Left sunlight'],

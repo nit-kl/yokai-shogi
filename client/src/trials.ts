@@ -1,7 +1,7 @@
 /* 試陣: 固定編成のCPU対戦。百鬼夜行と同じルールで、報酬・連勝・ランキングには入らない。
    enemyRows は [奥, 前]、playerRows は [前, 奥]。いずれも5マス、大将は1体。 */
 
-import { YOKAI } from '../../shared/data';
+import { FORMATION_COST_CAP, YOKAI, formationCost } from '../../shared/data';
 
 export type TrialKind = 'archetype' | 'verify';
 
@@ -24,12 +24,12 @@ export interface Trial {
 /** 検証陣で使う自軍。会心持ちと九尾を含む */
 const ALLY: (string | null)[][] = [
   ['ittan', 'kooni', 'nekomata', 'aooni', 'nue'],
-  ['tengu', 'kappa', 'kyubi', 'nurikabe', 'rokuro'],
+  [null, 'kappa', 'kyubi', 'nurikabe', null],
 ];
 
 const VEIL_ALLY: (string | null)[][] = [
   ['ittan', 'ingyo', 'nekomata', 'aooni', 'nue'],
-  ['tengu', 'kappa', 'kyubi', 'nurikabe', 'rokuro'],
+  [null, 'kappa', 'kyubi', 'nurikabe', null],
 ];
 
 export const TRIALS: Trial[] = [
@@ -43,7 +43,7 @@ export const TRIALS: Trial[] = [
     bossId: 'shuten',
     enemyRows: [
       ['rokuro', 'nurikabe', 'shuten', 'kappa', 'tengu'],
-      ['nue', 'nekomata', 'aooni', 'kooni', 'ittan'],
+      ['nue', 'nekomata', null, 'kooni', 'ittan'],
     ],
   },
   {
@@ -55,8 +55,8 @@ export const TRIALS: Trial[] = [
     watchEn: 'Shuten-doji heals, and Ibaraki-doji’s arm returns',
     bossId: 'shuten',
     enemyRows: [
-      ['tengu', 'ibaraki', 'shuten', 'aooni', 'raiju'],
-      ['kooni', 'kasha', 'daitengu', 'wanyudo', 'nue'],
+      ['tengu', 'ibaraki', 'shuten', 'aooni', null],
+      ['kooni', 'kasha', null, null, 'nue'],
     ],
   },
   {
@@ -69,7 +69,7 @@ export const TRIALS: Trial[] = [
     bossId: 'kyubi',
     enemyRows: [
       ['nekomata', 'tamamo', 'kyubi', 'inugami', 'kamaitachi'],
-      ['ittan', 'nue', 'aooni', 'onibi', 'daitengu'],
+      ['ittan', 'nue', null, null, null],
     ],
   },
   {
@@ -82,7 +82,7 @@ export const TRIALS: Trial[] = [
     bossId: 'shuten',
     enemyRows: [
       ['kappa', 'nurikabe', 'shuten', 'oonyudo', 'karakasa'],
-      ['zashiki', 'suiko', 'chochin', 'kodama', 'umibozu'],
+      ['zashiki', null, 'chochin', 'kodama', null],
     ],
   },
   {
@@ -95,7 +95,7 @@ export const TRIALS: Trial[] = [
     bossId: 'nurarihyon',
     enemyRows: [
       ['yatagarasu', 'raiju', 'nurarihyon', 'umibozu', 'shiranui'],
-      ['rinka', 'tsurube', 'onibi', 'kasha', 'kamaitachi'],
+      ['rinka', null, null, null, null],
     ],
   },
   {
@@ -109,7 +109,7 @@ export const TRIALS: Trial[] = [
     seed: 12041,
     playerRows: ALLY,
     enemyRows: [
-      ['tengu', 'nurikabe', 'shuten', 'kappa', 'rokuro'],
+      [null, 'nurikabe', 'shuten', 'kappa', 'rokuro'],
       ['kooni', 'nekomata', 'onibi', 'aooni', 'ittan'],
     ],
   },
@@ -124,8 +124,8 @@ export const TRIALS: Trial[] = [
     seed: 12042,
     playerRows: ALLY,
     enemyRows: [
-      ['nekomata', 'nurikabe', 'kyubi', 'kappa', 'tengu'],
-      ['ittan', 'tamamo', 'onibi', 'aooni', 'kamaitachi'],
+      ['nekomata', null, 'kyubi', 'kappa', null],
+      ['ittan', 'tamamo', 'onibi', null, 'kamaitachi'],
     ],
   },
   {
@@ -139,8 +139,8 @@ export const TRIALS: Trial[] = [
     seed: 12043,
     playerRows: ALLY,
     enemyRows: [
-      ['kappa', 'nurikabe', 'shuten', 'oonyudo', 'karakasa'],
-      ['kooni', 'yamata', 'aooni', 'nekomata', 'ittan'],
+      ['kappa', 'nurikabe', 'shuten', null, 'karakasa'],
+      ['kooni', 'yamata', null, 'nekomata', 'ittan'],
     ],
   },
   {
@@ -154,7 +154,7 @@ export const TRIALS: Trial[] = [
     seed: 12044,
     playerRows: VEIL_ALLY,
     enemyRows: [
-      ['kappa', 'nurikabe', 'nurarihyon', 'oonyudo', 'tengu'],
+      ['kappa', 'nurikabe', 'nurarihyon', null, null],
       ['kooni', 'nekomata', 'aooni', 'ittan', 'nue'],
     ],
   },
@@ -206,11 +206,11 @@ export function trialIssue(trial: Trial): string | null {
 function rowsIssue(rows: readonly (readonly (string | null)[])[], bossId: string): string | null {
   if (rows.length !== 2 || rows.some(row => row.length !== 5)) return 'shape';
   const ids = rows.flat().filter((id): id is string => !!id);
-  if (ids.length !== 10) return 'empty';
   if (new Set(ids).size !== ids.length) return 'duplicate';
   if (ids.some(id => !YOKAI[id])) return 'unknown';
   const bosses = ids.filter(id => YOKAI[id].boss);
   if (bosses.length !== 1 || bosses[0] !== bossId) return 'boss';
+  if (formationCost(rows) > FORMATION_COST_CAP) return 'cost';
   return null;
 }
 

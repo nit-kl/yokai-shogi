@@ -7,7 +7,7 @@
 import { BOSS_CHOICES, EMPTY_FORMATION, formationWithBoss, type BossChoice } from '../../../shared/data';
 import { drawGacha } from '../../../shared/gacha';
 import type { GachaResult } from '../../../shared/gacha';
-import { validateDisplayName, validateFormation } from '../../../shared/validate';
+import { validateDisplayName, validateFormation, validateFormationShape } from '../../../shared/validate';
 import { dojoPuzzleById, evaluateDojo, isDojoUnlocked } from '../../../shared/dojo';
 import { EXCHANGE_COST, ownedSet } from './types';
 import type { AdsClaimResult, AdsStatus, HyakkiProgress, HyakkiRanking, LoginBonus, MetaProvider, MetaState } from './types';
@@ -92,7 +92,8 @@ export class LocalMeta implements MetaProvider {
     if (saved && saved.onboardingDone === undefined) {
       blob.onboardingDone = Object.keys(saved.owned || {}).length > 1;
     }
-    if (validateFormation(blob.formation, ownedSet(blob))) {
+    /* コスト超過の保存済み編成は残す。対戦開始時に直しを案内する */
+    if (validateFormationShape(blob.formation, ownedSet(blob))) {
       blob.formation = EMPTY_FORMATION.map(r => [...r]);
     }
     return blob;

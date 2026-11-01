@@ -1,6 +1,6 @@
 /* エンジン自動対局テスト(旧 prototype/test/engine-test.js の移植) */
 import { test, expect } from 'vitest';
-import { COLS, ROWS, YOKAI } from '../shared/data';
+import { COLS, FORMATION_COST_CAP, ROWS, YOKAI, formationCost } from '../shared/data';
 import { Game } from '../shared/game';
 import { AI } from '../client/src/ai';
 import { HYAKKI_STAGE, soloBattleStage } from '../client/src/solo';
@@ -22,12 +22,31 @@ test('大将フラグ: 本体系3体とその異装だけが大将', () => {
 test('百鬼夜行は有効なランダム敵編成を生成する', () => {
   const stage = soloBattleStage(() => 0.42);
   const ids = stage.enemyRows.flat().filter((id): id is string => !!id);
-  expect(ids).toHaveLength(10);
-  expect(new Set(ids).size).toBe(10);
+  expect(new Set(ids).size).toBe(ids.length);
+  expect(formationCost(stage.enemyRows)).toBeLessThanOrEqual(FORMATION_COST_CAP);
   expect(stage.enemyRows[0][2]).toBe(stage.bossId);
   expect(YOKAI[stage.bossId].boss).toBe(true);
   expect(ids.filter(id => YOKAI[id].boss)).toEqual([stage.bossId]);
+  expect(ids.some(id => YOKAI[id].variantOf)).toBe(false);
   expect(() => Game.newState(null, stage.enemyRows)).not.toThrow();
+});
+
+test('百鬼夜行の敵は上限内で、満額でない並びも出る', () => {
+  const costs: number[] = [];
+  for (let seed = 1; seed <= 40; seed++) {
+    let state = seed >>> 0;
+    const rand = () => {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+      return state / 4294967296;
+    };
+    const stage = soloBattleStage(rand);
+    const cost = formationCost(stage.enemyRows);
+    costs.push(cost);
+    expect(cost, `seed ${seed}`).toBeLessThanOrEqual(FORMATION_COST_CAP);
+    expect(stage.enemyRows.flat().filter(id => id && YOKAI[id].boss)).toEqual([stage.bossId]);
+  }
+  expect(Math.min(...costs)).toBeLessThan(FORMATION_COST_CAP);
+  expect(Math.max(...costs)).toBe(FORMATION_COST_CAP);
 });
 
 test('AIは全難易度で合法手を返す', () => {

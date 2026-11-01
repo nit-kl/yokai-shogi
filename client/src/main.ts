@@ -8,6 +8,7 @@ import {
 } from '../../shared/data';
 import type { Rarity, Side } from '../../shared/data';
 import { Game, HUNGER_DRAIN } from '../../shared/game';
+import { formationBattleBlock } from '../../shared/validate';
 import type { Action, Ember, GameEvent, GameState, MoveTarget, Pos, CaptureEvent } from '../../shared/game';
 import { Records } from './records';
 import { chooseCPUAction } from './ai-client';
@@ -406,7 +407,7 @@ function wireButtons() {
     $('dojo-brief').classList.remove('hidden');
   };
   $('btn-solo-back').onclick = () => { AudioSys.play('click'); enterTitle(); };
-  $('btn-solo-battle').onclick = () => { AudioSys.play('click'); openHyakkiPreview(); };
+  $('btn-solo-battle').onclick = () => { AudioSys.play('click'); void openHyakkiPreview(); };
   $('btn-solo-formation').onclick = () => {
     AudioSys.play('click');
     MenuUI.openFormation({ onReturn: () => openSolo() });
@@ -417,12 +418,12 @@ function wireButtons() {
     openRanking('solo');
   };
   $('btn-hyakki-preview-back').onclick = () => { AudioSys.play('click'); pendingSoloStage = null; openSolo(); };
-  $('btn-hyakki-fight').onclick = () => { AudioSys.play('click'); startBattle(); };
-  $('btn-hyakki-continue').onclick = () => { AudioSys.play('click'); openHyakkiPreview(); };
+  $('btn-hyakki-fight').onclick = () => { AudioSys.play('click'); void startBattle(); };
+  $('btn-hyakki-continue').onclick = () => { AudioSys.play('click'); void openHyakkiPreview(); };
   $('btn-hyakki-retry').onclick = () => {
     AudioSys.play('click');
     soloStreak = 0;
-    openHyakkiPreview();
+    void openHyakkiPreview();
   };
   $('btn-hyakki-retire').onclick = () => {
     AudioSys.play('click');
@@ -454,12 +455,15 @@ function wireButtons() {
   $('btn-random-close').onclick = () => closeRandomModal();
   $('btn-friend-close').onclick = () => closeFriendModal();
   $('btn-online-random').onclick = () => {
-    const btn = $<HTMLButtonElement>('btn-online-random');
-    btn.disabled = true;
-    const conn = connectMatchmaker();
-    if (!conn) { btn.disabled = false; return; }
-    conn.send({ t: 'join_queue' });
-    startOnlineQueueTimer();
+    void (async () => {
+      if (!(await ensureFormationReady(() => enterTitle()))) return;
+      const btn = $<HTMLButtonElement>('btn-online-random');
+      btn.disabled = true;
+      const conn = connectMatchmaker();
+      if (!conn) { btn.disabled = false; return; }
+      conn.send({ t: 'join_queue' });
+      startOnlineQueueTimer();
+    })();
   };
   $('btn-online-ai').onclick = () => switchQueueToAi();
   $('btn-online-create').onclick = () => {
@@ -488,7 +492,13 @@ function wireButtons() {
   };
   $('btn-room-copy').onclick = () => { void copyRoomCode(); };
   $('btn-room-ready').onclick = () => {
-    online?.send({ t: 'room_ready', ready: !roomSelfReady });
+    void (async () => {
+      if (!roomSelfReady && !(await ensureFormationReady(() => {
+        showScreen('screen-room');
+        online?.send({ t: 'room_sync' });
+      }))) return;
+      online?.send({ t: 'room_ready', ready: !roomSelfReady });
+    })();
   };
   $('btn-room-formation').onclick = () => {
     AudioSys.play('click');
@@ -721,7 +731,20 @@ function nextDojoPuzzle(): DojoPuzzle | null {
   return DOJO_PUZZLES.find(p => p.order === current.order + 1 && isDojoUnlocked(p.id, dojoCleared)) ?? null;
 }
 
-function openHyakkiPreview() {
+async function ensureFormationReady(onReturn: () => void): Promise<boolean> {
+  const message = formationBattleBlock(Meta.formationRows());
+  if (!message) return true;
+  const edit = await confirmDialog(t(message), {
+    title: t('編成を整えてください'),
+    ok: t('編成を整える'),
+    cancel: t('戻る'),
+  });
+  if (edit) MenuUI.openFormation({ onReturn });
+  return false;
+}
+
+async function openHyakkiPreview() {
+  if (!(await ensureFormationReady(() => openSolo()))) return;
   MatchHourUI.stop();
   pendingSoloStage = soloBattleStage();
   activeSoloStage = pendingSoloStage;
@@ -1015,7 +1038,17 @@ async function onOnlineMessage(message: ServerBattleMessage) {
     const text = isPlayerFacingText(message.message)
       ? message.message
       : '対局の通信でエラーが発生しました';
-    setLobbyMessage(text);
+    setLobbyMessage(t(text));
+    if (message.message.includes('編成コスト')) {
+      void confirmDialog(t(message.message), {
+        title: t('編成を整えてください'),
+        ok: t('編成を整える'),
+        cancel: t('戻る'),
+      }).then(ok => {
+        if (!ok) return;
+        MenuUI.openFormation({ onReturn: () => enterTitle() });
+      });
+    }
     friendLobbyPending = false;
     $<HTMLButtonElement>('btn-online-random').disabled = false;
     busy = false;
@@ -2148,6 +2181,7 @@ async function playVsIntro(
 }
 
 async function startBattle() {
+  if (!(await ensureFormationReady(() => openSolo()))) return;
   dojoPuzzle = null;
   dojoActions = [];
   activeTrial = null;
@@ -2212,6 +2246,7 @@ async function startBattle() {
 }
 
 async function startTrialBattle(trial: Trial) {
+  if (!trial.playerRows && !(await ensureFormationReady(() => openTrials()))) return;
   activeTrial = trial;
   trialRoll = trial.seed != null ? makeTrialRand(trial.seed) : null;
   dojoPuzzle = null;
@@ -3100,7 +3135,7 @@ function openPieceDetail(id: string) {
     `<span class="rarity-chip ${ri.cls}">${def.variantOf ? `${ri.label} 異装` : ri.label}</span>` +
     (def.boss ? `<span class="type-chip t-boss">大将</span>` : '');
   $('piece-detail-name').textContent = def.name;
-  $('piece-detail-atk').textContent = `ATK ${def.atk}`;
+  $('piece-detail-atk').textContent = `ATK ${def.atk}　コスト ${RARITY_INFO[def.rarity].cost}`;
   $('piece-detail-move').textContent = def.moveText;
   $('piece-detail-skill-name').textContent = def.skill.name;
   const extras = catalogExtraLines(def.id);

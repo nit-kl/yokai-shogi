@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+import { FORMATION_COST_CAP, formationCost } from '../shared/data';
 import { Game } from '../shared/game';
 import { TRIALS, makeTrialRand, trialIssue } from '../client/src/trials';
 
@@ -8,6 +9,10 @@ test('試陣は戦型5つと検証陣5つで、どの並びも対局に出せる
   expect(new Set(TRIALS.map(trial => trial.id)).size).toBe(TRIALS.length);
   const seeds = TRIALS.flatMap(trial => trial.seed == null ? [] : [trial.seed]);
   expect(new Set(seeds).size).toBe(seeds.length);
+
+  const costs = TRIALS.map(trial => formationCost(trial.enemyRows));
+  expect(costs.every(cost => cost <= FORMATION_COST_CAP)).toBe(true);
+  expect(costs.some(cost => cost < FORMATION_COST_CAP)).toBe(true);
 
   for (const trial of TRIALS) {
     expect(trialIssue(trial), trial.id).toBeNull();

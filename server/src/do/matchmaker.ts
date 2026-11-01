@@ -2,6 +2,7 @@ import type { MatchMode, BattlePlayer, ClientBattleMessage, RoomSeatView, Server
 import { SHADOW_WAIT_JITTER_MS, SHADOW_WAIT_MS } from '../../../shared/battle';
 import type { Env } from '../env';
 import { isMatchHour } from '../../../shared/match-hour';
+import { formationBattleBlock } from '../../../shared/validate';
 import { loadPlayer, loadShadowOpponent, randomCode, send } from './common';
 
 interface Attachment { userId: string }
@@ -67,6 +68,7 @@ export class Matchmaker {
 
     if (msg.t === 'join_queue') {
       /* 既定はいつでもキュー可。緊急時のみ MATCH_HOUR_ENFORCE=1 で逢魔が時に閉じる */
+      if (!(await this.allowBattleEntry(ws, userId))) return;
       if (this.env.MATCH_HOUR_ENFORCE === '1' && !isMatchHour()) {
         send(ws, {
           t: 'error', code: 'MATCH_HOUR_CLOSED',
@@ -87,6 +89,7 @@ export class Matchmaker {
       return;
     }
     if (msg.t === 'request_shadow') {
+      if (!(await this.allowBattleEntry(ws, userId))) return;
       if (this.env.MATCH_HOUR_ENFORCE === '1' && !isMatchHour()) {
         send(ws, {
           t: 'error', code: 'MATCH_HOUR_CLOSED',
@@ -180,6 +183,12 @@ export class Matchmaker {
       this.removeFromQueue(userId, 'invalid');
       return;
     }
+    const blocked = formationBattleBlock(p.formation);
+    if (blocked) {
+      send(pSocket, { t: 'error', code: 'INVALID_FORMATION', message: blocked });
+      this.removeFromQueue(userId, 'invalid');
+      return;
+    }
     const shadow = await loadShadowOpponent(this.env.DB, userId);
     const result = await this.startBattle(p, pSocket, shadow, 'shadow', true);
     if (result.status === 'created') this.removeFromQueue(userId, 'shadow');
@@ -193,6 +202,17 @@ export class Matchmaker {
       status: 'invalid',
       userIds: [...(!p ? [pId] : []), ...(!e ? [eId] : [])],
     };
+    const blocked: string[] = [];
+    for (const [id, player, socket] of [
+      [pId, p, pSocket],
+      [eId, e, eSocket],
+    ] as const) {
+      const message = formationBattleBlock(player.formation);
+      if (!message) continue;
+      if (socket) send(socket, { t: 'error', code: 'INVALID_FORMATION', message });
+      blocked.push(id);
+    }
+    if (blocked.length > 0) return { status: 'invalid', userIds: blocked };
     if (!pSocket || !eSocket) return { status: 'invalid', userIds: [
       ...(!pSocket ? [pId] : []), ...(!eSocket ? [eId] : []),
     ] };
@@ -363,6 +383,7 @@ export class Matchmaker {
       send(ws, { t: 'error', code: 'VALIDATION', message: '相手の参加を待っています' });
       return;
     }
+    if (ready && !(await this.allowBattleEntry(ws, userId))) return;
     if (ready && isHost && !this.socketFor(room.hostId)) return;
     if (ready && !isHost && room.guestId && !this.socketFor(room.guestId)) return;
     if (isHost) room.hostReady = ready;
@@ -438,6 +459,14 @@ export class Matchmaker {
 
   private saveRoom(room: FriendRoom): Promise<void> {
     return this.state.storage.put(`room:${room.code}`, room);
+  }
+
+  private async allowBattleEntry(ws: WebSocket, userId: string): Promise<boolean> {
+    const player = await loadPlayer(this.env.DB, userId);
+    const message = player ? formationBattleBlock(player.formation) : '編成データが不正です';
+    if (!message) return true;
+    send(ws, { t: 'error', code: 'INVALID_FORMATION', message });
+    return false;
   }
 
   private async seatView(userId: string, ready: boolean): Promise<RoomSeatView | null> {

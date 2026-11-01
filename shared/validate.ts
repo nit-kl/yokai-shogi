@@ -4,12 +4,12 @@
    必ず同一ロジックを使う(doc 02 / 04)
    ============================================================ */
 
-import { COLS, YOKAI } from './data';
+import { COLS, FORMATION_COST_CAP, YOKAI, formationCost } from './data';
 
 export type FormationRows = (string | null)[][];
 
-/* 正常なら null、問題があればエラーメッセージを返す */
-export function validateFormation(rows: unknown, owned: ReadonlySet<string>): string | null {
+/* 形・所持・重複・大将。コスト超過では落とさない(保存済み編成を消さないため) */
+export function validateFormationShape(rows: unknown, owned: ReadonlySet<string>): string | null {
   if (!Array.isArray(rows) || rows.length !== 2 ||
       rows.some(r => !Array.isArray(r) || r.length !== COLS)) return '編成データが不正です';
   const grid = rows as FormationRows;
@@ -25,6 +25,36 @@ export function validateFormation(rows: unknown, owned: ReadonlySet<string>): st
     if (def.boss) bosses++;
   }
   if (bosses !== 1) return '大将を1体配置してください';
+  return null;
+}
+
+/* 正常なら null、問題があればエラーメッセージを返す */
+export function validateFormation(rows: unknown, owned: ReadonlySet<string>): string | null {
+  const shape = validateFormationShape(rows, owned);
+  if (shape) return shape;
+  if (formationCost(rows as FormationRows) > FORMATION_COST_CAP) {
+    return `編成コストが上限の${FORMATION_COST_CAP}を超えています`;
+  }
+  return null;
+}
+
+/* 保存済み編成のまま対戦に入れるか。超過時は入り直しを案内する */
+export function formationBattleBlock(rows: unknown): string | null {
+  if (!Array.isArray(rows) || rows.length !== 2 ||
+      rows.some(r => !Array.isArray(r) || r.length !== COLS)) return '編成データが不正です';
+  const grid = rows as FormationRows;
+  let bosses = 0;
+  for (const id of grid.flat()) {
+    if (!id) continue;
+    const def = YOKAI[id];
+    if (!def) return '編成データが不正です';
+    if (def.boss) bosses++;
+  }
+  if (bosses !== 1) return '大将を1体配置してください';
+  const cost = formationCost(grid);
+  if (cost > FORMATION_COST_CAP) {
+    return `いまの編成コストは${cost}です。上限は${FORMATION_COST_CAP}です。編成を整えてから対戦してください`;
+  }
   return null;
 }
 

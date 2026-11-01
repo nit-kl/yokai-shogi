@@ -3319,8 +3319,16 @@ html[data-script="latn"] .cur-yoryoku {
   flex-shrink: 0;
   box-sizing: border-box;
 }
+.form-cost {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+.form-cost.over { color: var(--e-red); }
 .form-info b { color: var(--paper); font-family: "Yu Mincho", serif; }
 .form-info .fi-atk { color: #ff9b6a; font-weight: bold; }
+.form-info .fi-cost { color: var(--gold); font-weight: bold; }
 #form-bench {
   display: flex; flex-wrap: wrap;
   justify-content: center;

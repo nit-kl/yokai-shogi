@@ -2,7 +2,7 @@
    百鬼盤 - ガチャ・編成・ログインボーナスUI
    ============================================================ */
 
-import { COLS, RARITY_INFO } from '../../shared/data';
+import { COLS, FORMATION_COST_CAP, RARITY_INFO, formationCost } from '../../shared/data';
 import { $, sleep, showScreen } from './util';
 import { AudioSys } from './audio';
 import { FX } from './effects';
@@ -730,6 +730,11 @@ export const MenuUI = {
   },
 
   updateFormationStatus() {
+    const cost = formationCost(this.rows);
+    const over = cost > FORMATION_COST_CAP;
+    const meter = $('form-cost');
+    meter.textContent = `編成コスト ${cost} / ${FORMATION_COST_CAP}`;
+    meter.classList.toggle('over', over);
     const err = Meta.validateFormation(this.rows);
     $('form-error').textContent = err ? `⚠ ${err}` : '';
     $<HTMLButtonElement>('btn-form-save').disabled = !!err;
@@ -785,7 +790,7 @@ export const MenuUI = {
     if (!def) { $('form-info').textContent = ''; return; }
     $('form-info').innerHTML =
       (def.boss ? `<span class="type-chip t-boss">大将</span> ` : '') +
-      `<b>${def.name}</b> <span class="fi-atk">ATK ${def.atk}</span><br>` +
+      `<b>${def.name}</b> <span class="fi-atk">ATK ${def.atk}</span> <span class="fi-cost">コスト ${RARITY_INFO[def.rarity].cost}</span><br>` +
       `${def.moveText}<br>【${def.skill.name}】${def.skill.desc}`;
   },
 

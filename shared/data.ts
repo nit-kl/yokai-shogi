@@ -77,12 +77,26 @@ const STEPS_DIAG4: readonly XY[] = [[1,-1],[-1,-1],[1,1],[-1,1]];
 const STEPS_ORTHO4: readonly XY[] = [[0,-1],[1,0],[-1,0],[0,1]];
 
 /* レアリティ: weight=ガチャ排出比, yoryoku=被り時の妖力変換量 */
-export const RARITY_INFO: Record<Rarity, { label: string; cls: string; color: string; weight: number; yoryoku: number }> = {
-  N:   { label: 'N',   cls: 'r-n',   color: '#9aa0b5', weight: 40, yoryoku: 20 },
-  R:   { label: 'R',   cls: 'r-r',   color: '#58b6ff', weight: 40, yoryoku: 50 },
-  SR:  { label: 'SR',  cls: 'r-sr',  color: '#c88aff', weight: 16, yoryoku: 150 },
-  SSR: { label: 'SSR', cls: 'r-ssr', color: '#ffd24a', weight: 4,  yoryoku: 400 },
+export const RARITY_INFO: Record<Rarity, { label: string; cls: string; color: string; weight: number; yoryoku: number; cost: number }> = {
+  N:   { label: 'N',   cls: 'r-n',   color: '#9aa0b5', weight: 40, yoryoku: 20,  cost: 1 },
+  R:   { label: 'R',   cls: 'r-r',   color: '#58b6ff', weight: 40, yoryoku: 50,  cost: 2 },
+  SR:  { label: 'SR',  cls: 'r-sr',  color: '#c88aff', weight: 16, yoryoku: 150, cost: 3 },
+  SSR: { label: 'SSR', cls: 'r-ssr', color: '#ffd24a', weight: 4,  yoryoku: 400, cost: 4 },
 };
+
+/** 編成に置けるコストの合計。空きマスは0。異装は元のレアリティと同じ */
+export const FORMATION_COST_CAP = 20;
+
+export function yokaiCost(id: string): number {
+  const def = YOKAI[id];
+  return def ? RARITY_INFO[def.rarity].cost : 0;
+}
+
+export function formationCost(rows: readonly (readonly (string | null)[])[]): number {
+  let total = 0;
+  for (const id of rows.flat()) if (id) total += yokaiCost(id);
+  return total;
+}
 
 const img = (name: string) => `assets/pieces/${name}.webp`;
 const imgSm = (name: string) => `assets/pieces/sm/${name}.webp`;
