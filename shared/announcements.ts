@@ -22,14 +22,14 @@ export const ANNOUNCEMENTS: Announcement[] = [
     title: '編成にコスト上限を追加しました',
     titleEn: 'Formations Now Have a Cost Limit',
     body: [
-      '編成できる強さに上限を設けました。レアリティごとのコストは N1、R2、SR3、SSR4 で、合計20までです。空きマスはコスト0です。',
+      '編成できる強さに上限を設けました。レアリティごとのコストは N1、R2、SR3、SSR4 で、合計25までです。空きマスはコスト0です。',
       '',
-      'すでに保存している編成が20を超えている場合、その編成のままでは対戦を始められません。お知らせのあと、対戦ボタンで直し方を案内します。編成画面で20以内に整えてから保存してください。',
+      'すでに保存している編成が25を超えている場合、その編成のままでは対戦を始められません。お知らせのあと、対戦ボタンで直し方を案内します。編成画面で25以内に整えてから保存してください。',
     ].join('\n'),
     bodyEn: [
-      'Formation strength now has a limit. Costs are N1, R2, SR3, and SSR4, with a total of 20. Empty squares cost 0.',
+      'Formation strength now has a limit. Costs are N1, R2, SR3, and SSR4, with a total of 25. Empty squares cost 0.',
       '',
-      'If a saved formation is over 20, it cannot enter battle as it is. After this notice, the battle buttons explain how to fix it. Lower it to 20 or less on the formation screen, then save.',
+      'If a saved formation is over 25, it cannot enter battle as it is. After this notice, the battle buttons explain how to fix it. Lower it to 25 or less on the formation screen, then save.',
     ].join('\n'),
     publishedAt: '2026-11-01T10:46:00+09:00',
     priority: 'high',

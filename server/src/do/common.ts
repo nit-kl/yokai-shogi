@@ -11,7 +11,7 @@ export const TURN_MS = 60_000;
 /** 本時間切れ後の秒読み。切れても即負けにせず、この時間内に着手すれば続行 */
 export const BYOYOMI_MS = 30_000;
 export const DISCONNECT_GRACE_MS = 60_000;
-export const RULE_VERSION = 'phase2-v21'; // v21: 編成コスト上限20。超過した保存済み編成では対戦を開始しない
+export const RULE_VERSION = 'phase2-v22'; // v22: 編成コスト上限25。超過した保存済み編成では対戦を開始しない
 
 export function envClockMs(raw: string | undefined, fallback: number): number {
   const n = Number(raw);
