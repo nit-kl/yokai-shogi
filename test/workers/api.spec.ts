@@ -438,6 +438,10 @@ describe('編成', () => {
     expect((await put([['kooni', 'kooni', null, null, null], [null, null, 'kyubi', null, null]])).status).toBe(400);
     // 構造不正
     expect((await put([['kyubi']])).status).toBe(400);
+    // 大将が前段
+    expect((await put([['kyubi', null, null, null, null], [null, null, null, null, null]])).status).toBe(400);
+    // 奥の段でも真正面が空き
+    expect((await put([[null, null, null, null, null], [null, null, 'kyubi', null, null]])).status).toBe(400);
 
     // 正常(tenguを所持させる)
     await env.DB.batch([
@@ -445,10 +449,11 @@ describe('編成', () => {
       env.DB.prepare(`INSERT INTO gacha_logs (user_id, idempotency_key, count, new_count, results)
         VALUES (?1, 'test-grant-tengu', 0, 1, '[]')`).bind(g.userId),
     ]);
-    const ok = await put([[null, 'tengu', null, null, null], [null, null, 'kyubi', null, null]]);
+    const ok = await put([[null, null, 'tengu', null, null], [null, null, 'kyubi', null, null]]);
     expect(ok.status).toBe(200);
     const f = await api('/v1/me/formation', { token: g.accessToken });
-    expect(f.body.rows[0][1]).toBe('tengu');
+    expect(f.body.rows[0][2]).toBe('tengu');
+    expect(f.body.rows[1][2]).toBe('kyubi');
   });
 });
 
@@ -897,7 +902,7 @@ describe('デモアカウント', () => {
     expect(collection.body.owned).toHaveLength(Object.keys(YOKAI).length);
 
     const rows = [
-      [null, null, null, null, null],
+      [null, null, 'kooni', null, null],
       [null, null, 'kyubi', null, null],
     ];
     expect((await api('/v1/me/formation', {

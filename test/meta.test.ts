@@ -5,7 +5,7 @@
 import { beforeEach, test, expect } from 'vitest';
 import { GACHA_POOL, RARITY_INFO, YOKAI, SETUP, ROWS, EMPTY_FORMATION } from '../shared/data';
 import { drawGacha, rollRarity, gachaRates } from '../shared/gacha';
-import { validateFormation, validateDisplayName } from '../shared/validate';
+import { bossFrontGuardIssue, formationBattleBlock, validateFormation, validateFormationShape, validateDisplayName } from '../shared/validate';
 import { Game } from '../shared/game';
 import { AI } from '../client/src/ai';
 
@@ -86,7 +86,23 @@ test('shared/gacha: レアリティ分布の健全性(10万回)', () => {
 /* ---------------------------------------------------------------- */
 test('shared/validate: 編成検証', () => {
   const owned = new Set([...initialOwned, 'kyubi', 'tamamo', 'nurarihyon', 'kooni', 'tengu']);
-  expect(validateFormation([['kyubi', null, null, null, null], [null, null, null, null, null]], owned)).toBeNull();
+  const legal = [[null, null, 'tengu', null, null], [null, null, 'kyubi', null, null]];
+  expect(validateFormation(legal, owned)).toBeNull();
+  expect(validateFormation([['tengu', null, null, null, null], ['kyubi', null, null, null, null]], owned), '端の大将').toBeNull();
+  expect(validateFormation([['kyubi', null, null, null, null], [null, null, null, null, null]], owned), '前段の大将')
+    .toBe('大将は奥の段に配置してください');
+  expect(validateFormation([[null, null, null, null, null], [null, null, 'kyubi', null, null]], owned), '真正面が空き')
+    .toBe('大将の真正面に味方を1体配置してください');
+  expect(validateFormation([[null, 'tengu', null, null, null], [null, null, 'kyubi', null, null]], owned), '隣の味方')
+    .toBe('大将の真正面に味方を1体配置してください');
+  expect(validateFormationShape([[null, null, null, null, null], [null, null, 'kyubi', null, null]], owned), '形は残す')
+    .toBeNull();
+  expect(formationBattleBlock(legal)).toBeNull();
+  expect(formationBattleBlock([[null, null, null, null, null], [null, null, 'kyubi', null, null]]))
+    .toBe('大将の真正面に味方を1体配置してください');
+  expect(bossFrontGuardIssue([[null, null, 'shuten', null, null], [null, null, 'kooni', null, null]], 'enemy')).toBeNull();
+  expect(bossFrontGuardIssue([[null, null, 'shuten', null, null], ['kooni', null, null, null, null]], 'enemy'))
+    .toBe('大将の真正面に味方を1体配置してください');
   expect(validateFormation([[null, null, null, null, null], [null, null, null, null, null]], owned), '大将なし').not.toBeNull();
   expect(validateFormation([['kyubi', null, null, null, null], ['nurarihyon', null, null, null, null]], owned), '大将2体').not.toBeNull();
   expect(validateFormation([['kooni', 'kooni', null, null, null], [null, null, 'kyubi', null, null]], owned), '重複').not.toBeNull();
@@ -189,8 +205,9 @@ test('LocalMeta: 編成保存・所持外/大将なしは拒否', async () => {
   await m.pickBoss('kyubi');
   m.data.owned.tengu = 1;
   expect(await m.setFormation([[null, null, null, null, null], [null, null, 'tamamo', null, null]]), '未所持').not.toBeNull();
-  expect(await m.setFormation([[null, 'tengu', null, null, null], [null, null, 'kyubi', null, null]]), '正常').toBeNull();
-  expect(m.data.formation[0][1]).toBe('tengu');
+  expect(await m.setFormation([[null, 'tengu', null, null, null], [null, null, 'kyubi', null, null]]), '真正面が空き').not.toBeNull();
+  expect(await m.setFormation([[null, null, 'tengu', null, null], [null, null, 'kyubi', null, null]]), '正常').toBeNull();
+  expect(m.data.formation[0][2]).toBe('tengu');
 });
 
 test('LocalMeta: コスト超過の保存済み編成は残し、保存と対戦では拒否する', () => {
@@ -204,7 +221,22 @@ test('LocalMeta: コスト超過の保存済み編成は残し、保存と対戦
   m.save();
   const loaded = new LocalMeta();
   expect(loaded.data.formation).toEqual(rows);
-  expect(validateFormation(rows, new Set(Object.keys(loaded.data.owned)))).not.toBeNull();
+  expect(validateFormation(rows, new Set(Object.keys(loaded.data.owned)))).toMatch(/上限/);
+});
+
+test('LocalMeta: 真正面が空の保存済み編成は残し、保存では拒否する', () => {
+  const m = new LocalMeta();
+  const rows = [
+    [null, null, null, null, null],
+    [null, null, 'kyubi', null, null],
+  ];
+  m.data.formation = rows;
+  m.data.owned.kyubi = 1;
+  m.save();
+  const loaded = new LocalMeta();
+  expect(loaded.data.formation).toEqual(rows);
+  expect(validateFormation(rows, new Set(Object.keys(loaded.data.owned))))
+    .toBe('大将の真正面に味方を1体配置してください');
 });
 
 test('LocalMeta: セーブ・ロード往復(localStorage経由)', () => {

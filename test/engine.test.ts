@@ -4,10 +4,12 @@ import { COLS, FORMATION_COST_CAP, ROWS, YOKAI, formationCost } from '../shared/
 import { Game } from '../shared/game';
 import { AI } from '../client/src/ai';
 import { HYAKKI_STAGE, soloBattleStage } from '../client/src/solo';
+import { bossFrontGuardIssue } from '../shared/validate';
 
 test('百鬼夜行のテンプレは大将を含む', () => {
   expect(YOKAI[HYAKKI_STAGE.bossId].boss).toBe(true);
   expect(HYAKKI_STAGE.enemyRows[0].some(id => id === HYAKKI_STAGE.bossId)).toBe(true);
+  expect(bossFrontGuardIssue(HYAKKI_STAGE.enemyRows, 'enemy')).toBeNull();
 });
 
 test('大将フラグ: 本体系3体とその異装だけが大将', () => {
@@ -25,6 +27,8 @@ test('百鬼夜行は有効なランダム敵編成を生成する', () => {
   expect(new Set(ids).size).toBe(ids.length);
   expect(formationCost(stage.enemyRows)).toBeLessThanOrEqual(FORMATION_COST_CAP);
   expect(stage.enemyRows[0][2]).toBe(stage.bossId);
+  expect(stage.enemyRows[1][2], '大将の真正面').toBeTruthy();
+  expect(bossFrontGuardIssue(stage.enemyRows, 'enemy')).toBeNull();
   expect(YOKAI[stage.bossId].boss).toBe(true);
   expect(ids.filter(id => YOKAI[id].boss)).toEqual([stage.bossId]);
   expect(ids.some(id => YOKAI[id].variantOf)).toBe(false);
@@ -44,6 +48,7 @@ test('百鬼夜行の敵は上限内で、満額でない並びも出る', () =>
     costs.push(cost);
     expect(cost, `seed ${seed}`).toBeLessThanOrEqual(FORMATION_COST_CAP);
     expect(stage.enemyRows.flat().filter(id => id && YOKAI[id].boss)).toEqual([stage.bossId]);
+    expect(bossFrontGuardIssue(stage.enemyRows, 'enemy'), `seed ${seed}`).toBeNull();
   }
   expect(Math.min(...costs)).toBeLessThan(FORMATION_COST_CAP);
   expect(Math.max(...costs)).toBe(FORMATION_COST_CAP);

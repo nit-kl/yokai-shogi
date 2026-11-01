@@ -121,7 +121,7 @@ beforeEach(() => {
   ls.clear();
   server = {
     tickets: 11, yoryoku: 0, owned: ['kyubi', 'kooni'], wins: 0,
-    formation: [['kyubi', null, null, null, null], [null, null, null, null, null]],
+    formation: [[null, null, 'kooni', null, null], [null, null, 'kyubi', null, null]],
     onboardingDone: true,
     validAccess: '', refreshValid: false, failNextAuthOnce: false, linkCode: null, requests: [],
   };
@@ -135,7 +135,8 @@ test('init: ゲスト発行 → /me・collection・formation をキャッシュ�
   expect(m.data.online).toBe(true);
   expect(m.data.tickets).toBe(11);
   expect(m.data.owned).toEqual({ kyubi: 1, kooni: 1 });
-  expect(m.data.formation[0][0]).toBe('kyubi');
+  expect(m.data.formation[1][2]).toBe('kyubi');
+  expect(m.data.formation[0][2]).toBe('kooni');
   // リフレッシュトークンが保存される
   expect(ls.get('yokaiShogi.rt.v1')).toBe('refresh-1');
 });
@@ -261,10 +262,13 @@ test('setFormation: 不正はサーバーのINVALID_FORMATIONメッセージを�
   m.data.owned['kooni'] = 1;
   const err = await m.setFormation([['kooni', null, null, null, null], [null, null, null, null, null]]);
   expect(err).toBeTruthy(); // 大将なし
-  // 正常(kyubiあり)
-  const ok = await m.setFormation([['kyubi', null, null, null, null], [null, null, null, null, null]]);
+  // 前段の大将はクライアントで拒否
+  expect(await m.setFormation([['kyubi', null, null, null, null], [null, null, null, null, null]])).toBeTruthy();
+  // 正常(奥の段の大将と、真正面の味方)
+  const ok = await m.setFormation([[null, null, 'kooni', null, null], [null, null, 'kyubi', null, null]]);
   expect(ok).toBeNull();
-  expect(m.data.formation[0][0]).toBe('kyubi');
+  expect(m.data.formation[1][2]).toBe('kyubi');
+  expect(m.data.formation[0][2]).toBe('kooni');
 });
 
 test('setName: 表示名を検証してAPIへ保存する', async () => {

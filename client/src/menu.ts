@@ -459,7 +459,7 @@ export const MenuUI = {
       hint.textContent = '初回特典の10連召喚を引こう!';
       $('screen-gacha').querySelector('.menu-col')!.insertBefore(hint, $('screen-gacha').querySelector('.gacha-center'));
     } else if (mode === 'formation') {
-      hint.textContent = '大将と仲間を配置して保存しよう';
+      hint.textContent = '大将は奥の段、真正面に味方を置いて保存しよう';
       $('screen-formation').querySelector('.menu-col')!.insertBefore(hint, $('screen-formation').querySelector('.form-zone-label'));
     } else {
       $('app').appendChild(hint);

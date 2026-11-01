@@ -1039,7 +1039,7 @@ async function onOnlineMessage(message: ServerBattleMessage) {
       ? message.message
       : '対局の通信でエラーが発生しました';
     setLobbyMessage(t(text));
-    if (message.message.includes('編成コスト')) {
+    if (message.code === 'INVALID_FORMATION') {
       void confirmDialog(t(message.message), {
         title: t('編成を整えてください'),
         ok: t('編成を整える'),

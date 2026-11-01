@@ -20,7 +20,7 @@ export const HYAKKI_STAGE: SoloStage = {
   randomized: true,
   enemyRows: [
     ['tengu', null, 'nurarihyon', null, 'raiju'],
-    ['kooni', 'nekomata', null, 'kappa', 'ittan'],
+    [null, 'nekomata', 'kooni', 'kappa', 'ittan'],
   ],
 };
 
@@ -51,7 +51,8 @@ export function soloBattleStage(rand: () => number = Math.random): SoloStage {
   }
   const grid: (string | null)[] = [null, null, null, null, null, null, null, null, null, null];
   grid[2] = bossId;
-  const slots = [0, 1, 3, 4, 5, 6, 7, 8, 9];
+  /* 0..4 が奥、5..9 が前。index 2 が大将なので、真正面の index 7 を先に埋める */
+  const slots = [7, 0, 1, 3, 4, 5, 6, 8, 9];
   for (let i = 0; i < picked.length; i++) grid[slots[i]] = picked[i];
   return {
     ...HYAKKI_STAGE,

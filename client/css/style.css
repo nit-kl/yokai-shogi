@@ -3326,6 +3326,15 @@ html[data-script="latn"] .cur-yoryoku {
   color: var(--gold);
 }
 .form-cost.over { color: var(--e-red); }
+.form-rule {
+  margin: 4px 0 0;
+  width: min(92vw, 480px);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  color: #d9c7ef;
+  text-align: center;
+}
 .form-info b { color: var(--paper); font-family: "Yu Mincho", serif; }
 .form-info .fi-atk { color: #ff9b6a; font-weight: bold; }
 .form-info .fi-cost { color: var(--gold); font-weight: bold; }

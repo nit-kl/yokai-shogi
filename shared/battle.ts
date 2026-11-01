@@ -10,7 +10,7 @@ export const SHADOW_WAIT_MS = 15_000;
 export const SHADOW_WAIT_JITTER_MS = 5_000;
 /** 影CPUが使う予備編成(他プレイヤーがいないとき) */
 export const SHADOW_FALLBACK_FORMATION: (string | null)[][] = [
-  ['ittan', 'kooni', null, 'nekomata', 'nue'],
+  ['ittan', null, 'kooni', 'nekomata', 'nue'],
   ['tengu', 'kappa', 'kyubi', 'nurikabe', 'rokuro'],
 ];
 export type ClockPhase = 'main' | 'byoyomi';

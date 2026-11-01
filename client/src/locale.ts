@@ -157,6 +157,12 @@ const STATIC: Record<string, string> = {
   '出る': 'Leave', '空ける': 'Clear',
   '席を空けますか？': 'Clear the guest seat?',
   '標準の編成が未設定です': 'No default formation is saved yet',
+  '大将は奥の段に配置してください': 'Place the general on the rear rank.',
+  '大将の真正面に味方を1体配置してください': 'Place one ally on the square directly in front of the general.',
+  '大将は奥の段に置き、真正面に味方を1体配置してください。対局が始まったあとは自由に動けます':
+    'Place the general on the rear rank, with one ally directly in front. After the battle starts, every piece may move freely.',
+  '大将は奥の段、真正面に味方を置いて保存しよう': 'Put the general on the rear rank, an ally directly in front, then save.',
+  '配置する妖怪を選択、盤面を選択し配置してください': 'Select a yokai, then tap a square to place it.',
   'いつでもマッチ可能。集まりやすい時間は毎日 20:00〜22:00（逢魔が時）': 'Match anytime. The busiest hours are 20:00–22:00 JST daily.',
   '対戦募集は': 'Find opponents on the', 'でも行っています': 'as well.',
   'レアリティで絞り込み': 'Filter by rarity', '駒画像の拡大表示': 'Enlarged yokai image',
@@ -379,6 +385,7 @@ const HTML_OVERRIDES: Record<string, string> = {
     <ul>
       <li><b>Night of Hunger:</b> After eight moves without a capture, both sides lose 50 HP each move. A capture resets it. Check remaining moves in <b>Status</b></li>
       <li><b>Formation cost:</b> N1, R2, SR3, SSR4, up to 20 total. Empty squares are free. A formation over the limit cannot enter battle</li>
+      <li><b>The general’s place:</b> Put the general on the rear rank, with one ally on the square directly in front. After the battle starts, every piece may move freely</li>
     </ul>
     <h3>Modes</h3>
     <ul>
@@ -386,7 +393,7 @@ const HTML_OVERRIDES: Record<string, string> = {
       <li><b>Yokai Dojo:</b> 1–2 move puzzles. Each first clear grants one summon ticket</li>
       <li><b>Trial Armies:</b> CPU battles against a fixed enemy lineup. They do not grant rewards, streaks, or ranking</li>
       <li><b>Online:</b> Random match anytime; busiest 20:00–22:00 JST. 60 seconds per move plus a 30-second countdown. Timeout skips a turn; two skips in a row lose. Friend rooms use a 6-digit code and start when both players are ready</li>
-      <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Formation needs exactly one General, and its cost must be 20 or less</li>
+      <li><b>Summon &amp; Formation:</b> Spend tickets (a 10-pull guarantees SR+). Duplicates become Spirit Power; 300 = 1 ticket. Place exactly one General on the rear rank, with one ally directly in front. Cost must be 20 or less</li>
     </ul>
     <p class="rules-more"><a href="https://nit-games.com/guide.html" target="_blank" rel="noopener noreferrer">How-to Guide</a></p>`,
   '.solo-note': 'Face a changing enemy army in every Night Parade challenge.<br>A loss resets your streak.<br>Build the longest streak and climb the weekly rankings.',

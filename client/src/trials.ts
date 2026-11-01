@@ -2,6 +2,7 @@
    enemyRows は [奥, 前]、playerRows は [前, 奥]。いずれも5マス、大将は1体。 */
 
 import { FORMATION_COST_CAP, YOKAI, formationCost } from '../../shared/data';
+import { bossFrontGuardIssue } from '../../shared/validate';
 
 export type TrialKind = 'archetype' | 'verify';
 
@@ -43,7 +44,7 @@ export const TRIALS: Trial[] = [
     bossId: 'shuten',
     enemyRows: [
       ['rokuro', 'nurikabe', 'shuten', 'kappa', 'tengu'],
-      ['nue', 'nekomata', null, 'kooni', 'ittan'],
+      ['nue', 'nekomata', 'kooni', null, 'ittan'],
     ],
   },
   {
@@ -56,7 +57,7 @@ export const TRIALS: Trial[] = [
     bossId: 'shuten',
     enemyRows: [
       ['tengu', 'ibaraki', 'shuten', 'aooni', null],
-      ['kooni', 'kasha', null, null, 'nue'],
+      ['kooni', null, 'kasha', null, 'nue'],
     ],
   },
   {
@@ -69,7 +70,7 @@ export const TRIALS: Trial[] = [
     bossId: 'kyubi',
     enemyRows: [
       ['nekomata', 'tamamo', 'kyubi', 'inugami', 'kamaitachi'],
-      ['ittan', 'nue', null, null, null],
+      ['ittan', null, 'nue', null, null],
     ],
   },
   {
@@ -95,7 +96,7 @@ export const TRIALS: Trial[] = [
     bossId: 'nurarihyon',
     enemyRows: [
       ['yatagarasu', 'raiju', 'nurarihyon', 'umibozu', 'shiranui'],
-      ['rinka', null, null, null, null],
+      [null, null, 'rinka', null, null],
     ],
   },
   {
@@ -140,7 +141,7 @@ export const TRIALS: Trial[] = [
     playerRows: ALLY,
     enemyRows: [
       ['kappa', 'nurikabe', 'shuten', null, 'karakasa'],
-      ['kooni', 'yamata', null, 'nekomata', 'ittan'],
+      [null, 'yamata', 'kooni', 'nekomata', 'ittan'],
     ],
   },
   {
@@ -190,12 +191,12 @@ export function bossIdIn(rows: readonly (readonly (string | null)[])[]): string 
 export function trialIssue(trial: Trial): string | null {
   if (!trial.id.startsWith('trial.')) return 'id';
   if (!YOKAI[trial.bossId]?.boss) return 'boss';
-  const enemy = rowsIssue(trial.enemyRows, trial.bossId);
+  const enemy = rowsIssue(trial.enemyRows, trial.bossId, 'enemy');
   if (enemy) return `enemy:${enemy}`;
   if (trial.kind === 'verify') {
     if (!trial.playerRows) return 'player-rows';
     if (trial.seed == null) return 'seed';
-    const player = rowsIssue(trial.playerRows, bossIdIn(trial.playerRows) ?? '');
+    const player = rowsIssue(trial.playerRows, bossIdIn(trial.playerRows) ?? '', 'player');
     if (player) return `player:${player}`;
   } else if (trial.playerRows || trial.seed != null) {
     return 'archetype-fixed';
@@ -203,13 +204,18 @@ export function trialIssue(trial: Trial): string | null {
   return null;
 }
 
-function rowsIssue(rows: readonly (readonly (string | null)[])[], bossId: string): string | null {
+function rowsIssue(
+  rows: readonly (readonly (string | null)[])[],
+  bossId: string,
+  side: 'player' | 'enemy',
+): string | null {
   if (rows.length !== 2 || rows.some(row => row.length !== 5)) return 'shape';
   const ids = rows.flat().filter((id): id is string => !!id);
   if (new Set(ids).size !== ids.length) return 'duplicate';
   if (ids.some(id => !YOKAI[id])) return 'unknown';
   const bosses = ids.filter(id => YOKAI[id].boss);
   if (bosses.length !== 1 || bosses[0] !== bossId) return 'boss';
+  if (bossFrontGuardIssue(rows, side)) return 'guard';
   if (formationCost(rows) > FORMATION_COST_CAP) return 'cost';
   return null;
 }
