@@ -600,6 +600,7 @@ function wireButtons() {
     sel = { kind: 'awaken', targets };
     AudioSys.play('select');
     for (const t of targets) cellEl(t.x, t.y).classList.add('hl-awaken');
+    syncMoveMarks();
   };
     $('btn-resign').onclick = () => {
     if (!G || G.winner || (!onlineSide && busy)) return;
@@ -1455,6 +1456,13 @@ function buildBoardCells() {
       wrap.appendChild(c);
     }
   }
+  const marks = $('board-marks');
+  marks.replaceChildren();
+  for (let i = 0; i < ROWS * COLS; i++) {
+    const mark = document.createElement('div');
+    mark.className = 'mark';
+    marks.appendChild(mark);
+  }
 }
 
 function cellEl(x: number, y: number): HTMLElement {
@@ -1941,14 +1949,44 @@ function bindLongPress(el: HTMLElement, onLongPress: () => void) {
 
 /* ============================== 入力 ============================== */
 const HL_CLASSES = [
-  'hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken', 'hl-phase',
+  'hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken', 'hl-phase', 'hl-block', 'hl-shadow',
   'hl-enemy-move', 'hl-enemy-capture', 'hl-enemy-selected',
 ] as const;
 
 function clearSel() {
   sel = null;
   document.querySelectorAll('.cell').forEach(c => c.classList.remove(...HL_CLASSES));
+  syncMoveMarks();
   if (G) renderHand('p');
+}
+
+/** 駒の上に、移動先・取り先の印を重ねる */
+function syncMoveMarks() {
+  const cells = $('board-cells').children;
+  const marks = $('board-marks').children;
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i].classList;
+    const mark = marks[i];
+    if (!mark) continue;
+    const foe = c.contains('hl-enemy-move') || c.contains('hl-enemy-capture') || c.contains('hl-enemy-selected');
+    const capture = c.contains('hl-capture') || c.contains('hl-enemy-capture');
+    const block = c.contains('hl-block');
+    const shadow = c.contains('hl-shadow');
+    const dot = !capture && !block && !shadow && (
+      c.contains('hl-move') || c.contains('hl-enemy-move') || c.contains('hl-drop') || c.contains('hl-phase')
+    );
+    const selected = c.contains('hl-selected') || c.contains('hl-enemy-selected') || c.contains('hl-awaken');
+    mark.className = 'mark'
+      + (capture ? ' capture' : '')
+      + (dot ? ' dot' : '')
+      + (selected ? ' selected' : '')
+      + (foe ? ' foe' : '')
+      + (c.contains('hl-drop') ? ' drop' : '')
+      + (c.contains('hl-phase') ? ' phase' : '')
+      + (c.contains('hl-awaken') ? ' awaken' : '')
+      + (block ? ' block' : '')
+      + (shadow ? ' shadow' : '');
+  }
 }
 
 /** 選択ハイライト・敵利き・駒説明をまとめて外す */
@@ -1968,6 +2006,9 @@ function showEnemyRange(x: number, y: number) {
   for (const m of moves) {
     cellEl(m.x, m.y).classList.add(m.capture ? 'hl-enemy-capture' : 'hl-enemy-move');
   }
+  for (const b of Game.allyBlocks(G, x, y)) cellEl(b.x, b.y).classList.add('hl-block');
+  for (const p of Game.slideShadow(G, x, y)) cellEl(p.x, p.y).classList.add('hl-shadow');
+  syncMoveMarks();
 }
 
 function beginPhaseSelect(from: Pos, to: Pos) {
@@ -1984,6 +2025,7 @@ function beginPhaseSelect(from: Pos, to: Pos) {
   AudioSys.play('select');
   cellEl(to.x, to.y).classList.add('hl-selected');
   for (const p of all) cellEl(p.x, p.y).classList.add('hl-phase');
+  syncMoveMarks();
 }
 
 function beginSpawnSelect(from: Pos, to: Pos) {
@@ -1998,6 +2040,7 @@ function beginSpawnSelect(from: Pos, to: Pos) {
   AudioSys.play('select');
   cellEl(to.x, to.y).classList.add('hl-selected');
   for (const p of options) cellEl(p.x, p.y).classList.add('hl-drop');
+  syncMoveMarks();
 }
 
 function beginDualSelect(from: Pos, to: Pos) {
@@ -2012,6 +2055,7 @@ function beginDualSelect(from: Pos, to: Pos) {
   AudioSys.play('select');
   cellEl(to.x, to.y).classList.add('hl-selected', 'hl-phase');
   for (const p of options) cellEl(p.x, p.y).classList.add('hl-capture');
+  syncMoveMarks();
 }
 
 function onCellClick(x: number, y: number) {
@@ -2105,11 +2149,16 @@ function onCellClick(x: number, y: number) {
 
   clearSel();
   const moves = Game.getMoves(G, x, y);
-  if (moves.length === 0) return;
+  const blocks = Game.allyBlocks(G, x, y);
+  const shadow = Game.slideShadow(G, x, y);
+  if (moves.length === 0 && blocks.length === 0 && shadow.length === 0) return;
   sel = { kind: 'piece', x, y, moves };
   AudioSys.play('select');
   cellEl(x, y).classList.add('hl-selected');
   for (const m of moves) cellEl(m.x, m.y).classList.add(m.capture ? 'hl-capture' : 'hl-move');
+  for (const b of blocks) cellEl(b.x, b.y).classList.add('hl-block');
+  for (const p of shadow) cellEl(p.x, p.y).classList.add('hl-shadow');
+  syncMoveMarks();
 }
 
 function onHandClick(id: string) {
@@ -2123,6 +2172,7 @@ function onHandClick(id: string) {
   AudioSys.play('select');
   renderHand('p');
   for (const d of drops) cellEl(d.x, d.y).classList.add('hl-drop');
+  syncMoveMarks();
 }
 
 /* ============================== 対局進行 ============================== */

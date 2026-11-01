@@ -285,31 +285,57 @@ export const Game = {
     return owner === 'p' ? y < ZONE_DEPTH : y >= ROWS - ZONE_DEPTH;
   },
 
-  getMoves(s: GameState, x: number, y: number): MoveTarget[] {
+  /* 合法手、味方が止めるマス、その奥で飛びが届かないマス */
+  scanMoves(s: GameState, x: number, y: number): { moves: MoveTarget[]; blocks: Pos[]; shadow: Pos[] } {
     const pc = s.board[y][x];
-    if (!pc) return [];
+    if (!pc) return { moves: [], blocks: [], shadow: [] };
     const def = YOKAI[pc.id];
     const mv = (pc.promoted && def.promoted) ? def.promoted : def.moves;
     const sign = pc.owner === 'p' ? 1 : -1;
-    const out: MoveTarget[] = [];
+    const moves: MoveTarget[] = [];
+    const blocks: Pos[] = [];
+    const shadow: Pos[] = [];
     const tryAdd = (nx: number, ny: number): boolean => {
       if (!this.inBounds(nx, ny)) return false;
       const occ = s.board[ny][nx];
-      if (occ && occ.owner === pc.owner) return false;
+      if (occ && occ.owner === pc.owner) {
+        blocks.push({ x: nx, y: ny });
+        return false;
+      }
       if (occ && def.skill.kind === 'hydra' && YOKAI[occ.id].boss) return false;
-      out.push({ x: nx, y: ny, capture: !!occ });
+      moves.push({ x: nx, y: ny, capture: !!occ });
       return !occ;
     };
     if (mv.steps) for (const [dx, dy] of mv.steps) tryAdd(x + dx, y + dy * sign);
     if (mv.jumps) for (const [dx, dy] of mv.jumps) tryAdd(x + dx, y + dy * sign);
     if (mv.slides) for (const [dx, dy] of mv.slides) {
       let nx = x + dx, ny = y + dy * sign;
+      let passedAlly = false;
       while (this.inBounds(nx, ny)) {
-        if (!tryAdd(nx, ny)) break;
+        if (passedAlly) shadow.push({ x: nx, y: ny });
+        else if (!tryAdd(nx, ny)) {
+          const occ = s.board[ny][nx];
+          if (occ && occ.owner === pc.owner) passedAlly = true;
+          else break;
+        }
         nx += dx; ny += dy * sign;
       }
     }
-    return out;
+    return { moves, blocks, shadow };
+  },
+
+  getMoves(s: GameState, x: number, y: number): MoveTarget[] {
+    return this.scanMoves(s, x, y).moves;
+  },
+
+  /* 移動先に味方がいるマス。合法手には入らない */
+  allyBlocks(s: GameState, x: number, y: number): Pos[] {
+    return this.scanMoves(s, x, y).blocks;
+  },
+
+  /* 飛び駒が味方で止まったあと、その奥のマス。合法手には入らない */
+  slideShadow(s: GameState, x: number, y: number): Pos[] {
+    return this.scanMoves(s, x, y).shadow;
   },
 
   getDrops(s: GameState, owner: Side, id: string): Pos[] {
