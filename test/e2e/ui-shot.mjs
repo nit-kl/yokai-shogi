@@ -61,21 +61,23 @@ if (await page.locator('#vs-label-p').textContent() !== '九尾使い') errors.p
 await waitForBattleInput(page);
 await page.screenshot({ path: path.join(dir, 'shot-2-battle.png') });
 
-// 小鬼は大将の真正面(x=2,y=4)。短タップで選択 → 移動ハイライト確認
-// #board-frame の boardFloat でセルが常に動くため、Playwright の stable 判定を force で迂回する
+// 小鬼は大将の真正面(x=2,y=4)。タップは閲覧、移動はドラッグ
 const cell = (x, y) => page.locator('#board-cells .cell').nth(y * 5 + x);
 await cell(2, 4).click({ force: true });
 if (!await cell(2, 4).evaluate(el => el.classList.contains('hl-selected'))) {
-  errors.push('自駒選択のハイライトが付いていない');
+  errors.push('自駒タップのハイライトが付いていない');
 }
-// 駒説明は長押しで表示（短タップは選択・移動専用）
-await cell(2, 4).click({ force: true, delay: 600 });
 if (!await page.locator('#info-move').textContent()) errors.push('選択駒の動きが表示されていない');
 if (await page.locator('#piece-info').evaluate(el => el.classList.contains('hidden'))) {
-  errors.push('長押しで駒説明パネルが開いていない');
+  errors.push('タップで駒説明パネルが開いていない');
 }
 await page.waitForTimeout(400);
 await page.screenshot({ path: path.join(dir, 'shot-3-select.png') });
+const stayed = await page.evaluate(() => window.yk.G?.board[4][2]?.uid ?? null);
+await cell(2, 3).click({ force: true });
+if (await page.evaluate(() => window.yk.G?.board[4][2]?.uid ?? null) !== stayed) {
+  errors.push('移動先のタップで駒が動いてしまった');
+}
 
 // 敵駒タップ → 利きプレビュー確認（着手はしない）
 // 利きが1マス以上ある敵を選ぶ(角で塞がれた駒だと範囲ハイライト0になりうる)
@@ -103,8 +105,24 @@ if (!enemyPos) {
   await page.screenshot({ path: path.join(dir, 'shot-3b-enemy-range.png') });
 }
 
-// 前へ1マス(2,3)へ移動 → AIの応手まで待つ
-await cell(2, 3).click({ force: true });
+// 前へ1マス(2,3)へドラッグ → AIの応手まで待つ
+const srcBox = await cell(2, 4).boundingBox();
+const dstBox = await cell(2, 3).boundingBox();
+if (!srcBox || !dstBox) errors.push('ドラッグ用のセル位置が取れない');
+else {
+  const sx = srcBox.x + srcBox.width / 2;
+  const sy = srcBox.y + srcBox.height / 2;
+  const dx = dstBox.x + dstBox.width / 2;
+  const dy = dstBox.y + dstBox.height / 2;
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(dx, dy, { steps: 12 });
+  await page.mouse.up();
+}
+await page.waitForTimeout(200);
+if (await page.evaluate(() => window.yk.G?.board[3][2]?.owner) !== 'p') {
+  errors.push('ドラッグで駒が移動していない');
+}
 await page.waitForTimeout(3500);
 await page.screenshot({ path: path.join(dir, 'shot-4-after-ai.png') });
 
