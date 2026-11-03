@@ -47,7 +47,6 @@ import {
 let G: GameState | null = null; // ゲーム状態
 let busy = false;               // 演出中・AI思考中の入力ロック
 type Sel =
-  | { kind: 'piece'; x: number; y: number; moves: MoveTarget[] }
   | { kind: 'hand'; id: string; drops: Pos[] }
   | { kind: 'awaken'; targets: Pos[] }
   | { kind: 'phase'; from: Pos; to: Pos; options: Pos[] } // 影遁/隱形の退避先選択(残留=to自身)
@@ -1470,10 +1469,7 @@ function buildBoardCells() {
       c.className = 'cell' + (y < ZONE_DEPTH ? ' zone-enemy' : y >= ROWS - ZONE_DEPTH ? ' zone-player' : '');
       c.dataset.x = String(x); c.dataset.y = String(y);
       c.appendChild(Object.assign(document.createElement('div'), { className: 'hl' }));
-      c.addEventListener('click', () => onCellClick(x, y));
-      bindLongPress(c, () => {
-        inspectCell(x, y);
-      });
+      bindCellGesture(c, x, y);
       wrap.appendChild(c);
     }
   }
@@ -1749,8 +1745,8 @@ function renderHand(side: Side) {
       count.textContent = `×${n}`;
       chip.appendChild(count);
     }
-    if (side === 'p') chip.addEventListener('click', () => onHandClick(id));
-    bindLongPress(chip, () => showInfo(id, false));
+    if (side === 'p') bindHandGesture(chip, id);
+    else bindLongPress(chip, () => showInfo(id, false));
     tray.appendChild(chip);
   }
 }
@@ -1789,9 +1785,10 @@ function updateComboHeat() {
   }
 }
 
-/* ---------- 駒情報パネル（長押しで表示） ---------- */
+/* ---------- 駒情報パネル（タップで表示。移動はドラッグ） ---------- */
 const LONG_PRESS_MS = 480;
 const LONG_PRESS_MOVE_PX = 14;
+const DRAG_SLOP_PX = 18;
 
 function inspectCell(x: number, y: number) {
   if (!G) return;
@@ -1907,14 +1904,14 @@ function bindLongPress(el: HTMLElement, onLongPress: () => void) {
 /* ============================== 入力 ============================== */
 const HL_CLASSES = [
   'hl-move', 'hl-capture', 'hl-drop', 'hl-selected', 'hl-awaken', 'hl-phase', 'hl-block', 'hl-shadow',
-  'hl-enemy-move', 'hl-enemy-capture', 'hl-enemy-selected',
+  'hl-enemy-move', 'hl-enemy-capture', 'hl-enemy-selected', 'hl-drag-over',
 ] as const;
 
-function clearSel() {
+function clearSel(renderPlayerHand = true) {
   sel = null;
   document.querySelectorAll('.cell').forEach(c => c.classList.remove(...HL_CLASSES));
   syncMoveMarks();
-  if (G) renderHand('p');
+  if (renderPlayerHand && G) renderHand('p');
 }
 
 /** 駒の上に、移動先・取り先の印を重ねる */
@@ -1933,6 +1930,7 @@ function syncMoveMarks() {
       c.contains('hl-move') || c.contains('hl-enemy-move') || c.contains('hl-drop') || c.contains('hl-phase')
     );
     const selected = c.contains('hl-selected') || c.contains('hl-enemy-selected') || c.contains('hl-awaken');
+    const dragOver = c.contains('hl-drag-over');
     mark.className = 'mark'
       + (capture ? ' capture' : '')
       + (dot ? ' dot' : '')
@@ -1942,7 +1940,8 @@ function syncMoveMarks() {
       + (c.contains('hl-phase') ? ' phase' : '')
       + (c.contains('hl-awaken') ? ' awaken' : '')
       + (block ? ' block' : '')
-      + (shadow ? ' shadow' : '');
+      + (shadow ? ' shadow' : '')
+      + (dragOver ? ' dragover' : '');
   }
 }
 
@@ -1958,7 +1957,6 @@ function showEnemyRange(x: number, y: number) {
   if (!G) return;
   clearSel();
   const moves = Game.getMoves(G, x, y);
-  AudioSys.play('select');
   cellEl(x, y).classList.add('hl-enemy-selected');
   for (const m of moves) {
     cellEl(m.x, m.y).classList.add(m.capture ? 'hl-enemy-capture' : 'hl-enemy-move');
@@ -2015,6 +2013,356 @@ function beginDualSelect(from: Pos, to: Pos) {
   syncMoveMarks();
 }
 
+type ActiveDrag =
+  | { kind: 'piece'; from: Pos; moves: MoveTarget[]; uid: number; hover: Pos | null }
+  | {
+    kind: 'hand'; id: string; drops: Pos[]; chip: HTMLElement; ghost: HTMLElement;
+    originX: number; originY: number; hover: Pos | null;
+  };
+
+let activeDrag: ActiveDrag | null = null;
+
+function choicePending(): boolean {
+  return !!sel && (sel.kind === 'phase' || sel.kind === 'spawn' || sel.kind === 'dual' || sel.kind === 'awaken');
+}
+
+function cellAtPoint(clientX: number, clientY: number): Pos | null {
+  const hit = document.elementFromPoint(clientX, clientY);
+  if (!(hit instanceof Element)) return null;
+  const cell = hit.closest('#board-cells .cell');
+  if (!(cell instanceof HTMLElement)) return null;
+  const x = Number(cell.dataset.x);
+  const y = Number(cell.dataset.y);
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+  return { x, y };
+}
+
+function paintOwnRange(x: number, y: number, moves: MoveTarget[]) {
+  if (!G) return;
+  cellEl(x, y).classList.add('hl-selected');
+  for (const m of moves) cellEl(m.x, m.y).classList.add(m.capture ? 'hl-capture' : 'hl-move');
+  for (const b of Game.allyBlocks(G, x, y)) cellEl(b.x, b.y).classList.add('hl-block');
+  for (const p of Game.slideShadow(G, x, y)) cellEl(p.x, p.y).classList.add('hl-shadow');
+  syncMoveMarks();
+}
+
+/** 盤上の閲覧。持ち駒の召喚や追撃先の確定はしない */
+function previewSquare(x: number, y: number) {
+  if (!G) return;
+  const pc = G.board[y][x];
+  if (pc && pc.owner !== 'p') {
+    showEnemyRange(x, y);
+    showInfo(pc.id, pc.promoted, liveEmberAt(x, y));
+    return;
+  }
+  if (pc) {
+    showOwnPreview(x, y);
+    return;
+  }
+  const em = liveEmberAt(x, y);
+  if (em) {
+    clearSel();
+    showEmberInfo(em);
+  }
+}
+
+/** 自駒の利きと能力。着手はしない */
+function showOwnPreview(x: number, y: number) {
+  if (!G) return;
+  const pc = G.board[y][x];
+  if (!pc) return;
+  clearSel();
+  paintOwnRange(x, y, Game.getMoves(G, x, y));
+  showInfo(pc.id, pc.promoted, liveEmberAt(x, y));
+}
+
+function setDragHover(cell: Pos | null) {
+  if (!activeDrag) return;
+  if (activeDrag.hover) cellEl(activeDrag.hover.x, activeDrag.hover.y).classList.remove('hl-drag-over');
+  const legal = cell && dragTargets().some(p => p.x === cell.x && p.y === cell.y) ? cell : null;
+  activeDrag.hover = legal;
+  if (legal) cellEl(legal.x, legal.y).classList.add('hl-drag-over');
+  syncMoveMarks();
+}
+
+function dragTargets(): Pos[] {
+  if (!activeDrag) return [];
+  return activeDrag.kind === 'piece' ? activeDrag.moves : activeDrag.drops;
+}
+
+function placeDraggedPiece(ev: PointerEvent) {
+  if (!activeDrag || activeDrag.kind !== 'piece') return;
+  const el = pieceEls.get(activeDrag.uid);
+  if (!el) return;
+  const origin = cellCenter(activeDrag.from.x, activeDrag.from.y);
+  el.style.transform = `translate(${ev.clientX - origin.x}px, ${ev.clientY - origin.y}px) scale(1.06)`;
+}
+
+function placeHandGhost(ev: PointerEvent) {
+  if (!activeDrag || activeDrag.kind !== 'hand') return;
+  activeDrag.ghost.style.left = `${ev.clientX - activeDrag.originX}px`;
+  activeDrag.ghost.style.top = `${ev.clientY - activeDrag.originY}px`;
+}
+
+function releaseDraggedPiece(uid: number) {
+  const el = pieceEls.get(uid);
+  if (!el) return;
+  el.classList.remove('dragging');
+  el.style.transform = '';
+}
+
+function endDragChrome() {
+  document.body.classList.remove('piece-dragging');
+}
+
+function beginPieceDrag(x: number, y: number, ev: PointerEvent): boolean {
+  if (!G || busy || G.winner || G.turn !== 'p' || choicePending()) return false;
+  const pc = G.board[y][x];
+  if (!pc || pc.owner !== 'p') return false;
+  const moves = Game.getMoves(G, x, y);
+  if (moves.length === 0) return false;
+  const el = pieceEls.get(pc.uid);
+  if (!el) return false;
+  clearSel();
+  hideInfo();
+  activeDrag = { kind: 'piece', from: { x, y }, moves, uid: pc.uid, hover: null };
+  el.classList.add('dragging');
+  document.body.classList.add('piece-dragging');
+  paintOwnRange(x, y, moves);
+  placeDraggedPiece(ev);
+  return true;
+}
+
+function beginHandDrag(id: string, chip: HTMLElement, ev: PointerEvent): boolean {
+  if (!G || busy || G.winner || G.turn !== 'p' || choicePending()) return false;
+  const drops = Game.getDrops(G, 'p', id);
+  if (drops.length === 0) return false;
+  const rect = chip.getBoundingClientRect();
+  const ghost = chip.cloneNode(true) as HTMLElement;
+  ghost.classList.add('drag-ghost');
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.height = `${rect.height}px`;
+  document.body.appendChild(ghost);
+  clearSel(false);
+  hideInfo();
+  chip.classList.remove('chip-selected');
+  chip.classList.add('drag-source');
+  activeDrag = {
+    kind: 'hand', id, drops, chip, ghost,
+    originX: rect.width / 2, originY: rect.height / 2, hover: null,
+  };
+  document.body.classList.add('piece-dragging');
+  for (const d of drops) cellEl(d.x, d.y).classList.add('hl-drop');
+  syncMoveMarks();
+  placeHandGhost(ev);
+  return true;
+}
+
+function cancelDrag() {
+  if (!activeDrag) return;
+  if (activeDrag.kind === 'piece') releaseDraggedPiece(activeDrag.uid);
+  else {
+    activeDrag.ghost.remove();
+    activeDrag.chip.classList.remove('drag-source');
+  }
+  activeDrag = null;
+  endDragChrome();
+  clearSel();
+}
+
+function commitPieceMove(from: Pos, to: Pos, moves: MoveTarget[]) {
+  if (!G) return;
+  const m = moves.find(t => t.x === to.x && t.y === to.y);
+  if (!m) return;
+  const attacker = G.board[from.y][from.x];
+  const sk = attacker ? YOKAI[attacker.id].skill.kind : '';
+  if (m.capture && (sk === 'phase' || sk === 'veil')) {
+    beginPhaseSelect(from, to);
+    return;
+  }
+  if (m.capture && sk === 'spawn') {
+    beginSpawnSelect(from, to);
+    return;
+  }
+  if (m.capture && sk === 'dual') {
+    beginDualSelect(from, to);
+    return;
+  }
+  doAction({ kind: 'move', from, to });
+}
+
+function finishDrag(ev: PointerEvent) {
+  if (!activeDrag) return;
+  const cell = cellAtPoint(ev.clientX, ev.clientY) ?? activeDrag.hover;
+  if (activeDrag.kind === 'piece') {
+    const { from, moves, uid } = activeDrag;
+    const legal = cell && moves.some(m => m.x === cell.x && m.y === cell.y) ? cell : null;
+    releaseDraggedPiece(uid);
+    activeDrag = null;
+    endDragChrome();
+    clearSel();
+    if (legal) commitPieceMove(from, legal, moves);
+    else if (cell && cell.x === from.x && cell.y === from.y) showOwnPreview(from.x, from.y);
+    return;
+  }
+  const { id, drops, chip, ghost } = activeDrag;
+  ghost.remove();
+  chip.classList.remove('drag-source');
+  activeDrag = null;
+  endDragChrome();
+  clearSel();
+  const legal = cell && drops.some(d => d.x === cell.x && d.y === cell.y) ? cell : null;
+  if (legal) doAction({ kind: 'drop', id, to: legal });
+}
+
+/** タップは閲覧。しきい値を超えて動かすと、自駒・持ち駒をドラッグできる */
+function bindCellGesture(el: HTMLElement, x: number, y: number) {
+  let timer: number | null = null;
+  let pointerId = -1;
+  let startX = 0;
+  let startY = 0;
+  let tracking = false;
+  let moved = false;
+  let longFired = false;
+
+  const clearTimer = () => {
+    if (timer == null) return;
+    clearTimeout(timer);
+    timer = null;
+  };
+
+  el.addEventListener('pointerdown', ev => {
+    if (tracking || activeDrag) return;
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    tracking = true;
+    moved = false;
+    longFired = false;
+    pointerId = ev.pointerId;
+    startX = ev.clientX;
+    startY = ev.clientY;
+    try { el.setPointerCapture(ev.pointerId); } catch { /* pointer already gone */ }
+    clearTimer();
+    timer = window.setTimeout(() => {
+      timer = null;
+      if (moved || activeDrag) return;
+      longFired = true;
+      if (choicePending()) inspectCell(x, y);
+      else previewSquare(x, y);
+    }, LONG_PRESS_MS);
+  });
+
+  el.addEventListener('pointermove', ev => {
+    if (!tracking || ev.pointerId !== pointerId) return;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if (!moved && dx * dx + dy * dy > DRAG_SLOP_PX * DRAG_SLOP_PX) {
+      moved = true;
+      clearTimer();
+      beginPieceDrag(x, y, ev);
+    }
+    if (activeDrag?.kind === 'piece' && activeDrag.from.x === x && activeDrag.from.y === y) {
+      placeDraggedPiece(ev);
+      setDragHover(cellAtPoint(ev.clientX, ev.clientY));
+    }
+  });
+
+  const end = (ev: PointerEvent, cancel: boolean) => {
+    if (!tracking || ev.pointerId !== pointerId) return;
+    clearTimer();
+    tracking = false;
+    if (activeDrag?.kind === 'piece' && activeDrag.from.x === x && activeDrag.from.y === y) {
+      if (cancel) cancelDrag();
+      else finishDrag(ev);
+      return;
+    }
+    if (cancel || longFired) return;
+    if (moved) {
+      const endCell = cellAtPoint(ev.clientX, ev.clientY);
+      if (!endCell || endCell.x !== x || endCell.y !== y) return;
+    }
+    onCellClick(x, y);
+  };
+  el.addEventListener('pointerup', ev => end(ev, false));
+  el.addEventListener('pointercancel', ev => end(ev, true));
+  el.addEventListener('contextmenu', ev => {
+    if (tracking || longFired) ev.preventDefault();
+  });
+}
+
+function bindHandGesture(chip: HTMLElement, id: string) {
+  let timer: number | null = null;
+  let pointerId = -1;
+  let startX = 0;
+  let startY = 0;
+  let tracking = false;
+  let moved = false;
+  let longFired = false;
+
+  const clearTimer = () => {
+    if (timer == null) return;
+    clearTimeout(timer);
+    timer = null;
+  };
+
+  chip.addEventListener('pointerdown', ev => {
+    if (tracking || activeDrag) return;
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    tracking = true;
+    moved = false;
+    longFired = false;
+    pointerId = ev.pointerId;
+    startX = ev.clientX;
+    startY = ev.clientY;
+    try { chip.setPointerCapture(ev.pointerId); } catch { /* pointer already gone */ }
+    clearTimer();
+    timer = window.setTimeout(() => {
+      timer = null;
+      if (moved || activeDrag) return;
+      longFired = true;
+      showInfo(id, false);
+    }, LONG_PRESS_MS);
+  });
+
+  chip.addEventListener('pointermove', ev => {
+    if (!tracking || ev.pointerId !== pointerId) return;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    if (!moved && dx * dx + dy * dy > DRAG_SLOP_PX * DRAG_SLOP_PX) {
+      moved = true;
+      clearTimer();
+      beginHandDrag(id, chip, ev);
+    }
+    if (activeDrag?.kind === 'hand' && activeDrag.chip === chip) {
+      placeHandGhost(ev);
+      setDragHover(cellAtPoint(ev.clientX, ev.clientY));
+    }
+  });
+
+  const end = (ev: PointerEvent, cancel: boolean) => {
+    if (!tracking || ev.pointerId !== pointerId) return;
+    clearTimer();
+    tracking = false;
+    if (activeDrag?.kind === 'hand' && activeDrag.chip === chip) {
+      if (cancel) cancelDrag();
+      else finishDrag(ev);
+      return;
+    }
+    if (cancel || longFired) return;
+    if (moved) {
+      const rect = chip.getBoundingClientRect();
+      const inside = ev.clientX >= rect.left && ev.clientX <= rect.right
+        && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
+      if (!inside) return;
+    }
+    onHandClick(id);
+  };
+  chip.addEventListener('pointerup', ev => end(ev, false));
+  chip.addEventListener('pointercancel', ev => end(ev, true));
+  chip.addEventListener('contextmenu', ev => {
+    if (tracking || longFired) ev.preventDefault();
+  });
+}
+
 function onCellClick(x: number, y: number) {
   if (!G) return;
 
@@ -2060,28 +2408,7 @@ function onCellClick(x: number, y: number) {
       clearBattleFocus();
       return;
     }
-    if (sel.kind === 'piece') {
-      const { x: sx, y: sy } = sel;
-      const m = sel.moves.find(m => m.x === x && m.y === y);
-      if (m) {
-        const attacker = G.board[sy][sx];
-        const sk = attacker ? YOKAI[attacker.id].skill.kind : '';
-        if (m.capture && (sk === 'phase' || sk === 'veil')) {
-          beginPhaseSelect({ x: sx, y: sy }, { x, y });
-          return;
-        }
-        if (m.capture && sk === 'spawn') {
-          beginSpawnSelect({ x: sx, y: sy }, { x, y });
-          return;
-        }
-        if (m.capture && sk === 'dual') {
-          beginDualSelect({ x: sx, y: sy }, { x, y });
-          return;
-        }
-        doAction({ kind: 'move', from: { x: sx, y: sy }, to: { x, y } });
-        return;
-      }
-    } else if (sel.kind === 'hand') {
+    if (sel.kind === 'hand') {
       const id = sel.id;
       const d = sel.drops.find(d => d.x === x && d.y === y);
       if (d) { doAction({ kind: 'drop', id, to: { x, y } }); return; }
@@ -2091,31 +2418,25 @@ function onCellClick(x: number, y: number) {
     }
   }
 
-  /* 敵駒: 手番外・演出中でも利きを確認できる */
+  /* 駒のタップは閲覧だけ。移動はドラッグ */
   if (pc && pc.owner !== 'p') {
     showEnemyRange(x, y);
+    showInfo(pc.id, pc.promoted, liveEmberAt(x, y));
     return;
   }
 
   if (!pc) {
+    const em = liveEmberAt(x, y);
+    if (em && !sel) {
+      clearSel();
+      showEmberInfo(em);
+      return;
+    }
     clearBattleFocus();
     return;
   }
 
-  if (!canAct) return;
-
-  clearSel();
-  const moves = Game.getMoves(G, x, y);
-  const blocks = Game.allyBlocks(G, x, y);
-  const shadow = Game.slideShadow(G, x, y);
-  if (moves.length === 0 && blocks.length === 0 && shadow.length === 0) return;
-  sel = { kind: 'piece', x, y, moves };
-  AudioSys.play('select');
-  cellEl(x, y).classList.add('hl-selected');
-  for (const m of moves) cellEl(m.x, m.y).classList.add(m.capture ? 'hl-capture' : 'hl-move');
-  for (const b of blocks) cellEl(b.x, b.y).classList.add('hl-block');
-  for (const p of shadow) cellEl(p.x, p.y).classList.add('hl-shadow');
-  syncMoveMarks();
+  showOwnPreview(x, y);
 }
 
 function onHandClick(id: string) {

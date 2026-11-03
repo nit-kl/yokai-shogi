@@ -1520,6 +1520,7 @@ html[data-script="latn"] .title-sub-top {
   border: 1px solid rgba(232,196,106,0.48);
   box-shadow: inset 0 1px 0 rgba(255, 236, 200, 0.18), 0 2px 6px rgba(0, 0, 0, 0.35);
   cursor: pointer;
+  touch-action: none;
   transition: transform 0.15s, box-shadow 0.2s;
   animation: chipIn 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
@@ -1535,6 +1536,16 @@ html[data-script="latn"] .title-sub-top {
 @media (hover: hover) and (pointer: fine) {
   .hud-player .hand-chip:hover { transform: translateY(-3px) scale(1.12); box-shadow: 0 0 14px rgba(232,196,106,0.7); }
 }
+.hand-chip.drag-source { opacity: 0.4; }
+.drag-ghost {
+  position: fixed;
+  z-index: 80;
+  margin: 0;
+  pointer-events: none;
+  transform: scale(1.12);
+  filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.5));
+}
+body.piece-dragging { cursor: grabbing; }
 .hand-chip.chip-selected {
   transform: translateY(-4px) scale(1.15);
   box-shadow: 0 0 18px rgba(232,196,106,1);
@@ -1663,6 +1674,7 @@ html[data-script="latn"] .title-sub-top {
   border: 1px solid rgba(190, 160, 255, 0.16);
   box-shadow: inset 0 0 14px rgba(90, 60, 180, 0.14);
   cursor: pointer;
+  touch-action: none;
 }
 .cell.zone-enemy { background: linear-gradient(180deg, rgba(255, 60, 60, 0.12), rgba(255, 60, 60, 0.04)); }
 .cell.zone-player { background: linear-gradient(0deg, rgba(70, 140, 255, 0.12), rgba(70, 140, 255, 0.04)); }
@@ -1711,6 +1723,11 @@ html[data-script="latn"] .title-sub-top {
   background: rgba(150, 140, 170, 0.1);
 }
 .cell.hl-last .hl { opacity: 1; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.28); }
+.cell.hl-drag-over .hl {
+  opacity: 1;
+  background: rgba(255, 244, 196, 0.28);
+  box-shadow: inset 0 0 0 4px rgba(255, 246, 210, 0.98), inset 0 0 18px rgba(255, 220, 120, 0.55);
+}
 @keyframes hlPulse { 0%, 100% { transform: scale(0.92); } 50% { transform: scale(1); } }
 
 /* 駒より手前に出す行き先の印。空きマスは点、取りは枠、味方で止めるマスは破線 */
@@ -1816,6 +1833,14 @@ html[data-script="latn"] .title-sub-top {
   border-color: #ffe7a8;
   background: rgba(255, 200, 80, 0.16);
 }
+.mark.dragover::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 12px;
+  border: 3px solid rgba(255, 248, 220, 0.98);
+  box-shadow: 0 0 16px rgba(255, 220, 120, 0.95);
+}
 @keyframes markPulse {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
   50% { transform: translate(-50%, -50%) scale(1.14); }
@@ -1831,6 +1856,11 @@ html[data-script="latn"] .title-sub-top {
   transition: left 0.26s cubic-bezier(0.3, 0.9, 0.3, 1), top 0.26s cubic-bezier(0.3, 0.9, 0.3, 1);
   pointer-events: none;
   z-index: 2;
+}
+.piece.dragging {
+  transition: none;
+  z-index: 8;
+  filter: drop-shadow(0 14px 10px rgba(0, 0, 0, 0.55));
 }
 .piece.moving { z-index: 5; }
 .piece.moving img { animation: pieceHop 0.28s cubic-bezier(0.3, 0.8, 0.4, 1); }
@@ -2040,6 +2070,31 @@ html[data-script="latn"] #turn-banner.show-skip .byoyomi-banner-msg {
   100% { opacity: 0; transform: translate(-10%, -50%) skewX(10deg); }
 }
 
+#move-hint {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 6px 0 0;
+  font-size: clamp(0.68rem, 1.65vh, 0.8rem);
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  color: #f6edd8;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+}
+#move-hint span {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(12, 8, 20, 0.78);
+  border: 1px solid rgba(232, 196, 106, 0.45);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+#move-hint span:first-child { color: #d7f3ff; border-color: rgba(140, 210, 255, 0.5); }
+#move-hint span:last-child { color: #ffe7a8; border-color: rgba(232, 196, 106, 0.55); }
+#board-wrap:has(#dojo-brief:not(.hidden)) #move-hint { visibility: hidden; }
+html[data-script="latn"] #move-hint { letter-spacing: 0.01em; }
 #thinking {
   position: absolute; left: 50%; bottom: -4px;
   transform: translate(-50%, 100%);

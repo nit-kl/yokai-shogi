@@ -17,6 +17,29 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-11-03-drag-move',
+    type: 'update',
+    title: '駒の動かし方を変えました',
+    titleEn: 'How You Move a Piece Has Changed',
+    body: [
+      '駒をタップしても、もう動きません。タップは、その駒の動きと能力を見るための操作です。',
+      '',
+      '動かすときは、駒をドラッグして移動先で指を離してください。盤の下にも同じ案内を出しています。',
+      '',
+      '持ち駒は、タップしてから空きマスをタップしても召喚できます。ドラッグして離しても召喚できます。',
+    ].join('\n'),
+    bodyEn: [
+      'Tapping a piece no longer moves it. A tap shows that piece’s movement and ability.',
+      '',
+      'To move, drag the piece and release it on the destination. The same hint appears under the board.',
+      '',
+      'A piece in hand can still be summoned by tapping it and then an empty square, or by dragging it onto the board.',
+    ].join('\n'),
+    publishedAt: '2026-11-03T13:40:00+09:00',
+    priority: 'high',
+    showUntil: '2026-12-03T23:59:59+09:00',
+  },
+  {
     id: '2026-11-01-formation-cost',
     type: 'update',
     title: '編成にコスト上限を追加しました',

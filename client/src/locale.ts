@@ -105,6 +105,8 @@ const STATIC: Record<string, string> = {
   '動き': 'Movement', '画像を拡大': 'Enlarge image', '閉じる': 'Close', 'タップで閉じる': 'Tap to close',
   '敵将': 'Enemy General', '自軍': 'Your Army', '覚醒': 'Awakening', '覚醒する': 'Awaken',
   '相手思考中…': 'Enemy is thinking…', '状': 'Status',
+  '駒をタップすると動きと能力': 'Tap a piece to see its movement and ability',
+  'ドラッグして離すと移動': 'Drag and release to move',
   '接続済み': 'Connected', '持ち時間': 'Time', '相手の再接続待ち': 'Waiting for opponent to reconnect',
   '対局ステータス': 'Battle Status', '飢餓': 'Hunger',
   '飢餓まであと8': '8 moves until Hunger', '8手取りなしで飢餓の夜。以後毎手双方-50。駒を取るとリセット。': 'After 8 moves without a capture, the Night of Hunger begins. Both sides lose 50 HP each move; a capture resets it.',
@@ -363,7 +365,7 @@ RESONANCES.forEach((r, i) => { add(r.name, resonanceEn[i][0]); add(r.desc, reson
 
 const HTML_OVERRIDES: Record<string, string> = {
   '.rules-scroll': `
-    <p class="rules-lead">Collect yokai, capture them, and drain HP. Skills differ by yokai — <b>press and hold</b> a piece, or open the <b>Compendium</b>.</p>
+    <p class="rules-lead">Collect yokai, capture them, and drain HP. Skills differ by yokai — <b>tap</b> a piece, or open the <b>Compendium</b>.</p>
     <h3>How to Win</h3>
     <ul>
       <li>Reduce the opponent's <b>HP to 0</b></li>
@@ -372,7 +374,8 @@ const HTML_OVERRIDES: Record<string, string> = {
     </ul>
     <h3>How to Move</h3>
     <ul>
-      <li>A short tap selects and moves. <b>Press and hold</b> for details. Focus a lightning mark to see lingering lightning</li>
+      <li><b>Tap</b> a piece to see its movement and ability. <b>Drag</b> it onto a destination to move. Tap a lightning mark to see lingering lightning</li>
+      <li><b>Tap</b> a hand piece, then an empty square, to summon. You can also drag it onto the board</li>
       <li>Capturing deals damage equal to your yokai's <b>attack</b></li>
       <li>Consecutive captures raise a <b>combo</b>, up to 2× damage (a non-capture or summon resets it)</li>
     </ul>

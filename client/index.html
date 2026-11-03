@@ -403,6 +403,10 @@
         <div id="dojo-brief" class="dojo-brief hidden"></div>
         <div id="turn-banner"></div>
         <div id="thinking" class="hidden"><span></span>相手思考中…</div>
+        <p id="move-hint">
+          <span>駒をタップすると動きと能力</span>
+          <span>ドラッグして離すと移動</span>
+        </p>
       </div>
 
       <div id="player-hud" class="hud hud-player">
@@ -788,7 +792,7 @@
     <div class="modal-box">
       <h2>遊び方</h2>
       <div class="rules-scroll">
-        <p class="rules-lead">妖怪を集めて、取って、HPを削る対戦です。細かい能力は駒ごとに違うので、<b>長押し</b>か<b>駒一覧</b>で確認してください。</p>
+        <p class="rules-lead">妖怪を集めて、取って、HPを削る対戦です。細かい能力は駒ごとに違うので、<b>タップ</b>か<b>駒一覧</b>で確認してください。</p>
         <h3>勝ち方</h3>
         <ul>
           <li>相手の<b>魂力を0</b>にする</li>
@@ -797,7 +801,8 @@
         </ul>
         <h3>動かし方</h3>
         <ul>
-          <li>短いタップで駒を選び、動かします。説明は<b>長押し</b></li>
+          <li>盤の駒は<b>タップ</b>で動きと能力を確認し、<b>ドラッグ</b>して移動先で離すと動きます</li>
+          <li>持ち駒はタップで選び、空きマスをタップして召喚します。ドラッグでも召喚できます</li>
           <li>敵を取ると、取った自分の駒の<b>攻撃力</b>ぶん相手のHPを削ります</li>
           <li>連続で取ると<b>コンボ</b>になり、ダメージが最大2倍まで上がります（取らない手・召喚でリセット）</li>
         </ul>
