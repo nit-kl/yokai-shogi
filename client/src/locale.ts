@@ -118,6 +118,7 @@ const STATIC: Record<string, string> = {
   '大将を選ぼう': 'Choose Your General', '登録なしで体験できます。最初に大将を1体選ぶと、すぐに仲間を集めて対局を始められます。': 'Play without registering. Choose one general, summon allies, and start battling right away.',
   'ログインボーナス': 'Login Bonus', '連続ログイン': 'Login Streak', '日目': 'days', 'ガチャチケット': 'Summon Ticket',
   '受け取る': 'Claim', '新妖怪追加記念': 'New Yokai Celebration', '新駒リリースをお祝いして': 'Celebrating a new yokai release',
+  'Steamリリース記念': 'Steam Launch Celebration', 'Steam版公開をお祝いして': 'Celebrating the Steam release',
   'お一人様1回・自動で付与されます': 'Granted automatically once per player',
   'オンライン機能の利用について': 'About Online Features', '利用規約を読む': 'Read the Terms of Service',
   'プライバシーポリシーを読む': 'Read the Privacy Policy', '同意してオンライン機能を利用': 'Accept and Use Online Features',
