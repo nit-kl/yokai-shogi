@@ -151,11 +151,11 @@ describe('認証', () => {
     expect(me.body.onboardingDone).toBe(true);
     expect(me.body.loginBonus).toEqual({ day: 1, tickets: 1 });
     expect(me.body.releaseGift).toEqual({
-      tickets: 150,
+      tickets: 200,
       title: '記念チケット配布',
       subtitle: 'キャンペーン特典をまとめて付与しました',
     });
-    expect(me.body.tickets).toBe(161); // 初期10 + ログボ1 + リリース100 + 新駒50
+    expect(me.body.tickets).toBe(211); // 初期10 + ログボ1 + リリース100 + 新駒50 + Steam50
   });
 
   it('ログインボーナス: 初日付与と同日2回目なし', async () => {
@@ -165,16 +165,16 @@ describe('認証', () => {
     const first = await api('/v1/me', { token: g.accessToken });
     expect(first.body.loginBonus).toEqual({ day: 1, tickets: 1 });
     expect(first.body.releaseGift).toEqual({
-      tickets: 150,
+      tickets: 200,
       title: '記念チケット配布',
       subtitle: 'キャンペーン特典をまとめて付与しました',
     });
-    expect(first.body.tickets).toBe(161);
+    expect(first.body.tickets).toBe(211);
 
     const second = await api('/v1/me', { token: g.accessToken });
     expect(second.body.loginBonus).toBeUndefined();
     expect(second.body.releaseGift).toBeUndefined();
-    expect(second.body.tickets).toBe(161);
+    expect(second.body.tickets).toBe(211);
   });
 
   it('ログインボーナス: オンボーディング中は付与しない', async () => {
@@ -208,6 +208,32 @@ describe('認証', () => {
     expect(me.body.tickets).toBe((before?.tickets ?? 0) + 50);
   });
 
+  it('Steamリリース記念: 受取済みユーザーには50枚だけ付与', async () => {
+    const g = await createGuest();
+    await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
+    await api('/v1/me', { token: g.accessToken });
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM campaign_grants WHERE user_id = ?1 AND campaign_id = 'steam-release-2026-11'")
+        .bind(g.userId),
+      env.DB.prepare("DELETE FROM currency_logs WHERE user_id = ?1 AND reason = 'compensation' AND ref_id = 'steam-release-2026-11'")
+        .bind(g.userId),
+      env.DB.prepare('UPDATE user_profiles SET tickets = tickets - 50 WHERE user_id = ?1')
+        .bind(g.userId),
+    ]);
+    const before = await env.DB.prepare('SELECT tickets FROM user_profiles WHERE user_id = ?1').bind(g.userId).first<{ tickets: number }>();
+    const me = await api('/v1/me', { token: g.accessToken });
+    expect(me.body.releaseGift).toEqual({
+      tickets: 50,
+      title: 'Steamリリース記念',
+      subtitle: 'Steam版公開をお祝いして',
+    });
+    expect(me.body.tickets).toBe((before?.tickets ?? 0) + 50);
+
+    const again = await api('/v1/me', { token: g.accessToken });
+    expect(again.body.releaseGift).toBeUndefined();
+    expect(again.body.tickets).toBe(me.body.tickets);
+  });
+
   it('ログインボーナス: 6日連続の翌日(7日目)は3枚', async () => {
     const g = await createGuest();
     await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
@@ -218,11 +244,11 @@ describe('認証', () => {
     const seventh = await api('/v1/me', { token: g.accessToken });
     expect(seventh.body.loginBonus).toEqual({ day: 7, tickets: 3 });
     expect(seventh.body.releaseGift).toEqual({
-      tickets: 150,
+      tickets: 200,
       title: '記念チケット配布',
       subtitle: 'キャンペーン特典をまとめて付与しました',
     });
-    expect(seventh.body.tickets).toBe(163); // 初期10 + 7日目3 + リリース100 + 新駒50
+    expect(seventh.body.tickets).toBe(213); // 初期10 + 7日目3 + リリース100 + 新駒50 + Steam50
   });
 
   it('ログインボーナス: 連続が途切れたら1日目に戻る', async () => {
@@ -414,7 +440,7 @@ describe('妖力交換', () => {
     ]);
     const ok = await api('/v1/exchange', { method: 'POST', token: g.accessToken, body: '{}' });
     expect(ok.status).toBe(200);
-    expect(ok.body.tickets).toBe(162); // 初期10 + ログボ1 + リリース100 + 新駒50 + 交換1
+    expect(ok.body.tickets).toBe(212); // 初期10 + ログボ1 + リリース100 + 新駒50 + Steam50 + 交換1
     expect(ok.body.yoryoku).toBe(0);
   });
 });
@@ -523,14 +549,14 @@ describe('ソロ勝利報酬', () => {
     const g = await createGuest();
     await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
     await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
-    await api('/v1/me', { token: g.accessToken }); // 161枚(初期10+ログボ1+リリース100+新駒50)
+    await api('/v1/me', { token: g.accessToken }); // 211枚(初期10+ログボ1+リリース100+新駒50+Steam50)
 
     const w1 = await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });
-    expect(w1.body).toMatchObject({ granted: 1, tickets: 162, dailyCount: 1 });
+    expect(w1.body).toMatchObject({ granted: 1, tickets: 212, dailyCount: 1 });
     const w2 = await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });
-    expect(w2.body).toMatchObject({ granted: 1, tickets: 163, dailyCount: 2 });
+    expect(w2.body).toMatchObject({ granted: 1, tickets: 213, dailyCount: 2 });
     const w3 = await api('/v1/solo/win', { method: 'POST', token: g.accessToken, body: '{}' });
-    expect(w3.body).toMatchObject({ granted: 0, tickets: 163, dailyCount: 2 });
+    expect(w3.body).toMatchObject({ granted: 0, tickets: 213, dailyCount: 2 });
     expect(w3.body.wins).toBe(3);
   });
 });
@@ -554,7 +580,7 @@ describe('リワード広告(doc 22)', () => {
     const g = await createGuest();
     await api('/v1/onboarding/boss', { method: 'POST', token: g.accessToken, body: JSON.stringify({ bossId: 'kyubi' }) });
     await api('/v1/onboarding/complete', { method: 'POST', token: g.accessToken, body: '{}' });
-    await api('/v1/me', { token: g.accessToken }); // 161枚(初期10+ログボ1+リリース100+新駒50)
+    await api('/v1/me', { token: g.accessToken }); // 211枚(初期10+ログボ1+リリース100+新駒50+Steam50)
 
     const bad = await api('/v1/ads/reward', {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'gpt' }),
@@ -565,17 +591,17 @@ describe('リワード広告(doc 22)', () => {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
     });
     expect(r1.status).toBe(200);
-    expect(r1.body).toMatchObject({ granted: 1, tickets: 162, dailyCount: 1, remaining: 1 });
+    expect(r1.body).toMatchObject({ granted: 1, tickets: 212, dailyCount: 1, remaining: 1 });
 
     const r2 = await api('/v1/ads/reward', {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
     });
-    expect(r2.body).toMatchObject({ granted: 1, tickets: 163, dailyCount: 2, remaining: 0 });
+    expect(r2.body).toMatchObject({ granted: 1, tickets: 213, dailyCount: 2, remaining: 0 });
 
     const r3 = await api('/v1/ads/reward', {
       method: 'POST', token: g.accessToken, body: JSON.stringify({ provider: 'mock' }),
     });
-    expect(r3.body).toMatchObject({ granted: 0, tickets: 163, dailyCount: 2, remaining: 0 });
+    expect(r3.body).toMatchObject({ granted: 0, tickets: 213, dailyCount: 2, remaining: 0 });
 
     const st = await api('/v1/ads/status', { token: g.accessToken });
     expect(st.body).toMatchObject({ claimed: 2, remaining: 0 });

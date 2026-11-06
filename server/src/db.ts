@@ -22,6 +22,8 @@ export const RELEASE_GIFT_CAMPAIGN_ID = 'release-2026-07';
 export const RELEASE_GIFT_TICKETS = 100;
 export const NEW_PIECES_GIFT_CAMPAIGN_ID = 'pieces-2026-08';
 export const NEW_PIECES_GIFT_TICKETS = 50;
+export const STEAM_RELEASE_GIFT_CAMPAIGN_ID = 'steam-release-2026-11';
+export const STEAM_RELEASE_GIFT_TICKETS = 50;
 export const CAMPAIGN_GIFTS: CampaignGiftDef[] = [
   {
     id: RELEASE_GIFT_CAMPAIGN_ID,
@@ -34,6 +36,12 @@ export const CAMPAIGN_GIFTS: CampaignGiftDef[] = [
     tickets: NEW_PIECES_GIFT_TICKETS,
     title: '新妖怪追加記念',
     subtitle: '新駒リリースをお祝いして',
+  },
+  {
+    id: STEAM_RELEASE_GIFT_CAMPAIGN_ID,
+    tickets: STEAM_RELEASE_GIFT_TICKETS,
+    title: 'Steamリリース記念',
+    subtitle: 'Steam版公開をお祝いして',
   },
 ];
 

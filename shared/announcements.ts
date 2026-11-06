@@ -17,6 +17,17 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: '2026-11-06-steam-release-gift',
+    type: 'campaign',
+    title: 'Steamリリース記念！ガチャチケット🎟50枚配布',
+    titleEn: 'Steam Launch Celebration: 50 Summon Tickets',
+    body: 'Steam版の公開を記念して、ガチャチケット50枚をプレゼントします。オンボーディング完了後の起動時に自動で付与されます（お一人様1回）。Web版とSteam版のどちらで遊んでいても受け取れます。',
+    bodyEn: 'To celebrate the Steam release, every player receives 50 summon tickets once after completing onboarding. The gift is available whether you play on the web or on Steam.',
+    publishedAt: '2026-11-06T18:00:00+09:00',
+    priority: 'high',
+    showUntil: '2026-12-31T23:59:59+09:00',
+  },
+  {
     id: '2026-11-03-drag-move',
     type: 'update',
     title: '駒の動かし方を変えました',
